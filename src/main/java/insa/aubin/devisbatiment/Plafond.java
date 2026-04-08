@@ -4,6 +4,7 @@ package insa.aubin.devisbatiment;
  *
  * Gabriel = gay
  */
-public class Piece {
-    
+public class Plafond {
+    private int idPlafond;
+    private Revetement revetement;
 }
