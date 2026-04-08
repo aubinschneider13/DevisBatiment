@@ -4,10 +4,18 @@
  */
 package insa.aubin.devisbatiment;
 
-/**
- *
- * @author Gabriel
- */
+/*@author Gabriel The Rizzler*/
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.*;
+
 public class Mur {
     
+    private String idMur;
+    
+    public Mur(){
+        SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
+        
+        this.idMur = "Mur" + formatter.format(new Date());
+    }
 }
