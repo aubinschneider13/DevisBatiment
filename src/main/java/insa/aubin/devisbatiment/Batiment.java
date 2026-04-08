@@ -4,6 +4,7 @@
  */
 package insa.aubin.devisbatiment;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.*;
@@ -20,5 +21,25 @@ public class Batiment {
         this.idBatiment = "Batiment" + formatter.format(new Date());
         this.nbNiveaux = nbNiveaux;
         this.niveaux = new ArrayList<>();
+        
+        creerDossier();
     }
+    
+    private void creerDossier() {
+        String chemin = "./" + idBatiment;
+
+        File dossier = new File("C:\\Users\\utilisateur\\Documents\\NetBeansProjects\\DevisBatiment\\src\\main\\java\\insa\\aubin\\sauvegarde");
+
+
+        if (!dossier.exists()) {
+            boolean created = dossier.mkdir();
+            if (created) {
+                System.out.println("Dossier créé : " + chemin);
+            } else {
+                System.out.println("Erreur : impossible de créer le dossier.");
+            }
+        }
+    }
+    
+    
 }
