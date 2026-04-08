@@ -6,5 +6,5 @@ package insa.aubin.devisbatiment;
  */
 public class Plafond {
     private int idPlafond;
-    private Revetement revetement;
+    private ArrayList<Revetement> revetement = new ArrayList<>();
 }
