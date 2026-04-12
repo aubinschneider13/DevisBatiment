@@ -63,9 +63,5 @@ public class Piece {
 
     public void setRevetements(ArrayList<Revetement> revetements) {
         this.revetements = revetements;
-    }
-    
-    
-
-    
+    } 
 }

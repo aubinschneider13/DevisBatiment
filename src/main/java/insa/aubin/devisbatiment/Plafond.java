@@ -1,9 +1,9 @@
 package insa.aubin.devisbatiment;
 
-import java.util.*;
+import java.util.ArrayList;
 /**
  *
- * Gabriel = gay
+ * 
  */
 public class Plafond {
     private int idPlafond;
