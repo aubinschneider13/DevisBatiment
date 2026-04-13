@@ -3,6 +3,8 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package insa.aubin.devisbatiment;
+import java.util.ArrayList;
+import java.util.List;
 
 /*@author Gabriel The Rizzler*/
 
@@ -14,6 +16,7 @@ public class Mur extends SurfaceAvecRevetement {
     private float xFin;
     private float yFin;
     private float hauteur;
+    private List<Ouverture> listeOuvertures;
 
     public Mur(String idMur, float xDebut, float yDebut, float xFin, float yFin, float hauteur) {
         super();
@@ -23,6 +26,7 @@ public class Mur extends SurfaceAvecRevetement {
         this.xFin = xFin;
         this.yFin = yFin;
         this.hauteur = hauteur;
+        this.listeOuvertures = new ArrayList<>();
     }
     
     public String getIdMur(){
@@ -71,6 +75,21 @@ public class Mur extends SurfaceAvecRevetement {
 
     public void setHauteur(float hauteur){
         this.hauteur = hauteur;
+    }
+
+    public List<Ouverture> getListeOuvertures(){
+        return listeOuvertures;
+    }
+
+    public void setListeOuvertures(List<Ouverture> listeOuvertures){
+        this.listeOuvertures = listeOuvertures;
+    }
+
+    //Méthode pour ajouter une ouverture dans la liste
+    public void ajouterOuverture(Ouverture o){
+        if(o != null){
+            this.listeOuvertures.add(o);
+        }
     }
     
     public float calculerLongueur(){

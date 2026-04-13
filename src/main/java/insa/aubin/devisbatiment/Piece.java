@@ -1,12 +1,13 @@
 package insa.aubin.devisbatiment;
 import java.util.ArrayList;
+import java.util.List;
 public class Piece {
     private String idPiece;
-    private ArrayList<Usage> usage = new ArrayList<>();
-    private ArrayList<Mur> mur = new ArrayList<>();
-    private ArrayList<Plafond> plafond = new ArrayList<>();
-    private ArrayList<Sol> sol = new ArrayList<>();
-    private ArrayList<Revetement> revetements = new ArrayList<>();
+    private List<Usage> usage = new ArrayList<>();
+    private List<Mur> mur = new ArrayList<>();
+    private List<Plafond> plafond = new ArrayList<>();
+    private List<Sol> sol = new ArrayList<>();
+    private List<Revetement> revetements = new ArrayList<>();
 
     public Piece(String idPiece) {
         this.idPiece = idPiece;
@@ -25,7 +26,7 @@ public class Piece {
         this.idPiece = idPiece;
     }
 
-    public ArrayList<Usage> getUsage() {
+    public List<Usage> getUsage() {
         return usage;
     }
 
@@ -33,35 +34,35 @@ public class Piece {
         this.usage = usage;
     }
 
-    public ArrayList<Mur> getMur() {
+    public List<Mur> getMur() {
         return mur;
     }
 
-    public void setMur(ArrayList<Mur> mur) {
+    public void setMur(List<Mur> mur) {
         this.mur = mur;
     }
 
-    public ArrayList<Plafond> getPlafond() {
+    public List<Plafond> getPlafond() {
         return plafond;
     }
 
-    public void setPlafond(ArrayList<Plafond> plafond) {
+    public void setPlafond(List<Plafond> plafond) {
         this.plafond = plafond;
     }
 
-    public ArrayList<Sol> getSol() {
+    public List<Sol> getSol() {
         return sol;
     }
 
-    public void setSol(ArrayList<Sol> sol) {
+    public void setSol(List<Sol> sol) {
         this.sol = sol;
     }
 
-    public ArrayList<Revetement> getRevetements() {
+    public List<Revetement> getRevetements() {
         return revetements;
     }
 
-    public void setRevetements(ArrayList<Revetement> revetements) {
+    public void setRevetements(List<Revetement> revetements) {
         this.revetements = revetements;
     } 
 }
