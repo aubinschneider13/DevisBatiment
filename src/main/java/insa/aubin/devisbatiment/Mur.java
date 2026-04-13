@@ -98,9 +98,19 @@ public class Mur extends SurfaceAvecRevetement {
         return (float) Math.sqrt(dX*dX + dY*dY);
     }
 
+    //Méthode pour calculer la surface brute du mur (cad sans les ouvertures)
     @Override
-    public float calculerSurface(){ //Calcul du surface brut (sans les ouvertures)
+    public float calculerSurface(){ 
         return calculerLongueur() * this.hauteur;
+    }
+
+    public float calculerSurfaceNette(){
+        float surfaceBrute = this.calculerSurface();
+        float surfaceOuverture = 0;
+        for (Ouverture o : listeOuvertures) {
+            surfaceOuverture += o.getLargeur() * o.getHauteur();
+        }
+        return surfaceBrute - surfaceOuverture;
     }
 
     /*public Mur(){

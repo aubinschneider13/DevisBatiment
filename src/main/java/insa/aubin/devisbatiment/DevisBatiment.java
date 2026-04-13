@@ -25,7 +25,7 @@ public class DevisBatiment {
         m1.ajouterOuverture(f3);
 
         System.out.println("Le nombre d'ouvertures du mur 1 : " + m1.getListeOuvertures().size());
-
+        System.out.println("Surface nette du mur : " + m1.calculerSurfaceNette());
        
     }
 }
