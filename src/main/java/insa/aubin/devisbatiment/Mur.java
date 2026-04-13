@@ -5,17 +5,88 @@
 package insa.aubin.devisbatiment;
 
 /*@author Gabriel The Rizzler*/
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.*;
 
-public class Mur {
+public class Mur extends SurfaceAvecRevetement {
     
     private String idMur;
+    private float xDebut;
+    private float yDebut;
+    private float xFin;
+    private float yFin;
+    private float hauteur;
+
+    public Mur(String idMur, float xDebut, float yDebut, float xFin, float yFin, float hauteur) {
+        super();
+        this.idMur = idMur;
+        this.xDebut = xDebut;
+        this.yDebut = yDebut;
+        this.xFin = xFin;
+        this.yFin = yFin;
+        this.hauteur = hauteur;
+    }
     
-    public Mur(){
+    public String getIdMur(){
+        return idMur;
+    }
+
+    public void setIdMur(String idMur){
+        this.idMur = idMur;
+    }
+
+    public float getxDebut() {
+        return xDebut;
+    }
+
+    public void setxDebut(float xDebut) {
+        this.xDebut = xDebut;
+    }
+
+    public float getyDebut() {
+        return yDebut;
+    }
+
+    public void setyDebut(float yDebut) {
+        this.yDebut = yDebut;
+    }
+
+    public float getxFin() {
+        return xFin;
+    }
+
+    public void setxFin(float xFin) {
+        this.xFin = xFin;
+    }
+    
+    public float getyFin() {
+        return yFin;
+    }
+    
+    public void setyFin(float yFin) {
+        this.yFin = yFin;
+    }
+
+    public float getHauteur(){
+        return hauteur;
+    }
+
+    public void setHauteur(float hauteur){
+        this.hauteur = hauteur;
+    }
+    
+    public float calculerLongueur(){
+        float dX = this.xFin - this.xDebut;
+        float dY = this.yFin - this.yDebut;
+        return (float) Math.sqrt(dX*dX + dY*dY);
+    }
+
+    @Override
+    public float calculerSurface(){ //Calcul du surface brut (sans les ouvertures)
+        return calculerLongueur() * this.hauteur;
+    }
+
+    /*public Mur(){
         SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
         
         this.idMur = "Mur" + formatter.format(new Date());
-    }
+    }*/
 }
