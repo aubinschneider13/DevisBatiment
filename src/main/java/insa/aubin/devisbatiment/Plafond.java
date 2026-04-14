@@ -23,7 +23,7 @@ public class Plafond extends SurfaceAvecRevetement {
     }
 
     @Override
-    public float calculerSurface(){
-
+    public double calculerSurface(){
+     return 0.0;
     }
 }

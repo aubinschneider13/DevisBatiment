@@ -6,25 +6,21 @@ package insa.aubin.devisbatiment;
 import java.util.ArrayList;
 import java.util.List;
 
-/*@author Gabriel The Rizzler*/
+/*@author Gabriel tkt*/
 
 public class Mur extends SurfaceAvecRevetement {
     
     private String idMur;
-    private float xDebut;
-    private float yDebut;
-    private float xFin;
-    private float yFin;
+    private Point point1;
+    private Point point2;
     private float hauteur;
     private List<Ouverture> listeOuvertures;
 
-    public Mur(String idMur, float xDebut, float yDebut, float xFin, float yFin, float hauteur) {
+    public Mur(String idMur, float hauteur) {
         super();
         this.idMur = idMur;
-        this.xDebut = xDebut;
-        this.yDebut = yDebut;
-        this.xFin = xFin;
-        this.yFin = yFin;
+        this.point1 = point1;
+        this.point2 = point2;
         this.hauteur = hauteur;
         this.listeOuvertures = new ArrayList<>();
     }
@@ -37,36 +33,20 @@ public class Mur extends SurfaceAvecRevetement {
         this.idMur = idMur;
     }
 
-    public float getxDebut() {
-        return xDebut;
+    public Point getPoint1() {
+        return point1;
     }
 
-    public void setxDebut(float xDebut) {
-        this.xDebut = xDebut;
+    public void setPoint1(Point point1) {
+        this.point1 = point1;
     }
 
-    public float getyDebut() {
-        return yDebut;
+    public Point getPoint2() {
+        return point2;
     }
 
-    public void setyDebut(float yDebut) {
-        this.yDebut = yDebut;
-    }
-
-    public float getxFin() {
-        return xFin;
-    }
-
-    public void setxFin(float xFin) {
-        this.xFin = xFin;
-    }
-    
-    public float getyFin() {
-        return yFin;
-    }
-    
-    public void setyFin(float yFin) {
-        this.yFin = yFin;
+    public void setPoint2(Point point2) {
+        this.point2 = point2;
     }
 
     public float getHauteur(){
@@ -92,21 +72,21 @@ public class Mur extends SurfaceAvecRevetement {
         }
     }
     
-    public float calculerLongueur(){
-        float dX = this.xFin - this.xDebut;
-        float dY = this.yFin - this.yDebut;
-        return (float) Math.sqrt(dX*dX + dY*dY);
+    public double calculerLongueur(){
+        double dX = this.point2.getX() - this.point1.getX();
+        double dY = this.point2.getY() - this.point1.getY();
+        return (double) Math.sqrt(dX*dX + dY*dY);
     }
 
     //Méthode pour calculer la surface brute du mur (cad sans les ouvertures)
     @Override
-    public float calculerSurface(){ 
+    public double calculerSurface(){ 
         return calculerLongueur() * this.hauteur;
     }
 
-    public float calculerSurfaceNette(){
-        float surfaceBrute = this.calculerSurface();
-        float surfaceOuverture = 0;
+    public double calculerSurfaceNette(){
+        double surfaceBrute = this.calculerSurface();
+        double surfaceOuverture = 0;
         for (Ouverture o : listeOuvertures) {
             surfaceOuverture += o.getLargeur() * o.getHauteur();
         }

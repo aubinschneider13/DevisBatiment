@@ -9,6 +9,6 @@ public abstract class SurfaceAvecRevetement {
         this.revetement = new ArrayList<>();
     }
 
-    public abstract float calculerSurface();
+    public abstract double calculerSurface();
 
 }

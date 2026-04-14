@@ -11,6 +11,8 @@ package insa.aubin.devisbatiment;
 public class DevisBatiment {
 
     public static void main(String[] args) {
+        
+        /*
         System.out.println("Hello World ");
         Mur m1 = new Mur("mur1", 1, 1, 2, 3, 7);
         System.out.println("Longueur du mur : " + m1.calculerLongueur());
@@ -27,5 +29,8 @@ public class DevisBatiment {
         System.out.println("Le nombre d'ouvertures du mur 1 : " + m1.getListeOuvertures().size());
         System.out.println("Surface nette du mur : " + m1.calculerSurfaceNette());
        
+        */
+        
+        
     }
 }

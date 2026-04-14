@@ -1,16 +1,26 @@
 package insa.aubin.devisbatiment;
 import java.util.ArrayList;
 import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class Piece {
     private String idPiece;
-    private List<Usage> usage = new ArrayList<>();
     private List<Mur> mur = new ArrayList<>();
+    private List<Point> points = new ArrayList<>();
+    
+    private List<Usage> usage = new ArrayList<>();
     private List<Plafond> plafond = new ArrayList<>();
     private List<Sol> sol = new ArrayList<>();
     private List<Revetement> revetements = new ArrayList<>();
-
-    public Piece(String idPiece) {
-        this.idPiece = idPiece;
+    
+    //Pièce à n points/coins
+    public Piece(List<Point> points) {
+        SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
+        
+        this.idPiece = "Piece" + formatter.format(new Date());
+        this.points = points;
+        
         this.usage = new ArrayList<>();
         this.mur = new ArrayList<>();
         this.plafond = new ArrayList<>();
