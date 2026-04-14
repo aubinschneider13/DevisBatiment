@@ -14,7 +14,9 @@ public class Piece {
     private List<Sol> sol = new ArrayList<>();
     private List<Revetement> revetements = new ArrayList<>();
     
-    //Pièce à n points/coins
+    //à modifier plus tard
+    private double hauteurSousPlafond = 12.2;
+    
     public Piece(List<Point> points) {
         SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
         
@@ -26,6 +28,12 @@ public class Piece {
         this.plafond = new ArrayList<>();
         this.sol = new ArrayList<>();
         this.revetements = new ArrayList<>();
+        
+        for (int i = 0; i < points.size(); i++) {
+            Point debut = points.get(i);
+            Point fin = points.get((i + 1) % points.size()); 
+            this.mur.add(new Mur(debut, fin, hauteurSousPlafond));
+        }
     }
 
     public String getIdPiece() {

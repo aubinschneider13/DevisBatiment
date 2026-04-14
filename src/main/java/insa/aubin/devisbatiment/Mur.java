@@ -5,6 +5,8 @@
 package insa.aubin.devisbatiment;
 import java.util.ArrayList;
 import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /*@author Gabriel tkt*/
 
@@ -13,12 +15,14 @@ public class Mur extends SurfaceAvecRevetement {
     private String idMur;
     private Point point1;
     private Point point2;
-    private float hauteur;
+    private double hauteur;
     private List<Ouverture> listeOuvertures;
 
-    public Mur(String idMur, float hauteur) {
+    public Mur(Point point1, Point point2, double hauteur) {
         super();
-        this.idMur = idMur;
+        SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
+        
+        this.idMur = "Mur" + formatter.format(new Date());
         this.point1 = point1;
         this.point2 = point2;
         this.hauteur = hauteur;
@@ -49,7 +53,7 @@ public class Mur extends SurfaceAvecRevetement {
         this.point2 = point2;
     }
 
-    public float getHauteur(){
+    public double getHauteur(){
         return hauteur;
     }
 
