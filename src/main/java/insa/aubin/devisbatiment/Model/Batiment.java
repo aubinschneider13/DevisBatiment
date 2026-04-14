@@ -37,16 +37,7 @@ public class Batiment {
 
         File dossier = new File(cheminDossier);
         dossier.mkdirs();
-
-        try (PrintWriter pw = new PrintWriter(new FileWriter(cheminDossier + "/batiment.txt"))) {
-            pw.println("idBatiment=" + this.idBatiment);
-            pw.println("nomBatiment=" + this.nomBatiment);
-            pw.println("typeBatiment=" + this.typeBatiment);
-            pw.println("nbNiveaux=" + this.nbNiveaux);
-        } catch (IOException e) {
-            System.err.println("Erreur création batiment.txt : " + e.getMessage());
-        }
-
+        
         try (PrintWriter pw = new PrintWriter(new FileWriter(cheminRacine + "/batiments.txt", true))) {
             pw.println(this.idBatiment + ";" + this.nomBatiment + ";" + this.typeBatiment);
         } catch (IOException e) {
