@@ -9,6 +9,16 @@ public abstract class SurfaceAvecRevetement {
         this.revetement = new ArrayList<>();
     }
 
+    public List<Revetement> getRevetement(){
+        return revetement;
+    }
+
     public abstract double calculerSurface();
+
+    public void ajouterRevetement(Revetement r){
+        if(r != null){
+            this.revetement.add(r);
+        }
+    }
 
 }
