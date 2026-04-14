@@ -4,21 +4,27 @@
  */
 package insa.aubin.devisbatiment;
 
-import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 
 public class Batiment {
+    private String nomBatiment;
     private String idBatiment;
     private String typeBatiment;
     private double nbNiveaux;
     private ArrayList<Niveau> niveaux = new ArrayList<>();
     
-    public Batiment(double nbNiveaux){
+    public Batiment(String nomBatiment , String typeBatiment, double nbNiveaux){
         SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
         
+        this.nomBatiment = nomBatiment;
         this.idBatiment = "Batiment" + formatter.format(new Date());
+        this.typeBatiment = typeBatiment;
         this.nbNiveaux = nbNiveaux;
         this.niveaux = new ArrayList<>();
         
@@ -26,18 +32,25 @@ public class Batiment {
     }
     
     private void creerDossier() {
-        String chemin = "./" + idBatiment;
+        String cheminRacine = "C:/Users/utilisateur/Documents/NetBeansProjects/DevisBatiment/data/Batiments";
+        String cheminDossier = cheminRacine + "/" + this.nomBatiment;
 
-        File dossier = new File("C:\\Users\\utilisateur\\Documents\\NetBeansProjects\\DevisBatiment\\src\\main\\java\\insa\\aubin\\sauvegarde");
+        File dossier = new File(cheminDossier);
+        dossier.mkdirs();
 
+        try (PrintWriter pw = new PrintWriter(new FileWriter(cheminDossier + "/batiment.txt"))) {
+            pw.println("idBatiment=" + this.idBatiment);
+            pw.println("nomBatiment=" + this.nomBatiment);
+            pw.println("typeBatiment=" + this.typeBatiment);
+            pw.println("nbNiveaux=" + this.nbNiveaux);
+        } catch (IOException e) {
+            System.err.println("Erreur création batiment.txt : " + e.getMessage());
+        }
 
-        if (!dossier.exists()) {
-            boolean created = dossier.mkdir();
-            if (created) {
-                System.out.println("Dossier créé : " + chemin);
-            } else {
-                System.out.println("Erreur : impossible de créer le dossier.");
-            }
+        try (PrintWriter pw = new PrintWriter(new FileWriter(cheminRacine + "/batiments.txt", true))) {
+            pw.println(this.idBatiment + ";" + this.nomBatiment + ";" + this.typeBatiment);
+        } catch (IOException e) {
+            System.err.println("Erreur écriture batiments.txt : " + e.getMessage());
         }
     }
     
