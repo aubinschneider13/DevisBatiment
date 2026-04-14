@@ -35,5 +35,7 @@ public class DevisBatiment {
         Mur m1 = new Mur(p1, p2, 4);
         System.out.println("Longueur du mur 1 : " + m1.calculerLongueur());
         
+        Batiment ImmeubleTest = new Batiment("ImmeubleTest", "Immeuble",5);
+        
     }
 }
