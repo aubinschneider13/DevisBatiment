@@ -30,7 +30,10 @@ public class DevisBatiment {
         System.out.println("Surface nette du mur : " + m1.calculerSurfaceNette());
        
         */
-        
+        Point p1 = new Point(2, 3);
+        Point p2 = new Point(4, 5);
+        Mur m1 = new Mur(p1, p2, 4);
+        System.out.println("Longueur du mur 1 : " + m1.calculerLongueur());
         
     }
 }

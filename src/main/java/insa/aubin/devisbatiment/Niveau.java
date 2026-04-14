@@ -5,13 +5,13 @@
 package insa.aubin.devisbatiment;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.*;
 
 public class Niveau {
     private String idNiveau;
     private double nbAppartements;
-    private float hauteurPlafond;
+    private double hauteurPlafond;
     ArrayList<Appartement> appartements = new ArrayList<>();
      
     public Niveau(double nbApparements, float hauteurPlafond){

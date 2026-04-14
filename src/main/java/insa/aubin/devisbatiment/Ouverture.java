@@ -5,10 +5,10 @@ package insa.aubin.devisbatiment;
  */
 public class Ouverture {
     private String idOuverture;
-    private float largeur;
-    private float hauteur;
+    private double largeur;
+    private double hauteur;
 
-    public Ouverture(String idOuverture, float largeur, float hauteur){
+    public Ouverture(String idOuverture, double largeur, double hauteur){
         this.idOuverture = idOuverture;
         this.largeur = largeur;
         this.hauteur = hauteur;
@@ -22,19 +22,19 @@ public class Ouverture {
         this.idOuverture = idOuverture;
     }
 
-    public float getLargeur(){
+    public double getLargeur(){
         return largeur;
     }
 
-    public void setLargeur(float largeur){
+    public void setLargeur(double largeur){
         this.largeur = largeur;
     }
 
-    public float getHauteur(){
+    public double getHauteur(){
         return hauteur;
     }
 
-    public void setHauteur(float hauteur){
+    public void setHauteur(double hauteur){
         this.hauteur = hauteur;
     }
 }
