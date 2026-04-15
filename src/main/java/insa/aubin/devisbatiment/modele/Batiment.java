@@ -22,7 +22,7 @@ public class Batiment {
     private String idBatiment;
     private String typeBatiment;
     private double nbNiveaux;
-    private ArrayList<Niveau> niveaux = new ArrayList<>();
+    private ArrayList<Niveau> niveaux;
     
     public Batiment(String nomBatiment , String typeBatiment, double nbNiveaux){
         SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
@@ -37,7 +37,7 @@ public class Batiment {
     }
     
     private void creerDossier() {
-        String cheminRacine = "C:/Users/utilisateur/Documents/NetBeansProjects/DevisBatiment/data/Batiments";
+        String cheminRacine = "C:/Users/haykk/Desktop/DevisBatiment/data/Batiments";
         String cheminDossier = cheminRacine + "/" + this.nomBatiment;
 
         File dossier = new File(cheminDossier);
