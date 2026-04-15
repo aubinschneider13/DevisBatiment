@@ -1,5 +1,6 @@
 package insa.aubin.devisbatiment.view;
 
+import insa.aubin.devisbatiment.controlleur.LoginControleur;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -9,6 +10,8 @@ public class MainApp extends Application {
     public void start(Stage primaryStage) {
         // On instancie ta vue principale (que l'on crée juste après)
         LoginView root = new LoginView();
+        LoginControleur loginControleur = new LoginControleur(root);
+        loginControleur.valider();
         
         Scene scene = new Scene(root, 400, 350);
         primaryStage.setTitle("InsaBuilder");
