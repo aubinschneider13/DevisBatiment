@@ -8,11 +8,12 @@ public class MainApp extends Application {
     @Override
     public void start(Stage primaryStage) {
         // On instancie ta vue principale (que l'on crée juste après)
-        VuePrincipale root = new VuePrincipale();
+        LoginView root = new LoginView();
         
-        Scene scene = new Scene(root, 1000, 700);
-        primaryStage.setTitle("Devis Bâtiment INSA - Vue 2D");
+        Scene scene = new Scene(root, 400, 350);
+        primaryStage.setTitle("InsaBuilder");
         primaryStage.setScene(scene);
+        primaryStage.setResizable(false); //On empêche la redimension de la fenêtre
         primaryStage.show();
     }
 
