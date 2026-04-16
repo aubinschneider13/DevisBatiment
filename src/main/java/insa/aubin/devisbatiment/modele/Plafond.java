@@ -1,23 +1,12 @@
 package insa.aubin.devisbatiment.modele;
-/**
- *
- * @author Jeffrey Epstein
- */
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class Plafond extends SurfaceAvecRevetement {
-    private String idPlafond;
-    //private ArrayList<Revetement> revetement = new ArrayList<>();
 
-    public Plafond(String idPlafond){
-        super();
-        this.idPlafond = idPlafond;
-    }
-
-    public String getIdPlafond(){
-        return idPlafond;
-    }
-
-    public void setIdPlafond(String idPlafond){
-        this.idPlafond = idPlafond;
+    public Plafond(){
+        super("Plafond" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date()));
     }
 
     @Override

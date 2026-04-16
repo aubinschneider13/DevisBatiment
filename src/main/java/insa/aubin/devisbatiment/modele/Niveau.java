@@ -1,13 +1,4 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package insa.aubin.devisbatiment.modele;
-
-/**
- *
- * @author Jeffrey Epstein
- */
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -20,11 +11,32 @@ public class Niveau {
     ArrayList<Appartement> appartements = new ArrayList<>();
      
     public Niveau(double nbApparements, float hauteurPlafond){
-        SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
         
-        this.idNiveau = "Niveau" + formatter.format(new Date());
+        this.idNiveau = "Niveau" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
         this.nbAppartements = nbAppartements;
         this.hauteurPlafond = hauteurPlafond;
         this.appartements = new ArrayList<>();
+    }
+    
+    //Getters and Setters
+
+    public String getIdNiveau() {
+        return idNiveau;
+    }
+
+    public double getNbAppartements() {
+        return nbAppartements;
+    }
+
+    public void setNbAppartements(double nbAppartements) {
+        this.nbAppartements = nbAppartements;
+    }
+
+    public double getHauteurPlafond() {
+        return hauteurPlafond;
+    }
+
+    public void setHauteurPlafond(double hauteurPlafond) {
+        this.hauteurPlafond = hauteurPlafond;
     }
 }

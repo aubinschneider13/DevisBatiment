@@ -1,12 +1,16 @@
 package insa.aubin.devisbatiment.modele;
-import java.util.ArrayList;
-import java.util.List;
-/**
- *
- * @author Jeffrey Epstein
- */
 
-public class Sol {
-    private String idSol;
-    private List<Revetement> revetement = new ArrayList<>();
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+public class Sol extends SurfaceAvecRevetement {
+    
+     public Sol(){
+        super("Sol" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date()));
+    }
+
+    @Override
+    public double calculerSurface(){
+     return 0.0;
+    }
 }

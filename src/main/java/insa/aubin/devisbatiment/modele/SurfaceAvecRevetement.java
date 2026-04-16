@@ -2,16 +2,13 @@ package insa.aubin.devisbatiment.modele;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- *
- * @author Jeffrey Epstein
- */
-
 public abstract class SurfaceAvecRevetement {
+    
     private List<Revetement> revetement;
+    private String idSurSurfaceAvecRevetement;
 
-    public SurfaceAvecRevetement(){
-        this.revetement = new ArrayList<>();
+    public SurfaceAvecRevetement(String idSurSurfaceAvecRevetement){
+        this.idSurSurfaceAvecRevetement = idSurSurfaceAvecRevetement;
     }
 
     public List<Revetement> getRevetement(){
@@ -25,5 +22,15 @@ public abstract class SurfaceAvecRevetement {
             this.revetement.add(r);
         }
     }
+
+    public String getIdSurSurfaceAvecRevetement() {
+        return idSurSurfaceAvecRevetement;
+    }
+
+    public void setIdSurSurfaceAvecRevetement(String idSurSurfaceAvecRevetement) {
+        this.idSurSurfaceAvecRevetement = idSurSurfaceAvecRevetement;
+    }
+    
+    
 
 }

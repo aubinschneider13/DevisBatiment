@@ -1,8 +1,4 @@
 package insa.aubin.devisbatiment.modele;
-/**
- *
- * @author Jeffrey Epstein
- */
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -14,9 +10,7 @@ public class Appartement {
     ArrayList<Piece> pieces = new ArrayList<>();
     
     public Appartement(double nbPieces){
-        SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
-        
-        this.idAppart = "Appartement" + formatter.format(new Date());
+        this.idAppart = "Appartement" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
         this.nbPieces = nbPieces;
         this.pieces = new ArrayList<>();
     }

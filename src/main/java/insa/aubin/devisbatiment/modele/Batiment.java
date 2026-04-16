@@ -1,13 +1,4 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package insa.aubin.devisbatiment.modele;
-
-/**
- *
- * @author Jeffrey Epstein
- */
 
 import java.io.File;
 import java.io.FileWriter;
@@ -25,10 +16,9 @@ public class Batiment {
     private ArrayList<Niveau> niveaux;
     
     public Batiment(String nomBatiment , String typeBatiment, double nbNiveaux){
-        SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
         
         this.nomBatiment = nomBatiment;
-        this.idBatiment = "Batiment" + formatter.format(new Date());
+        this.idBatiment = "Batiment" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
         this.typeBatiment = typeBatiment;
         this.nbNiveaux = nbNiveaux;
         this.niveaux = new ArrayList<>();

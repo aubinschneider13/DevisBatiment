@@ -8,6 +8,30 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>17</maven.compiler.release>
-        <exec.mainClass>insa.aubin.devisbatiment.DevisBatiment</exec.mainClass>
+        <exec.mainClass>insa.aubin.devisbatiment.view.MainApp</exec.mainClass>
     </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>17.0.18</version>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>17.0.18</version>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>insa.aubin.devisbatiment.view.MainApp</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

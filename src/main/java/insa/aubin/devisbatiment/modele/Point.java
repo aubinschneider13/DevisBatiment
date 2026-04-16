@@ -1,13 +1,5 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package insa.aubin.devisbatiment.modele;
 
-/**
- *
- * @author Jeffrey Epstein
- */
 public class Point {
     private double x;
     private double y;

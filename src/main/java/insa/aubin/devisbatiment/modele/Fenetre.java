@@ -1,14 +1,17 @@
 package insa.aubin.devisbatiment.modele;
 
-/**
- *
- * @author Jeffrey Epstein
- */
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class Fenetre extends Ouverture {
-    private static final double COTE_FENETRE = 1.20f;  //Par convention, les nomes des constantes s'écrivent comme : UPPER_SNAKE_CASE
+    private static final double COTE_FENETRE = 1.20;
 
-    public Fenetre(String idFenetre){
-        super(idFenetre, COTE_FENETRE, COTE_FENETRE);
+    public Fenetre() {
+        super("Fenetre" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date()), COTE_FENETRE, COTE_FENETRE);
     }
+
+    public String toCSV() {
+        return "FENETRE;" + COTE_FENETRE + ";" + COTE_FENETRE;
+    }
+   
 }
