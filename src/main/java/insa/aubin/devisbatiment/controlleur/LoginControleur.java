@@ -33,16 +33,23 @@ public class LoginControleur {
     }
 
     public void ouvrirTableauDeBord(){
-        Stage ancienStage;
-        ancienStage = (Stage) this.vue.getScene().getWindow();
-        ancienStage.close();
-
+        // 1. On prépare  la nouvelle fenêtre SANS fermer l'ancien tout de suite
         Stage nouveauStage = new Stage();
         DashBoardView dashBoardView = new DashBoardView();
         Scene nouveauScene = new Scene(dashBoardView);
+
         nouveauStage.setTitle("InsaBuilder - Tableau de bord");
         nouveauStage.setScene(nouveauScene);
         nouveauStage.setMaximized(true);
+
+        // 2. On affiche la nouvelle fenêtre
         nouveauStage.show();
+
+        // 3. SEULEMENT MAINTENANT, on récupère et on ferme l'ancienne
+        // On utilise le "Window" de la vue actuelle (LoginView)
+        Stage ancienStage = (Stage) this.vue.getScene().getWindow();
+        if (ancienStage != null) {
+            ancienStage.close();
+        }
     }
 }
