@@ -1,9 +1,6 @@
 package insa.aubin.devisbatiment.modele;
-/**
- *
- * @author Jeffrey Epstein
- */
-public class Ouverture {
+
+public abstract class Ouverture {
     private String idOuverture;
     private double largeur;
     private double hauteur;
@@ -13,28 +10,29 @@ public class Ouverture {
         this.largeur = largeur;
         this.hauteur = hauteur;
     }
+    
+    public abstract String toCSV();
+    
+    //Getters and Setters
 
-    public String getIdOuverture(){
+    public String getIdOuverture() {
         return idOuverture;
     }
 
-    public void setIdOuverture(String idOuverture){
-        this.idOuverture = idOuverture;
-    }
-
-    public double getLargeur(){
+    public double getLargeur() {
         return largeur;
     }
 
-    public void setLargeur(double largeur){
+    public void setLargeur(double largeur) {
         this.largeur = largeur;
     }
 
-    public double getHauteur(){
+    public double getHauteur() {
         return hauteur;
     }
 
-    public void setHauteur(double hauteur){
+    public void setHauteur(double hauteur) {
         this.hauteur = hauteur;
     }
+    
 }

@@ -1,20 +1,25 @@
 package insa.aubin.devisbatiment.modele;
 
-/**
- *
- * @author Jeffrey Epstein
- */
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class Revetement {
     private String idRevetement;
     private String typeRevetement;
     private double prixUnitaire;
 
-    public Revetement(String idRevetement, String typeRevetement, double prixUnitaire){
-        this.idRevetement = idRevetement;
+    public Revetement(String typeRevetement, double prixUnitaire){
+        this.idRevetement = "Revetement" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
         this.typeRevetement = typeRevetement;
         this.prixUnitaire = prixUnitaire;
     }
-
+    
+    public String toCSV() {
+        return "REVETEMENT;" + idRevetement + ";" + typeRevetement + ";" + prixUnitaire;
+    }
+    
+    // Getters et Setters
+    
     public String getIdRevetement() {
         return idRevetement;
     }

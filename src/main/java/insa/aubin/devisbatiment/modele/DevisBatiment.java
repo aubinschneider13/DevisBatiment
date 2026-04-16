@@ -6,7 +6,7 @@ package insa.aubin.devisbatiment.modele;
 
 /**
  *
- * @author Jeffrey Epstein
+ * @author Hayk t'es moche
  */
 
 public class DevisBatiment {

@@ -1,33 +1,63 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package insa.aubin.devisbatiment.modele;
+
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/*@author Gabriel tkt*/
-
 public class Mur extends SurfaceAvecRevetement {
     
-    private String idMur;
     private Point point1;
     private Point point2;
     private double hauteur;
     private List<Ouverture> listeOuvertures;
+    private String idMur;
 
     public Mur(Point point1, Point point2, double hauteur) {
-        super();
-        SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
-        
-        this.idMur = "Mur" + formatter.format(new Date());
+        super("Mur");
         this.point1 = point1;
         this.point2 = point2;
         this.hauteur = hauteur;
         this.listeOuvertures = new ArrayList<>();
     }
+    
+    //Méthode pour ajouter une ouverture dans la liste
+    public void ajouterOuverture(Ouverture o){
+        if(o != null){
+            this.listeOuvertures.add(o);
+        }
+    }
+    
+    public double calculerLongueur(){
+        double dX = this.point2.getX() - this.point1.getX();
+        double dY = this.point2.getY() - this.point1.getY();
+        return (double) Math.sqrt(dX*dX + dY*dY);
+    }
+
+    //Méthode pour calculer la surface brute du mur (cad sans les ouvertures)
+    @Override
+    public double calculerSurface(){ 
+        return calculerLongueur() * this.hauteur;
+    }
+
+    public double calculerSurfaceNette(){
+        double surfaceBrute = this.calculerSurface();
+        double surfaceOuverture = 0;
+        for (Ouverture o : listeOuvertures) {
+            surfaceOuverture += o.getLargeur() * o.getHauteur();
+        }
+        return surfaceBrute - surfaceOuverture;
+    }
+
+    /*public Mur(){
+        SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
+        
+        this.idMur = "Mur" + formatter.format(new Date());
+    }*/
+    
+    
+    
+    //Getters et Setters
     
     public String getIdMur(){
         return idMur;
@@ -68,38 +98,5 @@ public class Mur extends SurfaceAvecRevetement {
     public void setListeOuvertures(List<Ouverture> listeOuvertures){
         this.listeOuvertures = listeOuvertures;
     }
-
-    //Méthode pour ajouter une ouverture dans la liste
-    public void ajouterOuverture(Ouverture o){
-        if(o != null){
-            this.listeOuvertures.add(o);
-        }
-    }
     
-    public double calculerLongueur(){
-        double dX = this.point2.getX() - this.point1.getX();
-        double dY = this.point2.getY() - this.point1.getY();
-        return (double) Math.sqrt(dX*dX + dY*dY);
-    }
-
-    //Méthode pour calculer la surface brute du mur (cad sans les ouvertures)
-    @Override
-    public double calculerSurface(){ 
-        return calculerLongueur() * this.hauteur;
-    }
-
-    public double calculerSurfaceNette(){
-        double surfaceBrute = this.calculerSurface();
-        double surfaceOuverture = 0;
-        for (Ouverture o : listeOuvertures) {
-            surfaceOuverture += o.getLargeur() * o.getHauteur();
-        }
-        return surfaceBrute - surfaceOuverture;
-    }
-
-    /*public Mur(){
-        SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
-        
-        this.idMur = "Mur" + formatter.format(new Date());
-    }*/
 }

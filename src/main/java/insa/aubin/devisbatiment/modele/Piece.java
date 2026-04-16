@@ -1,10 +1,5 @@
 package insa.aubin.devisbatiment.modele;
 
-/**
- *
- * @author Jeffrey Epstein
- */
-
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -20,13 +15,10 @@ public class Piece {
     private List<Sol> sol = new ArrayList<>();
     private List<Revetement> revetements = new ArrayList<>();
     
-    //à modifier plus tard
-    private double hauteurSousPlafond = 12.2;
-    
+    private double hauteur = 12.2;
     public Piece(List<Point> points) {
-        SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
         
-        this.idPiece = "Piece" + formatter.format(new Date());
+        this.idPiece = "Piece" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
         this.points = points;
         
         this.usage = new ArrayList<>();
@@ -34,11 +26,12 @@ public class Piece {
         this.plafond = new ArrayList<>();
         this.sol = new ArrayList<>();
         this.revetements = new ArrayList<>();
-        
+            
         for (int i = 0; i < points.size(); i++) {
             Point debut = points.get(i);
-            Point fin = points.get((i + 1) % points.size()); 
-            this.mur.add(new Mur(debut, fin, hauteurSousPlafond));
+            Point fin = points.get((i + 1) % points.size());
+            
+            this.mur.add(new Mur(debut, fin, hauteur));
         }
     }
 
