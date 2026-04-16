@@ -45,6 +45,8 @@ public class LoginControleur {
         // 2. On affiche la nouvelle fenêtre
         nouveauStage.show();
 
+        DashBoardControleur dashBoardControleur = new DashBoardControleur(dashBoardView, nouveauStage);
+
         // 3. SEULEMENT MAINTENANT, on récupère et on ferme l'ancienne
         // On utilise le "Window" de la vue actuelle (LoginView)
         Stage ancienStage = (Stage) this.vue.getScene().getWindow();
