@@ -24,8 +24,11 @@ public class DashBoardControleur {
     public void ouvrirPiece(){
         PieceView pieceView = new PieceView();
         Scene pieceScene = new Scene(pieceView);
+
         stage.setScene(pieceScene);
         stage.setTitle("InsaBuilder - Nouveau devis pour une pièce");
         stage.show();
+        stage.setMaximized(false); //On force pour que la fenêtre occupe toute la page
+        stage.setMaximized(true);
     }
 }

@@ -16,9 +16,9 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Insets;
 
 public class DashBoardView extends BorderPane {
-    String cheminImmeuble = "/images/appartement icone.png";
-    String cheminMaison = "/images/maison icone.png";
-    String cheminPiece = "/images/piece icone.png";
+    String cheminImmeuble = "/images/appartement_icone.png";
+    String cheminMaison = "/images/maison_icone.png";
+    String cheminPiece = "/images/piece_icone.png";
 
     private Button immeubleButton;
     private Button appartementButton;
