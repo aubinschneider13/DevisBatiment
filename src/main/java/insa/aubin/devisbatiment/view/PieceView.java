@@ -6,9 +6,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
+import javafx.scene.layout.*;
 
 public class PieceView extends BorderPane {
     String cheminMur = "/images/mur_icone.png";
@@ -110,7 +108,7 @@ public class PieceView extends BorderPane {
         tabPane.getTabs().addAll(tabConstruction, tabDevis);
         tabPane.setStyle("-fx-border-color: #d1d1d1; -fx-border-width: 0 0 1 0;");
         this.setTop(tabPane);
-
+//--------------------------------------------------------------------------------------------------------------------------------------------------------
         // Au centre
         StackPane zoneCentrale = new StackPane();
         zoneCentrale.setStyle("-fx-background-color: #2b2b2b;"); //A modifer après
@@ -119,6 +117,30 @@ public class PieceView extends BorderPane {
 
         zoneCentrale.getChildren().add(canvas);
 
-        this.setCenter(zoneCentrale);
+        //this.setCenter(zoneCentrale);
+//--------------------------------------------------------------------------------------------------------------------------------------------------------
+        // A gauche
+        TreeItem<String> root = new TreeItem<>("Devis : Ma pièce");
+        TreeItem<String> murs = new TreeItem<>("Murs");
+        TreeItem<String> ouvertures = new TreeItem<>("Ouvertures");
+        TreeItem<String> surfaces = new TreeItem<>("Surfaces");
+
+        root.getChildren().addAll(murs, ouvertures, surfaces);
+
+        TreeView<String> treeView = new TreeView<>(root);
+
+        TitledPane titledPane = new TitledPane("Navigateur de modèle",  treeView);
+        titledPane.setCollapsible(false);
+
+        VBox leftVBox = new VBox(titledPane);
+        leftVBox.setVgrow(titledPane, Priority.ALWAYS);
+        leftVBox.setPrefWidth(250);
+
+        //this.setLeft(leftVBox);
+
+        SplitPane splitPane = new SplitPane(leftVBox, zoneCentrale);
+        splitPane.setDividerPosition(0, 0.2);
+
+        this.setCenter(splitPane);
     }
 }

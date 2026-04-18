@@ -8,7 +8,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
-public class Batiment {
+public abstract class Batiment {
     private String nomBatiment;
     private String idBatiment;
     private String typeBatiment;
@@ -39,6 +39,7 @@ public class Batiment {
             System.err.println("Erreur écriture batiments.txt : " + e.getMessage());
         }
     }
-    
+
+    public abstract void dessiner();
     
 }
