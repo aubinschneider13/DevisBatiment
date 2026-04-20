@@ -1,17 +1,19 @@
 package insa.aubin.devisbatiment.modele;
 
-import java.text.SimpleDateFormat;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
+
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
-public class Mur extends SurfaceAvecRevetement {
+public class Mur extends SurfaceAvecRevetement implements Dessin {
     
     private Point point1;
     private Point point2;
     private double hauteur;
     private List<Ouverture> listeOuvertures;
     private String idMur;
+    private Color color = Color.BLACK;
 
     public Mur(Point point1, Point point2, double hauteur) {
         super("Mur");
@@ -98,5 +100,20 @@ public class Mur extends SurfaceAvecRevetement {
     public void setListeOuvertures(List<Ouverture> listeOuvertures){
         this.listeOuvertures = listeOuvertures;
     }
-    
+
+    @Override
+    public Color getColor() {
+        return null;
+    }
+
+    @Override
+    public void setColor(Color color) {
+        this.color = color;
+    }
+
+    @Override
+    public void dessiner(GraphicsContext gc) {
+        gc.setStroke(this.color); //on définit une couleur pour les contours
+        gc.strokeLine(point1.getX(), point1.getY(), point2.getX(), point2.getY()); //on déssine la ligne
+    }
 }

@@ -39,7 +39,5 @@ public abstract class Batiment {
             System.err.println("Erreur écriture batiments.txt : " + e.getMessage());
         }
     }
-
-    public abstract void dessiner();
     
 }

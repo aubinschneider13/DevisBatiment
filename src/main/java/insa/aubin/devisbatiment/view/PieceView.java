@@ -113,7 +113,9 @@ public class PieceView extends BorderPane {
         StackPane zoneCentrale = new StackPane();
         zoneCentrale.setStyle("-fx-background-color: #2b2b2b;"); //A modifer après
 
-        Canvas canvas = new Canvas(1000, 700);
+        //Canvas canvas = new Canvas(1000, 700);
+        Canvas canvas = new Canvas(zoneCentrale.getWidth(), zoneCentrale.getHeight());
+        canvas.heightProperty().bind(zoneCentrale.heightProperty());
 
         zoneCentrale.getChildren().add(canvas);
 

@@ -9,9 +9,4 @@ public class Maison extends Batiment {
         super(nomBat, typeBat, nbNiveau);
         this.idMaison = "Maison" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
     }
-
-    @Override
-    public void dessiner() {
-
-    }
 }
