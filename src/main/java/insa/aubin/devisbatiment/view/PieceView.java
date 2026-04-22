@@ -1,5 +1,6 @@
 package insa.aubin.devisbatiment.view;
 
+import insa.aubin.devisbatiment.controlleur.PieceVueControleur;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.canvas.Canvas;
@@ -14,7 +15,13 @@ public class PieceView extends BorderPane {
     String cheminFenetre = "/images/fenetre_icone.png";
     String cheminCote = "/images/cote_icone.png";
 
+    private PieceVueControleur controleur;
+    private Button murButton;
+    private DessinCanvas canvas;
+
     public PieceView() {
+        this.controleur = new PieceVueControleur(this);
+
         //Au top
         TabPane tabPane = new TabPane();
         Tab tabConstruction = new Tab("Construction");
@@ -31,15 +38,19 @@ public class PieceView extends BorderPane {
         iconeMur.setFitWidth(30);
         iconeMur.setPreserveRatio(true);
 
-        Button murButton = new Button("Mur");
-        murButton.setStyle("-fx-cursor: hand;" +
+        this.murButton = new Button("Mur");
+        this.murButton.setStyle("-fx-cursor: hand;" +
                 "-fx-font-family: 'Arial';" +
                 "-fx-font-size: 13px;" +
                 "-fx-font-weight: bold;" +
                 "-fx-text-fill: #34495e;");
-        murButton.setPrefSize(60, 60);
-        murButton.setGraphic(iconeMur);
-        murButton.setContentDisplay(ContentDisplay.TOP);
+        this.murButton.setPrefSize(60, 60);
+        this.murButton.setGraphic(iconeMur);
+        this.murButton.setContentDisplay(ContentDisplay.TOP);
+
+        this.murButton.setOnAction(e -> {
+            this.controleur.btnMur(e); // Appelle la méthode qui fait changerEtat(30)
+        });
 
         Separator separation1 = new Separator();
         separation1.setOrientation(Orientation.VERTICAL);
@@ -111,11 +122,14 @@ public class PieceView extends BorderPane {
 //--------------------------------------------------------------------------------------------------------------------------------------------------------
         // Au centre
         StackPane zoneCentrale = new StackPane();
-        zoneCentrale.setStyle("-fx-background-color: #2b2b2b;"); //A modifer après
+        zoneCentrale.setStyle("-fx-background-color: #fffefe;"); //A modifer après
 
-        //Canvas canvas = new Canvas(1000, 700);
-        Canvas canvas = new Canvas(zoneCentrale.getWidth(), zoneCentrale.getHeight());
-        canvas.heightProperty().bind(zoneCentrale.heightProperty());
+        this.canvas = new DessinCanvas();
+        this.canvas.widthProperty().bind(zoneCentrale.widthProperty());
+        this.canvas.heightProperty().bind(zoneCentrale.heightProperty());
+        this.canvas.setOnMouseClicked(e -> {
+            this.controleur.clicDansZoneDeDessin(e);
+        });
 
         zoneCentrale.getChildren().add(canvas);
 
@@ -144,5 +158,13 @@ public class PieceView extends BorderPane {
         splitPane.setDividerPosition(0, 0.2);
 
         this.setCenter(splitPane);
+    }
+
+    public DessinCanvas getCanvas() {
+        return canvas;
+    }
+
+    public void redrawAll(){
+        this.canvas.redrawAll();
     }
 }

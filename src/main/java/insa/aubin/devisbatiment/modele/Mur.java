@@ -12,7 +12,6 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     private Point point2;
     private double hauteur;
     private List<Ouverture> listeOuvertures;
-    private String idMur;
     private Color color = Color.BLACK;
 
     public Mur(Point point1, Point point2, double hauteur) {
@@ -51,23 +50,7 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         return surfaceBrute - surfaceOuverture;
     }
 
-    /*public Mur(){
-        SimpleDateFormat formatter = new SimpleDateFormat("ddMMyyyyHHmmss");
-        
-        this.idMur = "Mur" + formatter.format(new Date());
-    }*/
-    
-    
-    
     //Getters et Setters
-    
-    public String getIdMur(){
-        return idMur;
-    }
-
-    public void setIdMur(String idMur){
-        this.idMur = idMur;
-    }
 
     public Point getPoint1() {
         return point1;
@@ -101,6 +84,7 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         this.listeOuvertures = listeOuvertures;
     }
 
+    //Méthodes pour éléments graphiques
     @Override
     public Color getColor() {
         return null;
@@ -115,5 +99,12 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     public void dessiner(GraphicsContext gc) {
         gc.setStroke(this.color); //on définit une couleur pour les contours
         gc.strokeLine(point1.getX(), point1.getY(), point2.getX(), point2.getY()); //on déssine la ligne
+    }
+
+    @Override
+    public String toString() {
+        return "Mur [" + getId() + "]"
+                + "(" + point1.getX() + "," + point1.getY() + ")"
+                + "(" + point2.getX() + "," + point2.getY() + ")";
     }
 }

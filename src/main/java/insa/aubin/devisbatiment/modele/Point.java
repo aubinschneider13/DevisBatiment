@@ -1,8 +1,13 @@
 package insa.aubin.devisbatiment.modele;
 
-public class Point {
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
+
+public class Point implements Dessin {
     private double x;
     private double y;
+    public static double RAYON_IN_DRAW = 5;
+    private Color color = Color.BLACK;
     
     public Point(double x, double y){
         this.x = x;
@@ -24,6 +29,19 @@ public class Point {
     public void setY(double y) {
         this.y = y;
     }
-    
-    
+
+    @Override
+    public void dessiner(GraphicsContext gc) {
+        gc.setFill(this.getColor());
+        gc.fillOval(this.x-RAYON_IN_DRAW, this.y-RAYON_IN_DRAW, 2*RAYON_IN_DRAW, 2*RAYON_IN_DRAW);
+    }
+
+    @Override
+    public void setColor(Color color) {
+        this.color = color;
+    }
+    @Override
+    public Color getColor() {
+        return this.color;
+    }
 }

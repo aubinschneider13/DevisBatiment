@@ -2,13 +2,14 @@ package insa.aubin.devisbatiment.modele;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class SurfaceAvecRevetement {
+public abstract class SurfaceAvecRevetement extends ElementDeConstruction{
     
     private List<Revetement> revetement;
-    private String idSurSurfaceAvecRevetement;
+    //private String idSurSurfaceAvecRevetement;
 
-    public SurfaceAvecRevetement(String idSurSurfaceAvecRevetement){
-        this.idSurSurfaceAvecRevetement = idSurSurfaceAvecRevetement;
+    public SurfaceAvecRevetement(String prefixe){
+        super(prefixe);
+        this.revetement = new ArrayList<>();
     }
 
     public List<Revetement> getRevetement(){
@@ -23,13 +24,7 @@ public abstract class SurfaceAvecRevetement {
         }
     }
 
-    public String getIdSurSurfaceAvecRevetement() {
-        return idSurSurfaceAvecRevetement;
-    }
-
-    public void setIdSurSurfaceAvecRevetement(String idSurSurfaceAvecRevetement) {
-        this.idSurSurfaceAvecRevetement = idSurSurfaceAvecRevetement;
-    }
+    //Méthode calculerPrixRevetement() à implémenter !
     
     
 

@@ -13,4 +13,9 @@ public class Plafond extends SurfaceAvecRevetement {
     public double calculerSurface(){
      return 0.0;
     }
+
+    @Override
+    public String toString() {
+        return "";
+    }
 }
