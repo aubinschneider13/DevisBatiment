@@ -63,5 +63,13 @@ public abstract class Batiment extends ElementDeConstruction {
         this.nbNiveaux = nbNiveaux;
     }
     
-    
+    @Override
+    public String toCSV() {
+        return getId() + ";" + nomBatiment + ";" + typeBatiment + ";" + nbNiveaux;
+    }
+
+    @Override
+    public String toString() {
+        return typeBatiment + " [id=" + getId() + ", nom=" + nomBatiment + ", niveaux=" + nbNiveaux + "]";
+    }
 }

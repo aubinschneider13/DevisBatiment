@@ -7,6 +7,11 @@ public class Immeuble extends Batiment {
     }
 
     @Override
+    public String toCSV() {
+        return "IMMEUBLE" + super.getId() + ";" + super.getNomBatiment() + ";" + "IMMEUBLE" + ";" + super.getNbNiveaux();
+    }
+
+    @Override
     public String toString() {
         return "Immeuble [id=" + getId() + ", nom=" + getNomBatiment()
                 + ", niveaux=" + getNbNiveaux() + "]";

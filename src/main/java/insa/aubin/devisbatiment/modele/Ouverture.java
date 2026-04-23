@@ -1,22 +1,23 @@
 package insa.aubin.devisbatiment.modele;
 
-public abstract class Ouverture {
-    private String idOuverture;
+public abstract class Ouverture extends ElementDeConstruction{
     private double largeur;
     private double hauteur;
 
-    public Ouverture(String idOuverture, double largeur, double hauteur){
-        this.idOuverture = idOuverture;
+    public Ouverture(String prefixe, double largeur, double hauteur){
+        super(prefixe);
         this.largeur = largeur;
         this.hauteur = hauteur;
     }
-    
-    public abstract String toCSV();
-    
-    //Getters and Setters
 
-    public String getIdOuverture() {
-        return idOuverture;
+    @Override
+    public String toCSV() {
+        return getId() + ";" + largeur + ";" + hauteur;
+    }
+
+    @Override
+    public String toString() {
+        return "Ouverture [id=" + getId() + ", largeur=" + largeur + ", hauteur=" + hauteur + "]";
     }
 
     public double getLargeur() {

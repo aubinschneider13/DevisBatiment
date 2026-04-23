@@ -1,31 +1,27 @@
 package insa.aubin.devisbatiment.modele;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
-public class Revetement {
-    private String idRevetement;
+public class Revetement extends ElementDeConstruction {
     private String typeRevetement;
     private double prixUnitaire;
 
     public Revetement(String typeRevetement, double prixUnitaire){
-        this.idRevetement = "Revetement" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
+        super("Revetement");
         this.typeRevetement = typeRevetement;
         this.prixUnitaire = prixUnitaire;
     }
-    
-    public String toCSV() {
-        return "REVETEMENT;" + idRevetement + ";" + typeRevetement + ";" + prixUnitaire;
-    }
-    
-    // Getters et Setters
-    
-    public String getIdRevetement() {
-        return idRevetement;
+
+    public double calculerPrixTotal(double surface) {
+        return this.prixUnitaire * surface;
     }
 
-    public void setIdRevetement(String idRevetement) {
-        this.idRevetement = idRevetement;
+    @Override
+    public String toCSV() {
+        return "REVETEMENT;" + getId() + ";" + typeRevetement + ";" + prixUnitaire;
+    }
+
+    @Override
+    public String toString() {
+        return "Revetement [id=" + getId() + ", type=" + typeRevetement + ", prixUnitaire=" + prixUnitaire + "]";
     }
 
     public String getTypeRevetement() {
@@ -43,7 +39,4 @@ public class Revetement {
     public void setPrixUnitaire(double prixUnitaire) {
         this.prixUnitaire = prixUnitaire;
     }
-
-
-
 }

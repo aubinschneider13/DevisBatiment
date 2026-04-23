@@ -32,7 +32,7 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     public double calculerLongueur(){
         double dX = this.point2.getX() - this.point1.getX();
         double dY = this.point2.getY() - this.point1.getY();
-        return (double) Math.sqrt(dX*dX + dY*dY);
+        return Math.sqrt(dX*dX + dY*dY);
     }
 
     //Méthode pour calculer la surface brute du mur (cad sans les ouvertures)
@@ -72,7 +72,7 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         return hauteur;
     }
 
-    public void setHauteur(float hauteur){
+    public void setHauteur(double hauteur){
         this.hauteur = hauteur;
     }
 
@@ -87,7 +87,7 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     //Méthodes pour éléments graphiques
     @Override
     public Color getColor() {
-        return null;
+        return color;
     }
 
     @Override
@@ -102,8 +102,16 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     }
 
     @Override
+    public String toCSV() {
+        return "MUR;" + super.toCSV()
+                + ";" + point1.getX() + ";" + point1.getY()
+                + ";" + point2.getX() + ";" + point2.getY()
+                + ";" + hauteur;
+    }
+
+    @Override
     public String toString() {
-        return "Mur [" + getId() + "]"
+        return "Mur [id=" + getId() + "]"
                 + "(" + point1.getX() + "," + point1.getY() + ")"
                 + "(" + point2.getX() + "," + point2.getY() + ")";
     }

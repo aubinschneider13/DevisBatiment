@@ -1,13 +1,4 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- */
-
 package insa.aubin.devisbatiment.modele;
-
-/**
- *
- * @author Hayk t'es moche
- */
 
 public class DevisBatiment {
 

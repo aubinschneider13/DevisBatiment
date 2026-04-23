@@ -1,18 +1,15 @@
 package insa.aubin.devisbatiment.modele;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 
-public class Niveau {
-    private String idNiveau;
+public class Niveau extends ElementDeConstruction {
+
     private double nbAppartements;
     private double hauteurPlafond;
-    ArrayList<Appartement> appartements = new ArrayList<>();
-     
-    public Niveau(double nbApparements, float hauteurPlafond){
-        
-        this.idNiveau = "Niveau" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
+    private ArrayList<Appartement> appartements;
+
+    public Niveau(double nbAppartements, double hauteurPlafond) {
+        super("Niveau");
         this.nbAppartements = nbAppartements;
         this.hauteurPlafond = hauteurPlafond;
         this.appartements = new ArrayList<>();
@@ -20,8 +17,10 @@ public class Niveau {
     
     //Getters and Setters
 
-    public String getIdNiveau() {
-        return idNiveau;
+    public Appartement ajouterAppartement(int nbPieces) {
+        Appartement a = new Appartement(nbPieces, this.hauteurPlafond);
+        this.appartements.add(a);
+        return a;
     }
 
     public double getNbAppartements() {
@@ -38,5 +37,20 @@ public class Niveau {
 
     public void setHauteurPlafond(double hauteurPlafond) {
         this.hauteurPlafond = hauteurPlafond;
+    }
+
+    public ArrayList<Appartement> getAppartements() {
+        return appartements;
+    }
+
+    @Override
+    public String toCSV() {
+        return "NIVEAU;" + getId() + ";" + nbAppartements + ";" + hauteurPlafond;
+    }
+
+    @Override
+    public String toString() {
+        return "Niveau [id=" + getId() + ", nbAppartements=" + nbAppartements
+                + ", hauteurPlafond=" + hauteurPlafond + "]";
     }
 }

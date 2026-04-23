@@ -10,8 +10,14 @@ public class Fenetre extends Ouverture {
         super("Fenetre" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date()), COTE_FENETRE, COTE_FENETRE);
     }
 
+    @Override
     public String toCSV() {
-        return "FENETRE;" + COTE_FENETRE + ";" + COTE_FENETRE;
+        return "FENETRE;" + getId() + ";" + COTE_FENETRE + ";" + COTE_FENETRE;
+    }
+
+    @Override
+    public String toString() {
+        return "Fenetre [id=" + getId() + ", largeur=" + COTE_FENETRE + ", hauteur=" + COTE_FENETRE + "]";
     }
    
 }

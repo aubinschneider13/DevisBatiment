@@ -1,21 +1,26 @@
 package insa.aubin.devisbatiment.modele;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 public class Sol extends SurfaceAvecRevetement {
-    
-     public Sol(){
-        super("Sol" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date()));
+
+    private double surface;
+
+    public Sol(double surface) {
+        super("Sol");
+        this.surface = surface;
     }
 
     @Override
-    public double calculerSurface(){
-     return 0.0;
+    public double calculerSurface() {
+        return surface;
+    }
+
+    @Override
+    public String toCSV() {
+        return "SOL;" + super.toCSV() + ";" + surface;
     }
 
     @Override
     public String toString() {
-        return "";
+        return "Sol [id=" + getId() + ", surface=" + surface + "]";
     }
 }

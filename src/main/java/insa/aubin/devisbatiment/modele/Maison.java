@@ -7,6 +7,11 @@ public class Maison extends Batiment {
     }
 
     @Override
+    public String toCSV() {
+        return "MAISON" + super.getId() + ";" + super.getNomBatiment() + ";" + "MAISON" + ";" + super.getNbNiveaux();
+    }
+
+    @Override
     public String toString() {
         return "Maison [id=" + getId() + ", nom=" + getNomBatiment()
                 + ", niveaux=" + getNbNiveaux() + "]";
