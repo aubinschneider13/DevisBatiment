@@ -1,26 +1,21 @@
 package insa.aubin.devisbatiment.modele;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class Plafond extends SurfaceAvecRevetement {
 
-    private float surface;
-
-    public Plafond(float surface) {
-        super("Plafond");
-        this.surface = surface;
+    public Plafond(){
+        super("Plafond" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date()));
     }
 
     @Override
-    public float calculerSurface() {
-        return surface;
-    }
-
-    @Override
-    public String toCSV() {
-        return "PLAFOND;" + super.toCSV() + ";" + surface;
+    public double calculerSurface(){
+     return 0.0;
     }
 
     @Override
     public String toString() {
-        return "Plafond [id=" + getId() + ", surface=" + surface + "]";
+        return "";
     }
 }
