@@ -1,13 +1,14 @@
 package insa.aubin.devisbatiment.modele;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 public class Immeuble extends Batiment {
-    private String idAppartement;
 
-    public Immeuble(String nomBat, String typeBat, double nbNiveau){
-        super(nomBat, typeBat, nbNiveau);
-        this.idAppartement = "Appartement" +  new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
+    public Immeuble(String nomBat, int nbNiveau) {
+        super(nomBat, "Immeuble", nbNiveau);
+    }
+
+    @Override
+    public String toString() {
+        return "Immeuble [id=" + getId() + ", nom=" + getNomBatiment()
+                + ", niveaux=" + getNbNiveaux() + "]";
     }
 }

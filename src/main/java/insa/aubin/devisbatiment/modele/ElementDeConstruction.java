@@ -4,14 +4,16 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public abstract class ElementDeConstruction {
+    
     private String id;
+    
     public ElementDeConstruction(String prefixe) {
-        this.id = generetId(prefixe);
+        this.id = genererId(prefixe);
     }
     public String getId() {
         return id;
     }
-    public String generetId(String prefixe) {
+    public String genererId(String prefixe) {
         return prefixe + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
     }
 
