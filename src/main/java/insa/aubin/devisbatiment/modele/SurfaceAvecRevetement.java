@@ -1,31 +1,47 @@
 package insa.aubin.devisbatiment.modele;
+
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class SurfaceAvecRevetement extends ElementDeConstruction{
-    
-    private List<Revetement> revetement;
-    //private String idSurSurfaceAvecRevetement;
+public abstract class SurfaceAvecRevetement extends ElementDeConstruction {
 
-    public SurfaceAvecRevetement(String prefixe){
+    private List<Revetement> revetements;
+
+    public SurfaceAvecRevetement(String prefixe) {
         super(prefixe);
-        this.revetement = new ArrayList<>();
+        this.revetements = new ArrayList<>();
     }
 
-    public List<Revetement> getRevetement(){
-        return revetement;
-    }
+    public List<Revetement> getRevetements() { return revetements; }
 
-    public abstract double calculerSurface();
+    public abstract float calculerSurface();
 
-    public void ajouterRevetement(Revetement r){
-        if(r != null){
-            this.revetement.add(r);
+    public void ajouterRevetement(Revetement r) {
+        if (r != null) {
+            this.revetements.add(r);
         }
     }
 
-    //Méthode calculerPrixRevetement() à implémenter !
-    
-    
+    public float calculerPrixRevetement() {
+        float total = 0;
+        for (Revetement r : revetements) {
+            total += r.calculerPrixTotal(calculerSurface());
+        }
+        return total;
+    }
 
+    @Override
+    public String toCSV() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(getId());
+        for (Revetement r : revetements) {
+            sb.append(";").append(r.getId());
+        }
+        return sb.toString();
+    }
+
+    @Override
+    public String toString() {
+        return "SurfaceAvecRevetement [id=" + getId() + ", revetements=" + revetements + "]";
+    }
 }

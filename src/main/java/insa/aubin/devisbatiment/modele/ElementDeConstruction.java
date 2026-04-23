@@ -17,6 +17,8 @@ public abstract class ElementDeConstruction {
         return prefixe + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
     }
 
+    public abstract String toCSV();
+    
     @Override
     public abstract String toString();
 }

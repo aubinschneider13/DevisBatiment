@@ -1,49 +1,43 @@
 package insa.aubin.devisbatiment.modele;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+public class Revetement extends ElementDeConstruction {
 
-public class Revetement {
-    private String idRevetement;
     private String typeRevetement;
-    private double prixUnitaire;
+    private float prixUnitaire;
 
-    public Revetement(String typeRevetement, double prixUnitaire){
-        this.idRevetement = "Revetement" + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
+    public Revetement(String typeRevetement, float prixUnitaire) {
+        super("Revetement");
         this.typeRevetement = typeRevetement;
         this.prixUnitaire = prixUnitaire;
     }
-    
-    public String toCSV() {
-        return "REVETEMENT;" + idRevetement + ";" + typeRevetement + ";" + prixUnitaire;
-    }
-    
-    // Getters et Setters
-    
-    public String getIdRevetement() {
-        return idRevetement;
+
+    public float calculerPrixTotal(float surface) {
+        return this.prixUnitaire * surface;
     }
 
-    public void setIdRevetement(String idRevetement) {
-        this.idRevetement = idRevetement;
+    @Override
+    public String toCSV() {
+        return "REVETEMENT;" + getId() + ";" + typeRevetement + ";" + prixUnitaire;
+    }
+
+    @Override
+    public String toString() {
+        return "Revetement [id=" + getId() + ", type=" + typeRevetement + ", prixUnitaire=" + prixUnitaire + "]";
     }
 
     public String getTypeRevetement() {
         return typeRevetement;
     }
-
+    
     public void setTypeRevetement(String typeRevetement) {
         this.typeRevetement = typeRevetement;
     }
-
-    public double getPrixUnitaire() {
+    
+    public float getPrixUnitaire() {
         return prixUnitaire;
     }
-
-    public void setPrixUnitaire(double prixUnitaire) {
+    
+    public void setPrixUnitaire(float prixUnitaire) {
         this.prixUnitaire = prixUnitaire;
     }
-
-
-
 }

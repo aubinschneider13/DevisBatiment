@@ -9,6 +9,7 @@ import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.scene.transform.Transform;
 
 public class PieceVueControleur {
+
     private PieceView vue;
     private int etat;
 
@@ -16,38 +17,32 @@ public class PieceVueControleur {
         this.vue = vue;
     }
 
-    public void changerEtat(int nouvelEtat){
-        if (nouvelEtat == 30){
-
-        }
+    public void changerEtat(int nouvelEtat) {
         this.etat = nouvelEtat;
     }
 
-    public Point posInModel(double x, double y) {
-        Transform modelVersVue = this.vue.getCanvas().getTransform();
-        Point2D pointTrans; //position du pt en pixel
+    public Point posInModel(float x, float y) {
+        Transform modelVersVue = this.vue.getCanvas().getLocalToSceneTransform();
+        Point2D pointTrans;
         try {
-            pointTrans = modelVersVue.inverseTransform(x, y); //convertit les pixels en données exploitables
+            pointTrans = modelVersVue.inverseTransform(x, y);
         } catch (NonInvertibleTransformException ex) {
             throw new Error(ex);
         }
-        Point pointClic = new Point(pointTrans.getX(), pointTrans.getY()); //on stocke les coordonnées exploitables
-
-        return pointClic;
+        return new Point((float) pointTrans.getX(), (float) pointTrans.getY());
     }
 
-    public void btnMur(ActionEvent t){
+    public void btnMur(ActionEvent t) {
         this.changerEtat(30);
     }
 
-    public void clicDansZoneDeDessin(MouseEvent t){
+    public void clicDansZoneDeDessin(MouseEvent t) {
         System.out.println("Clic détecté !");
-        if (this.etat == 30){
+        if (this.etat == 30) {
             System.out.println("Mode MUR actif");
-            Point pointClic = this.posInModel(t.getX(), t.getY());
+            Point pointClic = this.posInModel((float) t.getX(), (float) t.getY());
             System.out.println("Point créé à : " + pointClic.getX() + ", " + pointClic.getY());
             this.vue.getCanvas().ajouterElement(pointClic);
-            //this.vue.redrawAll();
         }
     }
 }
