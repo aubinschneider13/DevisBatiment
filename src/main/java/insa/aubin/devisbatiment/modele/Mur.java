@@ -21,6 +21,12 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         this.hauteur = hauteur;
         this.listeOuvertures = new ArrayList<>();
     }
+
+    public Mur(Point point1, Point point2){
+        super("Mur");
+        this.point1 = point1;
+        this.point2 = point2;
+    }
     
     //Méthode pour ajouter une ouverture dans la liste
     public void ajouterOuverture(Ouverture o){
@@ -97,8 +103,24 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
 
     @Override
     public void dessiner(GraphicsContext gc) {
+        //Le corps du mur
         gc.setStroke(this.color); //on définit une couleur pour les contours
+        gc.setLineWidth(3);
         gc.strokeLine(point1.getX(), point1.getY(), point2.getX(), point2.getY()); //on déssine la ligne
+
+        //Les coins
+        double rayon = 4.0;
+        gc.setFill(Color.WHITE); //Intérieur blanc
+        gc.setStroke(Color.BLUE); //contour bleu
+        gc.setLineWidth(3);
+
+        //Coin de départ
+        gc.fillOval(point1.getX() - rayon, point1.getY() - rayon, rayon * 2, rayon * 2);
+        gc.strokeOval(point1.getX() - rayon, point1.getY() - rayon, rayon * 2, rayon * 2);
+
+        //Coin de fin
+        gc.fillOval(point2.getX(),  point2.getY() - rayon, rayon * 2, rayon * 2);
+        gc.strokeOval(point2.getX(), point2.getY() - rayon, rayon * 2, rayon * 2);
     }
 
     @Override

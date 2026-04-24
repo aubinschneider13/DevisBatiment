@@ -130,6 +130,9 @@ public class PieceView extends BorderPane {
         this.canvas.setOnMouseClicked(e -> {
             this.controleur.clicDansZoneDeDessin(e);
         });
+        this.canvas.setOnMouseMoved(e -> {
+            this.controleur.mouseMovedDansZoneDessin(e);
+        });
 
         zoneCentrale.getChildren().add(canvas);
 

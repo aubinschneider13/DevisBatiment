@@ -1,5 +1,6 @@
 package insa.aubin.devisbatiment.controlleur;
 
+import insa.aubin.devisbatiment.modele.Mur;
 import insa.aubin.devisbatiment.modele.Point;
 import insa.aubin.devisbatiment.view.PieceView;
 import javafx.event.ActionEvent;
@@ -11,6 +12,8 @@ import javafx.scene.transform.Transform;
 public class PieceVueControleur {
     private PieceView vue;
     private int etat;
+    private Point pointDebut = null;
+    private Mur murEnCours;
 
     public PieceVueControleur(PieceView vue) {
         this.vue = vue;
@@ -44,10 +47,29 @@ public class PieceVueControleur {
         System.out.println("Clic détecté !");
         if (this.etat == 30){
             System.out.println("Mode MUR actif");
-            Point pointClic = this.posInModel(t.getX(), t.getY());
-            System.out.println("Point créé à : " + pointClic.getX() + ", " + pointClic.getY());
-            this.vue.getCanvas().ajouterElement(pointClic);
-            //this.vue.redrawAll();
+            Point p = this.posInModel(t.getX(), t.getY());
+
+            if (this.murEnCours == null){
+                //Premier clic
+                this.murEnCours = new Mur(p, p);
+                this.vue.getCanvas().ajouterElement(murEnCours);
+                System.out.println("Debut du mur : " + p);
+            }
+            else {
+                //Deuxième clic
+                this.murEnCours.setPoint2(p);
+                this.murEnCours = null; //on remet le premier point à null pour recommencer à dessiner un autre mur
+                this.vue.redrawAll();
+                System.out.println("Mur termine");
+            }
+
+        }
+    }
+
+    public void mouseMovedDansZoneDessin(MouseEvent t){
+        if (this.etat == 30){
+            this.murEnCours.setPoint2(this.posInModel(t.getX(), t.getY()));
+            this.vue.redrawAll();
         }
     }
 }
