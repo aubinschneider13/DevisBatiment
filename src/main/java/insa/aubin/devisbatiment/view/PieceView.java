@@ -113,8 +113,15 @@ public class PieceView extends BorderPane {
 
         tabConstruction.setContent(hBoxConstruction);
 
+        //Le Tab pour le devis et le choix des matériaux
         Tab tabDevis = new Tab("Matériaux et Devis");
         tabDevis.setClosable(false);
+
+        HBox hBoxDevis = new HBox();
+        hBoxDevis.setSpacing(10);
+        hBoxDevis.setPadding(new Insets(10));
+
+        //Button
 
         tabPane.getTabs().addAll(tabConstruction, tabDevis);
         tabPane.setStyle("-fx-border-color: #d1d1d1; -fx-border-width: 0 0 1 0;");
