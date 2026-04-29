@@ -17,7 +17,7 @@ public class LoginControleur {
     public void valider(){
         this.vue.getBtnValider().setOnAction(e -> {
             String motDePasse = this.vue.getPassword();
-            if(motDePasse.equals("groscaca")){
+            if(motDePasse.equals("Hayk")){
                 ouvrirTableauDeBord();
             }
             else{

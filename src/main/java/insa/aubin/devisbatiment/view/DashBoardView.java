@@ -36,7 +36,7 @@ public class DashBoardView extends BorderPane {
         messageBienvenue.setStyle("-fx-font-family: 'Bauhaus 93'; -fx-font-size: 40px; -fx-text-fill: #2c3e50;");
         messageBienvenue.setPadding(new Insets(5,0,0,0));
 
-        Label labelInstruction = new Label("A vous de jouer : commencer un nouveau devis ou continuer les !");
+        Label labelInstruction = new Label("À vous de jouer : commencez un nouveau devis ou continuez-les !");
         labelInstruction.setStyle("-fx-font-family: 'Arial Black'; -fx-font-size: 18px");
 
         Separator separator = new Separator();
@@ -58,7 +58,7 @@ public class DashBoardView extends BorderPane {
         firstHBox.setPadding(new Insets(10,10,10,10));
         firstHBox.setSpacing(20);
 
-        Label nouveauLabel = new Label("Réalisez un nouveau devis : ");
+        Label nouveauLabel = new Label("Réaliser un nouveau devis : ");
         nouveauLabel.setStyle("-fx-font-family: Arial Black; -fx-font-size: 14px");
 
                 //Configuration du bouton Immeuble
