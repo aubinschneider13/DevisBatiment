@@ -41,6 +41,7 @@ public class PieceVueControleur {
 
     public void btnMur(ActionEvent t){
         this.changerEtat(30);
+        this.vue.getOptionsMurVue().setVisible(true);
     }
 
     public void clicDansZoneDeDessin(MouseEvent t){

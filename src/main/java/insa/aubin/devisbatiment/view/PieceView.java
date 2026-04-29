@@ -3,6 +3,7 @@ package insa.aubin.devisbatiment.view;
 import insa.aubin.devisbatiment.controlleur.PieceVueControleur;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
+import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
@@ -18,6 +19,8 @@ public class PieceView extends BorderPane {
     private PieceVueControleur controleur;
     private Button murButton;
     private DessinCanvas canvas;
+
+    private OptionsMurVue optionsMurVue;
 
     public PieceView() {
         this.controleur = new PieceVueControleur(this);
@@ -141,7 +144,12 @@ public class PieceView extends BorderPane {
             this.controleur.mouseMovedDansZoneDessin(e);
         });
 
-        zoneCentrale.getChildren().add(canvas);
+        this.optionsMurVue = new OptionsMurVue();
+        StackPane.setAlignment(optionsMurVue, Pos.TOP_RIGHT);
+        StackPane.setMargin(optionsMurVue, new Insets(10));
+
+        zoneCentrale.getChildren().addAll(canvas,  optionsMurVue);
+
 
         //this.setCenter(zoneCentrale);
 //--------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -176,5 +184,9 @@ public class PieceView extends BorderPane {
 
     public void redrawAll(){
         this.canvas.redrawAll();
+    }
+
+    public OptionsMurVue getOptionsMurVue() {
+        return optionsMurVue;
     }
 }

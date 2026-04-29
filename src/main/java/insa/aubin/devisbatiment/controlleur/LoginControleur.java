@@ -15,6 +15,7 @@ public class LoginControleur {
     }
 
     public void valider(){
+        this.vue.getBtnValider().setDefaultButton(true); //mettre le bouton en default permet de déclencher automatiquement l'action de ce bouton en pressant sur la touche entrée
         this.vue.getBtnValider().setOnAction(e -> {
             String motDePasse = this.vue.getPassword();
             if(motDePasse.equals("Hayk")){
@@ -23,8 +24,8 @@ public class LoginControleur {
             else{
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setTitle("Erreur");
-                alert.setHeaderText("Erreur");
-                alert.setContentText("Erreur");
+                alert.setHeaderText("Échec de l'authentification");
+                alert.setContentText("Le mot de passe saisi est incorrect. Veuillez réessayer.");
                 alert.showAndWait();
 
                 this.vue.nettoyerMotDePasse();
