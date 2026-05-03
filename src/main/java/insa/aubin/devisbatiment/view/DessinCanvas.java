@@ -36,4 +36,8 @@ public class DessinCanvas extends Canvas {
         this.elements.add(d);
         this.redrawAll(); // On rafraîchit dès qu'on ajoute quelque chose
     }
+
+    public List<Dessin> getElements() {
+        return this.elements;
+    }
 }

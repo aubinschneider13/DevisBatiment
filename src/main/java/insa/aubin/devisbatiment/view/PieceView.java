@@ -4,7 +4,6 @@ import insa.aubin.devisbatiment.controlleur.PieceVueControleur;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
-import javafx.scene.canvas.Canvas;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -21,6 +20,11 @@ public class PieceView extends BorderPane {
     private DessinCanvas canvas;
 
     private OptionsMurVue optionsMurVue;
+
+    private TreeItem<String> root;
+    private TreeItem<String> itemMurs;
+    private TreeItem<String> itemOuvertures;
+    private TreeItem<String> itemSurfaces;
 
     public PieceView() {
         this.controleur = new PieceVueControleur(this);
@@ -154,12 +158,12 @@ public class PieceView extends BorderPane {
         //this.setCenter(zoneCentrale);
 //--------------------------------------------------------------------------------------------------------------------------------------------------------
         // A gauche
-        TreeItem<String> root = new TreeItem<>("Devis : Ma pièce");
-        TreeItem<String> murs = new TreeItem<>("Murs");
-        TreeItem<String> ouvertures = new TreeItem<>("Ouvertures");
-        TreeItem<String> surfaces = new TreeItem<>("Surfaces");
+        this.root = new TreeItem<>("Devis : Ma pièce");
+        this.itemMurs = new TreeItem<>("Murs");
+        this.itemOuvertures = new TreeItem<>("Ouvertures");
+        this.itemSurfaces = new TreeItem<>("Surfaces");
 
-        root.getChildren().addAll(murs, ouvertures, surfaces);
+        root.getChildren().addAll(itemMurs, itemOuvertures, itemSurfaces);
 
         TreeView<String> treeView = new TreeView<>(root);
 
@@ -176,6 +180,15 @@ public class PieceView extends BorderPane {
         splitPane.setDividerPosition(0, 0.2);
 
         this.setCenter(splitPane);
+
+        // On permet à la vue de recevoir le focus pour capturer les touches
+        this.setFocusTraversable(true);
+
+        this.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+                this.controleur.annulerConstruction();
+            }
+        });
     }
 
     public DessinCanvas getCanvas() {
@@ -188,5 +201,9 @@ public class PieceView extends BorderPane {
 
     public OptionsMurVue getOptionsMurVue() {
         return optionsMurVue;
+    }
+
+    public TreeItem<String> getItemMurs() {
+        return itemMurs;
     }
 }

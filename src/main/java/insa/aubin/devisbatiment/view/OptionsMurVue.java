@@ -1,10 +1,8 @@
 package insa.aubin.devisbatiment.view;
 
 import javafx.geometry.Insets;
-import javafx.scene.control.Label;
-import javafx.scene.control.RadioButton;
-import javafx.scene.control.Separator;
-import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.*;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
@@ -37,11 +35,15 @@ public class OptionsMurVue extends VBox {
         rbLibre = new RadioButton("Forme libre");
         rbRectangulaire.setToggleGroup(groupeForme);
         rbLibre.setToggleGroup(groupeForme);
-        rbLibre.setSelected(true);
+        rbRectangulaire.setSelected(true);
 
         this.getChildren().addAll(titre, new Separator(), rbManuel, rbCoordonnees, new Separator(), rbRectangulaire, rbLibre);
 
         // Par défaut, on cache le panneau
         this.setVisible(false);
+    }
+
+    public boolean estRectangulaire(){
+        return  rbRectangulaire.isSelected();
     }
 }

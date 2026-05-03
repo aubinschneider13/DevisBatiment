@@ -13,6 +13,8 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     private double hauteur;
     private List<Ouverture> listeOuvertures;
     private Color color = Color.BLACK;
+    private static int compteurMurs = 0;
+    private int numeroUnique;
 
     public Mur(Point point1, Point point2, double hauteur) {
         super("Mur");
@@ -20,12 +22,13 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         this.point2 = point2;
         this.hauteur = hauteur;
         this.listeOuvertures = new ArrayList<>();
+
+        compteurMurs++;
+        this.numeroUnique = compteurMurs;
     }
 
     public Mur(Point point1, Point point2){
-        super("Mur");
-        this.point1 = point1;
-        this.point2 = point2;
+        this(point1, point2, 2.5);
     }
     
     //Méthode pour ajouter une ouverture dans la liste
@@ -119,7 +122,7 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         gc.strokeOval(point1.getX() - rayon, point1.getY() - rayon, rayon * 2, rayon * 2);
 
         //Coin de fin
-        gc.fillOval(point2.getX(),  point2.getY() - rayon, rayon * 2, rayon * 2);
+        gc.fillOval(point2.getX() - rayon,  point2.getY() - rayon, rayon * 2, rayon * 2);
         gc.strokeOval(point2.getX(), point2.getY() - rayon, rayon * 2, rayon * 2);
     }
 
@@ -132,9 +135,12 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     }
 
     @Override
-    public String toString() {
+    /*public String toString() {
         return "Mur [id=" + getId() + "]"
                 + "(" + point1.getX() + "," + point1.getY() + ")"
                 + "(" + point2.getX() + "," + point2.getY() + ")";
+    }*/
+    public String toString() {
+        return String.format("Mur n°%d (%.2f m)", numeroUnique, calculerLongueur());
     }
 }
