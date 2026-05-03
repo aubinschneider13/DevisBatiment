@@ -1,18 +1,14 @@
 package insa.aubin.devisbatiment.modele;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Appartement extends ElementDeConstruction {
-
-    private int nbPieces;
     private double hauteurPlafond;
     private List<Piece> pieces;
 
     public Appartement(int nbPieces, double hauteurPlafond) {
         super("Appartement");
-        this.nbPieces = nbPieces;
         this.hauteurPlafond = hauteurPlafond;
         this.pieces = new ArrayList<>();
     }
@@ -23,19 +19,30 @@ public class Appartement extends ElementDeConstruction {
         return p;
     }
 
-    public int getNbPieces() { return nbPieces; }
-    public void setNbPieces(int nbPieces) { this.nbPieces = nbPieces; }
-    public double getHauteurPlafond() { return hauteurPlafond; }
-    public List<Piece> getPieces() { return pieces; }
+    public int getNbPieces() {
+        return pieces.size();
+    }
+
+    public double getHauteurPlafond() {
+        return hauteurPlafond;
+    }
+
+    public void setHauteurPlafond(double hauteurPlafond) {
+        this.hauteurPlafond = hauteurPlafond;
+    }
+
+    public List<Piece> getPieces() {
+        return pieces;
+    }
 
     @Override
     public String toCSV() {
-        return "APPARTEMENT;" + getId() + ";" + nbPieces + ";" + hauteurPlafond;
+        return "APPARTEMENT;" + getId() + ";" + getNbPieces() + ";" + hauteurPlafond;
     }
 
     @Override
     public String toString() {
-        return "Appartement [id=" + getId() + ", nbPieces=" + nbPieces
+        return "Appartement [id=" + getId() + ", nbPieces=" + getNbPieces()
                 + ", hauteurPlafond=" + hauteurPlafond + "]";
     }
 }

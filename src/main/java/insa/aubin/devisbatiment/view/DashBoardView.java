@@ -19,11 +19,13 @@ public class DashBoardView extends BorderPane {
     String cheminImmeuble = "/images/appartement_icone.png";
     String cheminMaison = "/images/maison_icone.png";
     String cheminPiece = "/images/piece_icone.png";
+    String cheminSettings = "/images/engrenage_icone.png";
 
     private Button immeubleButton;
     private Button appartementButton;
     private Button maisonButton;
     private Button pieceButton;
+    private Button settingsButton;
 
 
 
@@ -42,8 +44,28 @@ public class DashBoardView extends BorderPane {
         Separator separator = new Separator();
         separator.setOrientation(Orientation.HORIZONTAL);
         separator.setStyle("-fx-padding: 0 50 0 50;");
+        
+            // Configuration du bouton Settings
+        Image iconeSettings = new Image(getClass().getResource(cheminSettings).toExternalForm());
+        ImageView imgSettings = new ImageView(iconeSettings);
+        imgSettings.setFitWidth(30);
+        imgSettings.setFitHeight(30);
+        imgSettings.setPreserveRatio(true);
 
-        topVBox.getChildren().addAll(messageBienvenue,labelInstruction, separator);
+        settingsButton = new Button();
+        settingsButton.setGraphic(imgSettings);
+        settingsButton.setStyle("-fx-cursor: hand; -fx-background-color: transparent;");
+
+        // BorderPane pour placer le titre au centre et settings en haut à droite
+        BorderPane topBar = new BorderPane();
+        VBox titres = new VBox(messageBienvenue, labelInstruction);
+        titres.setAlignment(Pos.TOP_CENTER);
+        topBar.setCenter(titres);
+        topBar.setRight(settingsButton);
+        BorderPane.setAlignment(settingsButton, Pos.TOP_RIGHT);
+        BorderPane.setMargin(settingsButton, new Insets(5, 10, 0, 0));
+
+        topVBox.getChildren().addAll(topBar, separator);
         this.setTop(topVBox);
 
         //Les composants au centre
@@ -144,5 +166,9 @@ public class DashBoardView extends BorderPane {
 
     public Button getPieceButton() {
         return pieceButton;
+    }
+    
+     public Button getSettingsButton() {
+        return settingsButton;
     }
 }

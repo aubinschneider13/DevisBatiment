@@ -1,14 +1,13 @@
 package insa.aubin.devisbatiment.modele;
 
 public class Maison extends Batiment {
-
     public Maison(String nomBatiment) {
-        super(nomBatiment, "Maison", 1);
+        super(nomBatiment, "Maison");
     }
 
     @Override
     public String toCSV() {
-        return "MAISON" + super.getId() + ";" + super.getNomBatiment() + ";" + "MAISON" + ";" + super.getNbNiveaux();
+        return "MAISON;" + getId() + ";" + getNomBatiment() + ";" + getNbNiveaux();
     }
 
     @Override

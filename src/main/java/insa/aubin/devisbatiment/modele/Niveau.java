@@ -3,19 +3,14 @@ package insa.aubin.devisbatiment.modele;
 import java.util.ArrayList;
 
 public class Niveau extends ElementDeConstruction {
-
-    private double nbAppartements;
     private double hauteurPlafond;
     private ArrayList<Appartement> appartements;
 
-    public Niveau(double nbAppartements, double hauteurPlafond) {
+    public Niveau(double hauteurPlafond) {
         super("Niveau");
-        this.nbAppartements = nbAppartements;
         this.hauteurPlafond = hauteurPlafond;
         this.appartements = new ArrayList<>();
     }
-    
-    //Getters and Setters
 
     public Appartement ajouterAppartement(int nbPieces) {
         Appartement a = new Appartement(nbPieces, this.hauteurPlafond);
@@ -23,12 +18,12 @@ public class Niveau extends ElementDeConstruction {
         return a;
     }
 
-    public double getNbAppartements() {
-        return nbAppartements;
+    public int getNbAppartements() {
+        return appartements.size();
     }
 
-    public void setNbAppartements(double nbAppartements) {
-        this.nbAppartements = nbAppartements;
+    public ArrayList<Appartement> getAppartements() {
+        return appartements;
     }
 
     public double getHauteurPlafond() {
@@ -39,18 +34,14 @@ public class Niveau extends ElementDeConstruction {
         this.hauteurPlafond = hauteurPlafond;
     }
 
-    public ArrayList<Appartement> getAppartements() {
-        return appartements;
-    }
-
     @Override
     public String toCSV() {
-        return "NIVEAU;" + getId() + ";" + nbAppartements + ";" + hauteurPlafond;
+        return "NIVEAU;" + getId() + ";" + getNbAppartements() + ";" + hauteurPlafond;
     }
 
     @Override
     public String toString() {
-        return "Niveau [id=" + getId() + ", nbAppartements=" + nbAppartements
+        return "Niveau [id=" + getId() + ", nbAppartements=" + getNbAppartements()
                 + ", hauteurPlafond=" + hauteurPlafond + "]";
     }
 }

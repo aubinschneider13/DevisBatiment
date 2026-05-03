@@ -1,14 +1,13 @@
 package insa.aubin.devisbatiment.modele;
 
 public class Immeuble extends Batiment {
-
-    public Immeuble(String nomBat, int nbNiveau) {
-        super(nomBat, "Immeuble", nbNiveau);
+    public Immeuble(String nomBatiment) {
+        super(nomBatiment, "Immeuble");
     }
 
     @Override
     public String toCSV() {
-        return "IMMEUBLE" + super.getId() + ";" + super.getNomBatiment() + ";" + "IMMEUBLE" + ";" + super.getNbNiveaux();
+        return "IMMEUBLE;" + getId() + ";" + getNomBatiment() + ";" + getNbNiveaux();
     }
 
     @Override

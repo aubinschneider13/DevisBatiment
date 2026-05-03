@@ -1,42 +1,26 @@
 package insa.aubin.devisbatiment.modele;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 
 public abstract class Batiment extends ElementDeConstruction {
-
     private String nomBatiment;
     private String typeBatiment;
-    private int nbNiveaux;
     private ArrayList<Niveau> niveaux;
 
-    public Batiment(String nomBatiment, String typeBatiment, int nbNiveaux) {
+    public Batiment(String nomBatiment, String typeBatiment) {
         super(typeBatiment);
         if (!typeBatiment.equals("Maison") && !typeBatiment.equals("Immeuble")) {
             throw new IllegalArgumentException("typeBatiment doit être 'Maison' ou 'Immeuble'");
         }
         this.nomBatiment = nomBatiment;
         this.typeBatiment = typeBatiment;
-        this.nbNiveaux = nbNiveaux;
         this.niveaux = new ArrayList<>();
-        creerDossier();
     }
-    
-    private void creerDossier() {
-        String cheminRacine = "C:/Users/haykk/Desktop/DevisBatiment/data/Batiments";
-        String cheminDossier = cheminRacine + "/" + this.nomBatiment;
 
-        File dossier = new File(cheminDossier);
-        dossier.mkdirs();
-
-        try (PrintWriter pw = new PrintWriter(new FileWriter(cheminRacine + "/batiments.txt", true))) {
-            pw.println(this.getId() + ";" + this.nomBatiment + ";" + this.typeBatiment);
-        } catch (IOException e) {
-            System.err.println("Erreur écriture batiments.txt : " + e.getMessage());
-        }
+    public Niveau ajouterNiveau(double hauteurPlafond) {
+        Niveau n = new Niveau(hauteurPlafond);
+        this.niveaux.add(n);
+        return n;
     }
 
     public String getNomBatiment() {
@@ -56,20 +40,20 @@ public abstract class Batiment extends ElementDeConstruction {
     }
 
     public int getNbNiveaux() {
-        return nbNiveaux;
+        return niveaux.size();
     }
 
-    public void setNbNiveaux(int nbNiveaux) {
-        this.nbNiveaux = nbNiveaux;
+    public ArrayList<Niveau> getNiveaux() {
+        return niveaux;
     }
-    
+
     @Override
     public String toCSV() {
-        return getId() + ";" + nomBatiment + ";" + typeBatiment + ";" + nbNiveaux;
+        return getId() + ";" + nomBatiment + ";" + typeBatiment + ";" + getNbNiveaux();
     }
 
     @Override
     public String toString() {
-        return typeBatiment + " [id=" + getId() + ", nom=" + nomBatiment + ", niveaux=" + nbNiveaux + "]";
+        return typeBatiment + " [id=" + getId() + ", nom=" + nomBatiment + ", niveaux=" + getNbNiveaux() + "]";
     }
 }

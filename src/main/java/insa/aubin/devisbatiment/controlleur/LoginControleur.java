@@ -1,5 +1,6 @@
 package insa.aubin.devisbatiment.controlleur;
 
+import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
 import insa.aubin.devisbatiment.view.LoginView;
 import insa.aubin.devisbatiment.view.DashBoardView;
 import javafx.scene.Scene;
@@ -27,18 +28,16 @@ public class LoginControleur {
                 alert.setHeaderText("Échec de l'authentification");
                 alert.setContentText("Le mot de passe saisi est incorrect. Veuillez réessayer.");
                 alert.showAndWait();
-
                 this.vue.nettoyerMotDePasse();
             }
         });
     }
 
     public void ouvrirTableauDeBord(){
-        // 1. On prépare  la nouvelle fenêtre SANS fermer l'ancien tout de suite
+        // 1. On prépare la nouvelle fenêtre SANS fermer l'ancien tout de suite
         Stage nouveauStage = new Stage();
         DashBoardView dashBoardView = new DashBoardView();
         Scene nouveauScene = new Scene(dashBoardView);
-
         nouveauStage.setTitle("InsaBuilder - Tableau de bord");
         nouveauStage.setScene(nouveauScene);
         nouveauStage.setMaximized(true);
@@ -46,7 +45,9 @@ public class LoginControleur {
         // 2. On affiche la nouvelle fenêtre
         nouveauStage.show();
 
-        DashBoardControleur dashBoardControleur = new DashBoardControleur(dashBoardView, nouveauStage);
+        // On instancie le gestionnaire une seule fois ici et on le passe au controleur
+        GestionnaireSauvegarde gestionnaire = new GestionnaireSauvegarde();
+        DashBoardControleur dashBoardControleur = new DashBoardControleur(dashBoardView, nouveauStage, gestionnaire);
 
         // 3. SEULEMENT MAINTENANT, on récupère et on ferme l'ancienne
         // On utilise le "Window" de la vue actuelle (LoginView)
