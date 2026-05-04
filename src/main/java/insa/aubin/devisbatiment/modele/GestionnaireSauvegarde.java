@@ -9,6 +9,7 @@ public class GestionnaireSauvegarde {
 
     private boolean sauvegardeActive;
     private String cheminRacine;
+    private static final String FICHIER_CONFIG = "config.properties";
 
     public GestionnaireSauvegarde() {
         this.sauvegardeActive = false;
@@ -35,11 +36,40 @@ public class GestionnaireSauvegarde {
         }
         this.cheminRacine = chemin.trim();
         this.sauvegardeActive = true;
+        sauvegarderConfig();
     }
 
     public void desactiver() {
         this.sauvegardeActive = false;
         this.cheminRacine = null;
+        sauvegarderConfig();
+    }
+    
+    private void sauvegarderConfig() {
+    try (PrintWriter pw = new PrintWriter(new FileWriter(FICHIER_CONFIG))) {
+        pw.println("actif=" + sauvegardeActive);
+        pw.println("chemin=" + (cheminRacine != null ? cheminRacine : ""));
+    } catch (IOException e) {
+        System.err.println("Erreur sauvegarde config : " + e.getMessage());
+    }
+}
+
+    public void chargerConfig() {
+        File f = new File(FICHIER_CONFIG);
+        if (!f.exists()) return;
+        try (java.util.Scanner sc = new java.util.Scanner(f)) {
+            String chemin = "";
+            boolean actif = false;
+            while (sc.hasNextLine()) {
+                String[] parts = sc.nextLine().split("=", 2);
+                if (parts.length < 2) continue;
+                if (parts[0].equals("actif")) actif = Boolean.parseBoolean(parts[1]);
+                if (parts[0].equals("chemin")) chemin = parts[1];
+            }
+            if (actif && !chemin.isEmpty()) activer(chemin);
+        } catch (Exception e) {
+            System.err.println("Erreur chargement config : " + e.getMessage());
+        }
     }
 
     public boolean isSauvegardeActive() {

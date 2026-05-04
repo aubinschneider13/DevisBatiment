@@ -6,12 +6,24 @@ import insa.aubin.devisbatiment.view.SettingsView;
 public class SettingsControleur {
     private SettingsView settingsView;
     private GestionnaireSauvegarde gestionnaire;
-
+    
     public SettingsControleur(SettingsView settingsView, GestionnaireSauvegarde gestionnaire) {
         this.settingsView = settingsView;
         this.gestionnaire = gestionnaire;
         configurerToggle();
         configurerChemin();
+        restaurerEtat();
+    }
+    
+    private void restaurerEtat() {
+        if (gestionnaire.isSauvegardeActive()) {
+            settingsView.getToggleSauvegarde().setSelected(true);
+            settingsView.getToggleSauvegarde().setText("Activée");
+            settingsView.getCheminField().setText(gestionnaire.getCheminRacine());
+            settingsView.afficherZoneChemin(true);
+            settingsView.getStatusLabel().setStyle("-fx-font-size: 12px; -fx-text-fill: green;");
+            settingsView.getStatusLabel().setText("✓ Sauvegarde activée : " + gestionnaire.getCheminRacine());
+        }
     }
 
     private void configurerToggle() {
@@ -47,9 +59,19 @@ public class SettingsControleur {
     private void validerChemin() {
         String chemin = settingsView.getCheminField().getText();
         try {
+            // Vérification que le chemin se termine par "Batiments"
+            if (chemin == null || !chemin.trim().endsWith("Batiments")) {
+                throw new IllegalArgumentException("Le chemin d'accès doit mener au dossier 'Batiments'.");
+            }
             gestionnaire.activer(chemin);
             settingsView.getStatusLabel().setStyle("-fx-font-size: 12px; -fx-text-fill: green;");
             settingsView.getStatusLabel().setText("✓ Sauvegarde activée : " + chemin);
+            
+            // Attendre 0.5 secondes puis fermer
+            javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(javafx.util.Duration.millis(500));
+            pause.setOnFinished(e -> settingsView.fermerFenetre());
+            pause.play();
+            
         } catch (IllegalArgumentException ex) {
             settingsView.getStatusLabel().setStyle("-fx-font-size: 12px; -fx-text-fill: red;");
             settingsView.getStatusLabel().setText("✗ " + ex.getMessage());

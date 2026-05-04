@@ -47,6 +47,7 @@ public class LoginControleur {
 
         // On instancie le gestionnaire une seule fois ici et on le passe au controleur
         GestionnaireSauvegarde gestionnaire = new GestionnaireSauvegarde();
+        gestionnaire.chargerConfig();
         DashBoardControleur dashBoardControleur = new DashBoardControleur(dashBoardView, nouveauStage, gestionnaire);
 
         // 3. SEULEMENT MAINTENANT, on récupère et on ferme l'ancienne
