@@ -1,6 +1,7 @@
 package insa.aubin.devisbatiment.view;
 
 import insa.aubin.devisbatiment.controlleur.PieceVueControleur;
+import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -8,28 +9,46 @@ import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.stage.Stage;
 
 public class PieceView extends BorderPane {
     String cheminMur = "/images/mur_icone.png";
     String cheminPorte = "/images/porte_icone.png";
     String cheminFenetre = "/images/fenetre_icone.png";
     String cheminCote = "/images/cote_icone.png";
+    String cheminRetour = "/images/fleche_retour_icone.png";
 
     private PieceVueControleur controleur;
     private Button murButton;
     private DessinCanvas canvas;
-
     private OptionsMurVue optionsMurVue;
-
     private TreeItem<String> root;
     private TreeItem<String> itemMurs;
     private TreeItem<String> itemOuvertures;
     private TreeItem<String> itemSurfaces;
 
-    public PieceView() {
-        this.controleur = new PieceVueControleur(this);
+    public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire) {
+        this.controleur = new PieceVueControleur(this, stage, gestionnaire);
 
-        //Au top
+        // Bouton retour
+        Image imgRetour = new Image(getClass().getResource(cheminRetour).toExternalForm());
+        ImageView iconeRetour = new ImageView(imgRetour);
+        iconeRetour.setFitHeight(50);
+        iconeRetour.setFitWidth(30);
+        iconeRetour.setPreserveRatio(true);
+
+        Button retourButton = new Button("Retour");
+        retourButton.setStyle("-fx-cursor: hand;" +
+                "-fx-font-family: 'Arial';" +
+                "-fx-font-size: 13px;" +
+                "-fx-font-weight: bold;" +
+                "-fx-text-fill: #34495e;");
+        retourButton.setPrefSize(60, 60);
+        retourButton.setGraphic(iconeRetour);
+        retourButton.setContentDisplay(ContentDisplay.TOP);
+        retourButton.setOnAction(e -> controleur.retourDashboard());
+
+        // TabPane
         TabPane tabPane = new TabPane();
         Tab tabConstruction = new Tab("Construction");
         tabConstruction.setClosable(false);
@@ -38,7 +57,7 @@ public class PieceView extends BorderPane {
         hBoxConstruction.setSpacing(10);
         hBoxConstruction.setPadding(new Insets(10));
 
-            //Config bouton Mur
+        // Bouton Mur
         Image imgMur = new Image(getClass().getResource(cheminMur).toExternalForm());
         ImageView iconeMur = new ImageView(imgMur);
         iconeMur.setFitHeight(50);
@@ -54,15 +73,12 @@ public class PieceView extends BorderPane {
         this.murButton.setPrefSize(60, 60);
         this.murButton.setGraphic(iconeMur);
         this.murButton.setContentDisplay(ContentDisplay.TOP);
-
-        this.murButton.setOnAction(e -> {
-            this.controleur.btnMur(e); // Appelle la méthode qui fait changerEtat(30)
-        });
+        this.murButton.setOnAction(e -> this.controleur.btnMur(e));
 
         Separator separation1 = new Separator();
         separation1.setOrientation(Orientation.VERTICAL);
 
-            //Config bouton Porte
+        // Bouton Porte
         Image imgPorte = new Image(getClass().getResource(cheminPorte).toExternalForm());
         ImageView iconePorte = new ImageView(imgPorte);
         iconePorte.setFitHeight(50);
@@ -79,7 +95,7 @@ public class PieceView extends BorderPane {
         porteButton.setGraphic(iconePorte);
         porteButton.setContentDisplay(ContentDisplay.TOP);
 
-            //Config bouton Fenêtre
+        // Bouton Fenêtre
         Image imgFen = new Image(getClass().getResource(cheminFenetre).toExternalForm());
         ImageView iconeFen = new ImageView(imgFen);
         iconeFen.setFitHeight(50);
@@ -99,7 +115,7 @@ public class PieceView extends BorderPane {
         Separator separation2 = new Separator();
         separation2.setOrientation(Orientation.VERTICAL);
 
-            //Config bouton côte
+        // Bouton Côte
         Image imgCote = new Image(getClass().getResource(cheminCote).toExternalForm());
         ImageView iconeCote = new ImageView(imgCote);
         iconeCote.setFitHeight(50);
@@ -117,10 +133,8 @@ public class PieceView extends BorderPane {
         coteButton.setContentDisplay(ContentDisplay.TOP);
 
         hBoxConstruction.getChildren().addAll(murButton, separation1, porteButton, fenetreButton, separation2, coteButton);
-
         tabConstruction.setContent(hBoxConstruction);
 
-        //Le Tab pour le devis et le choix des matériaux
         Tab tabDevis = new Tab("Matériaux et Devis");
         tabDevis.setClosable(false);
 
@@ -128,36 +142,31 @@ public class PieceView extends BorderPane {
         hBoxDevis.setSpacing(10);
         hBoxDevis.setPadding(new Insets(10));
 
-        //Button
-
         tabPane.getTabs().addAll(tabConstruction, tabDevis);
         tabPane.setStyle("-fx-border-color: #d1d1d1; -fx-border-width: 0 0 1 0;");
-        this.setTop(tabPane);
-//--------------------------------------------------------------------------------------------------------------------------------------------------------
-        // Au centre
+
+        HBox topBar = new HBox(retourButton, tabPane);
+        HBox.setHgrow(tabPane, Priority.ALWAYS);
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        this.setTop(topBar);
+
+        // Centre
         StackPane zoneCentrale = new StackPane();
-        zoneCentrale.setStyle("-fx-background-color: #fffefe;"); //A modifer après
+        zoneCentrale.setStyle("-fx-background-color: #fffefe;");
 
         this.canvas = new DessinCanvas();
         this.canvas.widthProperty().bind(zoneCentrale.widthProperty());
         this.canvas.heightProperty().bind(zoneCentrale.heightProperty());
-        this.canvas.setOnMouseClicked(e -> {
-            this.controleur.clicDansZoneDeDessin(e);
-        });
-        this.canvas.setOnMouseMoved(e -> {
-            this.controleur.mouseMovedDansZoneDessin(e);
-        });
+        this.canvas.setOnMouseClicked(e -> this.controleur.clicDansZoneDeDessin(e));
+        this.canvas.setOnMouseMoved(e -> this.controleur.mouseMovedDansZoneDessin(e));
 
         this.optionsMurVue = new OptionsMurVue();
         StackPane.setAlignment(optionsMurVue, Pos.TOP_RIGHT);
         StackPane.setMargin(optionsMurVue, new Insets(10));
 
-        zoneCentrale.getChildren().addAll(canvas,  optionsMurVue);
+        zoneCentrale.getChildren().addAll(canvas, optionsMurVue);
 
-
-        //this.setCenter(zoneCentrale);
-//--------------------------------------------------------------------------------------------------------------------------------------------------------
-        // A gauche
+        // Gauche
         this.root = new TreeItem<>("Devis : Ma pièce");
         this.itemMurs = new TreeItem<>("Murs");
         this.itemOuvertures = new TreeItem<>("Ouvertures");
@@ -166,24 +175,18 @@ public class PieceView extends BorderPane {
         root.getChildren().addAll(itemMurs, itemOuvertures, itemSurfaces);
 
         TreeView<String> treeView = new TreeView<>(root);
-
-        TitledPane titledPane = new TitledPane("Navigateur de modèle",  treeView);
+        TitledPane titledPane = new TitledPane("Navigateur de modèle", treeView);
         titledPane.setCollapsible(false);
 
         VBox leftVBox = new VBox(titledPane);
         leftVBox.setVgrow(titledPane, Priority.ALWAYS);
         leftVBox.setPrefWidth(250);
 
-        //this.setLeft(leftVBox);
-
         SplitPane splitPane = new SplitPane(leftVBox, zoneCentrale);
         splitPane.setDividerPosition(0, 0.2);
-
         this.setCenter(splitPane);
 
-        // On permet à la vue de recevoir le focus pour capturer les touches
         this.setFocusTraversable(true);
-
         this.setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
                 this.controleur.annulerConstruction();
@@ -191,19 +194,8 @@ public class PieceView extends BorderPane {
         });
     }
 
-    public DessinCanvas getCanvas() {
-        return canvas;
-    }
-
-    public void redrawAll(){
-        this.canvas.redrawAll();
-    }
-
-    public OptionsMurVue getOptionsMurVue() {
-        return optionsMurVue;
-    }
-
-    public TreeItem<String> getItemMurs() {
-        return itemMurs;
-    }
+    public DessinCanvas getCanvas() { return canvas; }
+    public void redrawAll() { this.canvas.redrawAll(); }
+    public OptionsMurVue getOptionsMurVue() { return optionsMurVue; }
+    public TreeItem<String> getItemMurs() { return itemMurs; }
 }
