@@ -20,6 +20,7 @@ public class SettingsView extends VBox {
         this.setPadding(new Insets(20));
         this.setAlignment(Pos.TOP_LEFT); // corrigé : Pos.TOP_LEFT est valide
         this.setPrefWidth(300);
+        this.setPrefHeight(500);
 
         Label titre = new Label("Paramètres");
         titre.setStyle("-fx-font-family: 'Arial Black'; -fx-font-size: 16px;");
