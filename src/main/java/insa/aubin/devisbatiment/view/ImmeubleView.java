@@ -1,38 +1,77 @@
 package insa.aubin.devisbatiment.view;
+
 import javafx.geometry.Insets;
-import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.scene.canvas.Canvas;
 import javafx.stage.Stage;
 
 public class ImmeubleView extends BorderPane {
-    public ImmeubleView(){
+
+    private Button btnAjouterNiveau;
+    private TreeView<String> treeView;
+    private TreeItem<String> rootItem;
+    private DessinCanvas canvas; // On réutilise ton canvas existant
+
+    public ImmeubleView(Stage stage) {
+        // --- 1. BARRE D'OUTILS (TOP) ---
         TabPane tabPaneImmeuble = new TabPane();
-        Tab tabImmeuble = new Tab("Construction");
-        tabImmeuble.setClosable(false);
+        Tab tabConstruction = new Tab("Construction");
+        tabConstruction.setClosable(false);
 
-        HBox hBox = new HBox();
-        hBox.setSpacing(10);
-        hBox.setPadding(new Insets(10));
+        HBox toolBar = new HBox();
+        toolBar.setSpacing(10);
+        toolBar.setPadding(new Insets(10));
+        toolBar.setAlignment(Pos.CENTER_LEFT);
 
-        Button premierButton = new Button("Premier");
-        premierButton.setStyle("-fx-cursor: hand;" +
-                "-fx-font-family: 'Arial';" +
-                "-fx-font-size: 13px;" +
-                "-fx-font-weight: bold;" +
-                "-fx-text-fill: #34495e;");
-        premierButton.setPrefSize(60, 60);
+        btnAjouterNiveau = new Button("Ajouter\nNiveau");
+        btnAjouterNiveau.setStyle("-fx-cursor: hand; -fx-font-weight: bold; -fx-text-alignment: center;");
+        btnAjouterNiveau.setPrefSize(80, 60);
 
-        hBox.getChildren().add(premierButton);
+        toolBar.getChildren().add(btnAjouterNiveau);
+        tabConstruction.setContent(toolBar);
+        tabPaneImmeuble.getTabs().add(tabConstruction);
 
+        this.setTop(tabPaneImmeuble);
 
+        // --- 2. ZONE CENTRALE (SPLITPANE) ---
+        SplitPane splitPane = new SplitPane();
 
+        // Gauche : Navigateur
+        VBox navigateurBox = new VBox();
+        navigateurBox.setMinWidth(200);
+        Label lblNav = new Label(" Navigateur de l'immeuble");
+        lblNav.setStyle("-fx-background-color: #ecf0f1; -fx-font-weight: bold;");
+        lblNav.setMaxWidth(Double.MAX_VALUE);
 
+        rootItem = new TreeItem<>("Immeuble");
+        rootItem.setExpanded(true);
+        treeView = new TreeView<>(rootItem);
 
+        VBox.setVgrow(treeView, Priority.ALWAYS);
+        navigateurBox.getChildren().addAll(lblNav, treeView);
+
+        // Droite : Canvas
+        StackPane zoneDessin = new StackPane();
+        zoneDessin.setStyle("-fx-background-color: white;");
+        canvas = new DessinCanvas(); // Ton composant de dessin
+
+        // On lie la taille du canvas à celle du conteneur
+        canvas.widthProperty().bind(zoneDessin.widthProperty());
+        canvas.heightProperty().bind(zoneDessin.heightProperty());
+
+        zoneDessin.getChildren().add(canvas);
+
+        splitPane.getItems().addAll(navigateurBox, zoneDessin);
+        splitPane.setDividerPositions(0.2); // 20% pour le navigateur
+
+        this.setCenter(splitPane);
     }
 
-
+    // Getters pour le contrôleur
+    public Button getBtnAjouterNiveau() { return btnAjouterNiveau; }
+    public TreeView<String> getTreeView() { return treeView; }
+    public TreeItem<String> getRootItem() { return rootItem; }
+    public DessinCanvas getCanvas() { return canvas; }
 }

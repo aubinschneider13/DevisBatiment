@@ -1,16 +1,17 @@
 package insa.aubin.devisbatiment.controlleur;
 
 import insa.aubin.devisbatiment.view.DashBoardView;
+import insa.aubin.devisbatiment.view.ImmeubleView;
 import insa.aubin.devisbatiment.view.PieceView;
+import javafx.application.Platform;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
 import insa.aubin.devisbatiment.view.SettingsView;
 import insa.aubin.devisbatiment.controlleur.SettingsControleur;
 import javafx.stage.Modality;
-import javafx.geometry.Rectangle2D;
-import javafx.stage.Screen;
-import javafx.application.Platform;
 
 public class DashBoardControleur {
     private DashBoardView dashBoardView;
@@ -22,21 +23,36 @@ public class DashBoardControleur {
         this.stage = stage;
         this.gestionnaire = gestionnaire;
         creerPiece();
+        creerImmeuble();
         configurerSettings();
     }
-    
-    private void mettreFenetrePleinEcran() {
-    Platform.runLater(() -> {
-        Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
 
-        stage.setResizable(true);
-        stage.setX(bounds.getMinX());
-        stage.setY(bounds.getMinY());
-        stage.setWidth(bounds.getWidth());
-        stage.setHeight(bounds.getHeight());
-    });
-}
+    public void creerImmeuble(){
+        this.dashBoardView.getImmeubleButton().setOnAction(e -> {
+            ouvrirImmeuble();
+        });
+    }
 
+    public void ouvrirImmeuble(){
+        ImmeubleView immeubleView = new ImmeubleView(stage);
+        Scene immeubleScene = new Scene(immeubleView);
+
+        stage.setScene(immeubleScene);
+        stage.setTitle("InsaBuilder - Nouveau devis pour un Immeuble");
+        mettreFenetrePleinEcran();
+    }
+
+    public void mettreFenetrePleinEcran() {
+        Platform.runLater(() -> {
+            Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
+
+            stage.setResizable(true);
+            stage.setX(bounds.getMinX());
+            stage.setY(bounds.getMinY());
+            stage.setWidth(bounds.getWidth());
+            stage.setHeight(bounds.getHeight());
+        });
+    }
     public void creerPiece(){
         this.dashBoardView.getPieceButton().setOnAction(e -> {
             ouvrirPiece();
@@ -51,7 +67,7 @@ public class DashBoardControleur {
         stage.setTitle("InsaBuilder - Nouveau devis pour une pièce");
         mettreFenetrePleinEcran();
     }
-    
+
 
     private void configurerSettings() {
         dashBoardView.getSettingsButton().setOnAction(e -> ouvrirSettings());
