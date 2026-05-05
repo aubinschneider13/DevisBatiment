@@ -5,15 +5,29 @@ import java.util.ArrayList;
 public abstract class Batiment extends ElementDeConstruction {
     private String nomBatiment;
     private String typeBatiment;
+    private Point point1;
+    private Point point2;
+    private Point point3;
+    
     private ArrayList<Niveau> niveaux;
 
-    public Batiment(String nomBatiment, String typeBatiment) {
+    public Batiment(String nomBatiment, String typeBatiment, Point point1, Point point2, Point point3) {
         super(typeBatiment);
         if (!typeBatiment.equals("Maison") && !typeBatiment.equals("Immeuble")) {
             throw new IllegalArgumentException("typeBatiment doit être 'Maison' ou 'Immeuble'");
         }
         this.nomBatiment = nomBatiment;
         this.typeBatiment = typeBatiment;
+        
+        if (!Point.sontOrthogonaux(point1, point2, point3)) {
+            throw new IllegalArgumentException("Les points ne forment pas un angle droit en point2.");
+        }
+        
+        this.point1 = point1;
+        this.point2= point2;
+        this.point3 = point3;
+        
+        
         this.niveaux = new ArrayList<>();
     }
 

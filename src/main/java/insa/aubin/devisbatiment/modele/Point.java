@@ -29,6 +29,15 @@ public class Point implements Dessin {
     public void setY(double y) {
         this.y = y;
     }
+    
+    public static boolean sontOrthogonaux(Point p1, Point p2, Point p3) {
+        double abX = p2.getX() - p1.getX();
+        double abY = p2.getY() - p1.getY();
+        double bcX = p3.getX() - p2.getX();
+        double bcY = p3.getY() - p2.getY();
+        double produitScalaire = abX * bcX + abY * bcY;
+        return Math.abs(produitScalaire) <= 1e-9;
+    }
 
     @Override
     public void dessiner(GraphicsContext gc) {
