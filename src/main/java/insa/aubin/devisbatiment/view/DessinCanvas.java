@@ -1,6 +1,5 @@
 package insa.aubin.devisbatiment.view;
 
-import insa.aubin.devisbatiment.controlleur.PieceVueControleur;
 import insa.aubin.devisbatiment.modele.Dessin;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;

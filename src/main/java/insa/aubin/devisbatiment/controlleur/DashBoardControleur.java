@@ -14,7 +14,7 @@ public class DashBoardControleur {
     private Stage stage;
     private GestionnaireSauvegarde gestionnaire;
 
-        public DashBoardControleur(DashBoardView dashBoardView, Stage stage, GestionnaireSauvegarde gestionnaire) {
+    public DashBoardControleur(DashBoardView dashBoardView, Stage stage, GestionnaireSauvegarde gestionnaire) {
         this.dashBoardView = dashBoardView;
         this.stage = stage;
         this.gestionnaire = gestionnaire;

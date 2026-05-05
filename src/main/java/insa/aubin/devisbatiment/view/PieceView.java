@@ -1,6 +1,6 @@
 package insa.aubin.devisbatiment.view;
 
-import insa.aubin.devisbatiment.controlleur.PieceVueControleur;
+import insa.aubin.devisbatiment.controlleur.PieceControleur;
 import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -18,7 +18,7 @@ public class PieceView extends BorderPane {
     String cheminCote = "/images/cote_icone.png";
     String cheminRetour = "/images/fleche_retour_icone.png";
 
-    private PieceVueControleur controleur;
+    private PieceControleur controleur;
     private Button murButton;
     private DessinCanvas canvas;
     private OptionsMurVue optionsMurVue;
@@ -28,7 +28,7 @@ public class PieceView extends BorderPane {
     private TreeItem<String> itemSurfaces;
 
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire) {
-        this.controleur = new PieceVueControleur(this, stage, gestionnaire);
+        this.controleur = new PieceControleur(this, stage, gestionnaire);
 
         // Bouton retour
         Image imgRetour = new Image(getClass().getResource(cheminRetour).toExternalForm());
