@@ -11,8 +11,6 @@ import javafx.geometry.Point2D;
 import javafx.scene.Scene;
 import javafx.scene.control.TreeItem;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.transform.NonInvertibleTransformException;
-import javafx.scene.transform.Transform;
 import javafx.stage.Stage;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
@@ -32,11 +30,10 @@ public class PieceControleur {
         this.stage = stage;
         this.gestionnaire = gestionnaire;
     }
-    
+
     public void mettreFenetrePleinEcran() {
         Platform.runLater(() -> {
             Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
-
             stage.setResizable(true);
             stage.setX(bounds.getMinX());
             stage.setY(bounds.getMinY());
@@ -56,17 +53,18 @@ public class PieceControleur {
 
     public void changerEtat(int nouvelEtat) {
         this.etat = nouvelEtat;
+        this.vue.getCanvas().setPanActif(nouvelEtat == 0);
     }
 
+    /**
+     * Convertit les coordonnées de la souris en coordonnées du modèle
+     * en prenant en compte le zoom et le magnétisme de la grille.
+     */
     public Point posInModel(double x, double y) {
-        Transform modelVersVue = this.vue.getCanvas().getTransform();
-        Point2D pointTrans;
-        try {
-            pointTrans = modelVersVue.inverseTransform(x, y);
-        } catch (NonInvertibleTransformException ex) {
-            throw new Error(ex);
-        }
-        return new Point(pointTrans.getX(), pointTrans.getY());
+        // Utilise snapToGrid qui gère à la fois la conversion pixels→modèle
+        // et le magnétisme sur la grille, avec Y inversé
+        Point2D p = this.vue.getCanvas().snapToGrid(x, y);
+        return new Point(p.getX(), p.getY());
     }
 
     public void btnMur(ActionEvent t) {
@@ -76,6 +74,7 @@ public class PieceControleur {
 
     public void clicDansZoneDeDessin(MouseEvent t) {
         if (this.etat == 30) {
+            // Utilise la méthode corrigée avec Snap et Zoom
             Point pClic = this.posInModel(t.getX(), t.getY());
             boolean modRect = this.vue.getOptionsMurVue().estRectangulaire();
 
@@ -156,6 +155,7 @@ public class PieceControleur {
         this.etapeRectangle = 0;
         this.mur1 = null;
         this.mur2 = null;
+        this.vue.redrawAll();
     }
 
     public void rafraichirNavigateur() {
@@ -167,5 +167,11 @@ public class PieceControleur {
                 this.vue.getItemMurs().getChildren().add(item);
             }
         }
+    }
+    
+    public void btnNavigation(ActionEvent t) {
+        this.changerEtat(0); // etat 0 = aucun outil, pan actif
+        this.vue.getCanvas().setPanActif(true);
+        this.vue.getOptionsMurVue().setVisible(false);
     }
 }

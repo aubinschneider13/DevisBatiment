@@ -106,26 +106,26 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
 
     @Override
     public void dessiner(GraphicsContext gc) {
-        //Le corps du mur
-        gc.setStroke(this.color); //on définit une couleur pour les contours
-        gc.setLineWidth(3);
-        gc.strokeLine(point1.getX(), point1.getY(), point2.getX(), point2.getY()); //on déssine la ligne
+        // Le corps du mur — épaisseur fixe en pixels indépendante du zoom
+        gc.setStroke(this.color);
+        gc.setLineWidth(0.1); // 0.1m d'épaisseur en coordonnées modèle
+        gc.strokeLine(point1.getX(), point1.getY(), point2.getX(), point2.getY());
 
-        //Les coins
-        double rayon = 4.0;
-        gc.setFill(Color.WHITE); //Intérieur blanc
-        gc.setStroke(Color.BLUE); //contour bleu
-        gc.setLineWidth(3);
+        // Les coins — rayon fixe en coordonnées modèle (petit = ~10cm)
+        double rayon = 0.08;
+        gc.setFill(Color.WHITE);
+        gc.setStroke(Color.BLUE);
+        gc.setLineWidth(0.02);
 
-        //Coin de départ
+        // Coin de départ
         gc.fillOval(point1.getX() - rayon, point1.getY() - rayon, rayon * 2, rayon * 2);
         gc.strokeOval(point1.getX() - rayon, point1.getY() - rayon, rayon * 2, rayon * 2);
 
-        //Coin de fin
-        gc.fillOval(point2.getX() - rayon,  point2.getY() - rayon, rayon * 2, rayon * 2);
-        gc.strokeOval(point2.getX(), point2.getY() - rayon, rayon * 2, rayon * 2);
+        // Coin de fin
+        gc.fillOval(point2.getX() - rayon, point2.getY() - rayon, rayon * 2, rayon * 2);
+        gc.strokeOval(point2.getX() - rayon, point2.getY() - rayon, rayon * 2, rayon * 2);
     }
-
+    
     @Override
     public String toCSV() {
         return "MUR;" + super.toCSV()

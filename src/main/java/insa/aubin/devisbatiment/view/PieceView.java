@@ -17,6 +17,7 @@ public class PieceView extends BorderPane {
     String cheminFenetre = "/images/fenetre_icone.png";
     String cheminCote = "/images/cote_icone.png";
     String cheminRetour = "/images/fleche_retour_icone.png";
+    String cheminMain = "/images/main_icone.png";
 
     private PieceControleur controleur;
     private Button murButton;
@@ -30,23 +31,7 @@ public class PieceView extends BorderPane {
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire) {
         this.controleur = new PieceControleur(this, stage, gestionnaire);
 
-        // Bouton retour
-        Image imgRetour = new Image(getClass().getResource(cheminRetour).toExternalForm());
-        ImageView iconeRetour = new ImageView(imgRetour);
-        iconeRetour.setFitHeight(50);
-        iconeRetour.setFitWidth(30);
-        iconeRetour.setPreserveRatio(true);
-
-        Button retourButton = new Button("Retour");
-        retourButton.setStyle("-fx-cursor: hand;" +
-                "-fx-font-family: 'Arial';" +
-                "-fx-font-size: 13px;" +
-                "-fx-font-weight: bold;" +
-                "-fx-text-fill: #34495e;");
-        retourButton.setPrefSize(60, 60);
-        retourButton.setGraphic(iconeRetour);
-        retourButton.setContentDisplay(ContentDisplay.TOP);
-        retourButton.setOnAction(e -> controleur.retourDashboard());
+        
 
         // TabPane
         TabPane tabPane = new TabPane();
@@ -56,7 +41,30 @@ public class PieceView extends BorderPane {
         HBox hBoxConstruction = new HBox();
         hBoxConstruction.setSpacing(10);
         hBoxConstruction.setPadding(new Insets(10));
+        hBoxConstruction.setMaxWidth(Double.MAX_VALUE);
+        
+        // Bouton Navigation
+        Image imgMain = new Image(getClass().getResource(cheminMain).toExternalForm());
+        ImageView iconeMain = new ImageView(imgMain);
+        iconeMain.setFitHeight(50);
+        iconeMain.setFitWidth(30);
+        iconeMain.setPreserveRatio(true);
 
+        Button navigationButton = new Button("Naviguer");
+        navigationButton.setStyle("-fx-cursor: hand;" +
+                "-fx-font-family: 'Arial';" +
+                "-fx-font-size: 13px;" +
+                "-fx-font-weight: bold;" +
+                "-fx-text-fill: #34495e;");
+        navigationButton.setPrefSize(80, 60);
+        navigationButton.setGraphic(iconeMain);
+        navigationButton.setContentDisplay(ContentDisplay.TOP);
+        navigationButton.setOnAction(e -> this.controleur.btnNavigation(e));
+        
+        // Séparateur 1
+        Separator separation1 = new Separator();
+        separation1.setOrientation(Orientation.VERTICAL);
+        
         // Bouton Mur
         Image imgMur = new Image(getClass().getResource(cheminMur).toExternalForm());
         ImageView iconeMur = new ImageView(imgMur);
@@ -74,9 +82,10 @@ public class PieceView extends BorderPane {
         this.murButton.setGraphic(iconeMur);
         this.murButton.setContentDisplay(ContentDisplay.TOP);
         this.murButton.setOnAction(e -> this.controleur.btnMur(e));
-
-        Separator separation1 = new Separator();
-        separation1.setOrientation(Orientation.VERTICAL);
+        
+        //Séparateur 2
+        Separator separation2 = new Separator();
+        separation2.setOrientation(Orientation.VERTICAL);
 
         // Bouton Porte
         Image imgPorte = new Image(getClass().getResource(cheminPorte).toExternalForm());
@@ -111,9 +120,10 @@ public class PieceView extends BorderPane {
         fenetreButton.setPrefSize(70, 60);
         fenetreButton.setGraphic(iconeFen);
         fenetreButton.setContentDisplay(ContentDisplay.TOP);
-
-        Separator separation2 = new Separator();
-        separation2.setOrientation(Orientation.VERTICAL);
+        
+        // Séparateur 3
+        Separator separation3 = new Separator();
+        separation3.setOrientation(Orientation.VERTICAL);
 
         // Bouton Côte
         Image imgCote = new Image(getClass().getResource(cheminCote).toExternalForm());
@@ -132,7 +142,31 @@ public class PieceView extends BorderPane {
         coteButton.setGraphic(iconeCote);
         coteButton.setContentDisplay(ContentDisplay.TOP);
 
-        hBoxConstruction.getChildren().addAll(murButton, separation1, porteButton, fenetreButton, separation2, coteButton);
+        // Espaceur
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        
+        // Bouton Retour
+        Image imgRetour = new Image(getClass().getResource(cheminRetour).toExternalForm());
+        ImageView iconeRetour = new ImageView(imgRetour);
+        iconeRetour.setFitHeight(50);
+        iconeRetour.setFitWidth(30);
+        iconeRetour.setPreserveRatio(true);
+
+        Button retourButton = new Button("Retour");
+        retourButton.setStyle("-fx-cursor: hand;" +
+                "-fx-font-family: 'Arial';" +
+                "-fx-font-size: 13px;" +
+                "-fx-font-weight: bold;" +
+                "-fx-text-fill: #34495e;");
+        retourButton.setPrefSize(60, 60);
+        retourButton.setGraphic(iconeRetour);
+        retourButton.setContentDisplay(ContentDisplay.TOP);
+        retourButton.setOnAction(e -> controleur.retourDashboard());
+        
+        //Fin HBox
+        hBoxConstruction.getChildren().addAll(navigationButton, separation1, murButton,
+        separation2, porteButton, fenetreButton, separation3, coteButton, spacer, retourButton);
         tabConstruction.setContent(hBoxConstruction);
 
         Tab tabDevis = new Tab("Matériaux et Devis");
@@ -141,14 +175,13 @@ public class PieceView extends BorderPane {
         HBox hBoxDevis = new HBox();
         hBoxDevis.setSpacing(10);
         hBoxDevis.setPadding(new Insets(10));
+        tabDevis.setContent(hBoxDevis);
 
         tabPane.getTabs().addAll(tabConstruction, tabDevis);
         tabPane.setStyle("-fx-border-color: #d1d1d1; -fx-border-width: 0 0 1 0;");
 
-        HBox topBar = new HBox(retourButton, tabPane);
-        HBox.setHgrow(tabPane, Priority.ALWAYS);
-        topBar.setAlignment(Pos.CENTER_LEFT);
-        this.setTop(topBar);
+        // On place le tabPane en haut du BorderPane
+        this.setTop(tabPane);
 
         // Centre
         StackPane zoneCentrale = new StackPane();
