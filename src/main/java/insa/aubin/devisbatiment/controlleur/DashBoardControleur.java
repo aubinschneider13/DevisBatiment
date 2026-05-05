@@ -29,7 +29,7 @@ public class DashBoardControleur {
     }
 
     public void ouvrirPiece(){
-        PieceView pieceView = new PieceView();
+        PieceView pieceView = new PieceView(stage,gestionnaire);
         Scene pieceScene = new Scene(pieceView);
 
         stage.setScene(pieceScene);
