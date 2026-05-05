@@ -15,7 +15,7 @@ import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.scene.transform.Transform;
 import javafx.stage.Stage;
 
-public class PieceVueControleur {
+public class PieceControleur {
     private PieceView vue;
     private Stage stage;
     private GestionnaireSauvegarde gestionnaire;
@@ -24,7 +24,7 @@ public class PieceVueControleur {
     private Mur mur1, mur2;
     private int etapeRectangle;
 
-    public PieceVueControleur(PieceView vue, Stage stage, GestionnaireSauvegarde gestionnaire) {
+    public PieceControleur(PieceView vue, Stage stage, GestionnaireSauvegarde gestionnaire) {
         this.vue = vue;
         this.stage = stage;
         this.gestionnaire = gestionnaire;
