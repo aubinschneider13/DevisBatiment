@@ -14,6 +14,9 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.scene.transform.Transform;
 import javafx.stage.Stage;
+import javafx.geometry.Rectangle2D;
+import javafx.stage.Screen;
+import javafx.application.Platform;
 
 public class PieceControleur {
     private PieceView vue;
@@ -29,15 +32,26 @@ public class PieceControleur {
         this.stage = stage;
         this.gestionnaire = gestionnaire;
     }
+    
+    private void mettreFenetrePleinEcran() {
+    Platform.runLater(() -> {
+        Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
+
+        stage.setResizable(true);
+        stage.setX(bounds.getMinX());
+        stage.setY(bounds.getMinY());
+        stage.setWidth(bounds.getWidth());
+        stage.setHeight(bounds.getHeight());
+    });
+}
 
     public void retourDashboard() {
         DashBoardView dashBoardView = new DashBoardView();
         Scene dashScene = new Scene(dashBoardView);
         stage.setScene(dashScene);
         stage.setTitle("InsaBuilder - Tableau de bord");
-        stage.setMaximized(false);
-        stage.setMaximized(true);
         new DashBoardControleur(dashBoardView, stage, gestionnaire);
+        mettreFenetrePleinEcran();
     }
 
     public void changerEtat(int nouvelEtat) {
