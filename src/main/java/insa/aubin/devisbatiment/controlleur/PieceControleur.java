@@ -33,17 +33,17 @@ public class PieceControleur {
         this.gestionnaire = gestionnaire;
     }
     
-    private void mettreFenetrePleinEcran() {
-    Platform.runLater(() -> {
-        Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
+    public void mettreFenetrePleinEcran() {
+        Platform.runLater(() -> {
+            Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
 
-        stage.setResizable(true);
-        stage.setX(bounds.getMinX());
-        stage.setY(bounds.getMinY());
-        stage.setWidth(bounds.getWidth());
-        stage.setHeight(bounds.getHeight());
-    });
-}
+            stage.setResizable(true);
+            stage.setX(bounds.getMinX());
+            stage.setY(bounds.getMinY());
+            stage.setWidth(bounds.getWidth());
+            stage.setHeight(bounds.getHeight());
+        });
+    }
 
     public void retourDashboard() {
         DashBoardView dashBoardView = new DashBoardView();
