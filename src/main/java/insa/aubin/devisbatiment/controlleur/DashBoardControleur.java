@@ -8,6 +8,9 @@ import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
 import insa.aubin.devisbatiment.view.SettingsView;
 import insa.aubin.devisbatiment.controlleur.SettingsControleur;
 import javafx.stage.Modality;
+import javafx.geometry.Rectangle2D;
+import javafx.stage.Screen;
+import javafx.application.Platform;
 
 public class DashBoardControleur {
     private DashBoardView dashBoardView;
@@ -21,6 +24,18 @@ public class DashBoardControleur {
         creerPiece();
         configurerSettings();
     }
+    
+    private void mettreFenetrePleinEcran() {
+    Platform.runLater(() -> {
+        Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
+
+        stage.setResizable(true);
+        stage.setX(bounds.getMinX());
+        stage.setY(bounds.getMinY());
+        stage.setWidth(bounds.getWidth());
+        stage.setHeight(bounds.getHeight());
+    });
+}
 
     public void creerPiece(){
         this.dashBoardView.getPieceButton().setOnAction(e -> {
@@ -34,9 +49,7 @@ public class DashBoardControleur {
 
         stage.setScene(pieceScene);
         stage.setTitle("InsaBuilder - Nouveau devis pour une pièce");
-        stage.show();
-        stage.setMaximized(false); //On force pour que la fenêtre occupe toute la page
-        stage.setMaximized(true);
+        mettreFenetrePleinEcran();
     }
     
 
