@@ -12,8 +12,8 @@ import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
 public class ImmeubleView extends BorderPane {
-    String cheminRetour = "/images/fleche_retour_icone.png";
-    String cheminMain = "/images/main_icone.png";
+    private String cheminRetour = "/images/fleche_retour_icone.png";
+    private String cheminMain = "/images/main_icone.png";
     
     private ImmeubleControleur controleur;
     private Button btnAjouterNiveau;
@@ -22,9 +22,6 @@ public class ImmeubleView extends BorderPane {
     private DessinCanvas canvas;
 
     public ImmeubleView(Stage stage, GestionnaireSauvegarde gestionnaire) {
-        // Initialisation du contrôleur
-        this.controleur = new ImmeubleControleur(this, stage, gestionnaire);
-
         // --- 1. BARRE D'OUTILS (TOP) ---
         TabPane tabPaneImmeuble = new TabPane();
         Tab tabConstruction = new Tab("Construction");
@@ -38,26 +35,23 @@ public class ImmeubleView extends BorderPane {
         // Bouton Navigation
         Image imgMain = new Image(getClass().getResource(cheminMain).toExternalForm());
         ImageView iconeMain = new ImageView(imgMain);
-        iconeMain.setFitHeight(30); // Ajusté pour cohérence
+        iconeMain.setFitHeight(30);
         iconeMain.setFitWidth(30);
         iconeMain.setPreserveRatio(true);
 
         Button navigationButton = new Button("Naviguer");
-        navigationButton.setStyle("-fx-cursor: hand; -fx-font-family: 'Arial'; -fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #34495e;");
+        navigationButton.setStyle("-fx-cursor: hand; -fx-font-weight: bold; -fx-text-fill: #34495e;");
         navigationButton.setPrefSize(80, 60);
         navigationButton.setGraphic(iconeMain);
         navigationButton.setContentDisplay(ContentDisplay.TOP);
-        navigationButton.setOnAction(e -> this.controleur.btnNavigation(e));
         
-        // Séparateur 1
-        Separator separation1 = new Separator();
-        separation1.setOrientation(Orientation.VERTICAL);
+        // Séparateur
+        Separator separation1 = new Separator(Orientation.VERTICAL);
         
         // Bouton Ajouter Niveau
         btnAjouterNiveau = new Button("Ajouter\nNiveau");
         btnAjouterNiveau.setStyle("-fx-cursor: hand; -fx-font-weight: bold; -fx-text-alignment: center; -fx-text-fill: #34495e;");
         btnAjouterNiveau.setPrefSize(80, 60);
-        btnAjouterNiveau.setOnAction(e -> this.controleur.btnAjouterNiveau(e));
         
         // Espaceur pour pousser le bouton retour à droite
         Region spacer = new Region();
@@ -71,50 +65,47 @@ public class ImmeubleView extends BorderPane {
         iconeRetour.setPreserveRatio(true);
 
         Button retourButton = new Button("Retour");
-        retourButton.setStyle("-fx-cursor: hand; -fx-font-family: 'Arial'; -fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #34495e;");
+        retourButton.setStyle("-fx-cursor: hand; -fx-font-weight: bold; -fx-text-fill: #34495e;");
         retourButton.setPrefSize(80, 60);
         retourButton.setGraphic(iconeRetour);
         retourButton.setContentDisplay(ContentDisplay.TOP);
-        retourButton.setOnAction(e -> controleur.retourDashboard());
         
-        // Assemblage de la HBox (Ordre corrigé)
+        // Assemblage Toolbar
         toolBar.getChildren().addAll(navigationButton, separation1, btnAjouterNiveau, spacer, retourButton);
-        
         tabConstruction.setContent(toolBar);
         tabPaneImmeuble.getTabs().add(tabConstruction);
         this.setTop(tabPaneImmeuble);
 
-        // --- 2. ZONE CENTRALE (SPLITPANE) ---
+        // --- 2. CENTRE (NAVIGATEUR + CANVAS) ---
         SplitPane splitPane = new SplitPane();
 
-        VBox navigateurBox = new VBox();
-        navigateurBox.setMinWidth(200);
-        Label lblNav = new Label(" Navigateur de l'immeuble");
-        lblNav.setStyle("-fx-background-color: #ecf0f1; -fx-font-weight: bold; -fx-padding: 5;");
-        lblNav.setMaxWidth(Double.MAX_VALUE);
-
-        rootItem = new TreeItem<>("Immeuble");
+        // Gauche : Navigateur
+        rootItem = new TreeItem<>("Immeuble (en attente...)");
         rootItem.setExpanded(true);
         treeView = new TreeView<>(rootItem);
-
+        
+        VBox navBox = new VBox(new Label(" Navigateur"), treeView);
         VBox.setVgrow(treeView, Priority.ALWAYS);
-        navigateurBox.getChildren().addAll(lblNav, treeView);
 
-        StackPane zoneDessin = new StackPane();
-        zoneDessin.setStyle("-fx-background-color: white;");
+        // Droite : Canvas
         canvas = new DessinCanvas();
+        StackPane zoneDessin = new StackPane(canvas);
         canvas.widthProperty().bind(zoneDessin.widthProperty());
         canvas.heightProperty().bind(zoneDessin.heightProperty());
 
-        zoneDessin.getChildren().add(canvas);
-        splitPane.getItems().addAll(navigateurBox, zoneDessin);
+        splitPane.getItems().addAll(navBox, zoneDessin);
         splitPane.setDividerPositions(0.2);
-
         this.setCenter(splitPane);
+
+        // --- 3. INITIALISATION DU CONTROLEUR ---
+        this.controleur = new ImmeubleControleur(this, stage, gestionnaire);
+        
+        // Liaison des actions après init du controleur
+        navigationButton.setOnAction(e -> controleur.btnNavigation(e));
+        retourButton.setOnAction(e -> controleur.retourDashboard());
+        btnAjouterNiveau.setOnAction(e -> controleur.btnAjouterNiveau(e));
     }
 
-    public Button getBtnAjouterNiveau() { return btnAjouterNiveau; }
-    public TreeView<String> getTreeView() { return treeView; }
     public TreeItem<String> getRootItem() { return rootItem; }
     public DessinCanvas getCanvas() { return canvas; }
 }
