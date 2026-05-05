@@ -34,7 +34,7 @@ public class DashBoardControleur {
     }
 
     public void ouvrirImmeuble(){
-        ImmeubleView immeubleView = new ImmeubleView(stage);
+        ImmeubleView immeubleView = new ImmeubleView(stage,gestionnaire);
         Scene immeubleScene = new Scene(immeubleView);
 
         stage.setScene(immeubleScene);
