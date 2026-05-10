@@ -191,7 +191,11 @@ public class PieceView extends BorderPane {
         this.canvas.widthProperty().bind(zoneCentrale.widthProperty());
         this.canvas.heightProperty().bind(zoneCentrale.heightProperty());
         this.canvas.setOnMouseClicked(e -> this.controleur.clicDansZoneDeDessin(e));
-        this.canvas.setOnMouseMoved(e -> this.controleur.mouseMovedDansZoneDessin(e));
+        this.canvas.setOnMouseClicked(e -> {
+        if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
+            this.controleur.clicDansZoneDeDessin(e);
+        }
+        });
 
         this.optionsMurVue = new OptionsMurVue();
         StackPane.setAlignment(optionsMurVue, Pos.TOP_RIGHT);

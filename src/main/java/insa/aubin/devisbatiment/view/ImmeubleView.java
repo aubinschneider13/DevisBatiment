@@ -90,6 +90,7 @@ public class ImmeubleView extends BorderPane {
         // Droite : Canvas
         canvas = new DessinCanvas();
         StackPane zoneDessin = new StackPane(canvas);
+        zoneDessin.setStyle("-fx-background-color: #fffefe;");
         canvas.widthProperty().bind(zoneDessin.widthProperty());
         canvas.heightProperty().bind(zoneDessin.heightProperty());
 
