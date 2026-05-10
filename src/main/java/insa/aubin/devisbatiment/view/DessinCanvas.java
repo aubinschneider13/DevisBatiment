@@ -26,10 +26,19 @@ public class DessinCanvas extends Canvas {
     private double panStartX, panStartY;
     private double panStartOffsetX, panStartOffsetY;
 
-    private static final double GRID_SIZE = 1.0; // 1 unité modèle
+    private double gridSize = 1.0; // 1 unité modèle (modifiable via l'échelle)
     private boolean panActif = false;
     private boolean isPanning = false;
+    
+    public void setGridSize(double gridSize) {
+        this.gridSize = gridSize;
+        redrawAll();
+    }
 
+    public double getGridSize() {
+        return gridSize;
+    }
+    
     public DessinCanvas() {
         this.elements = new ArrayList<>();
 
@@ -114,8 +123,8 @@ public class DessinCanvas extends Canvas {
         double my = -(py - offsetY) / zoomFactor; // Y inversé
 
         // Snap à la grille
-        double snappedX = Math.round(mx / GRID_SIZE) * GRID_SIZE;
-        double snappedY = Math.round(my / GRID_SIZE) * GRID_SIZE;
+        double snappedX = Math.round(mx / gridSize) * gridSize;
+        double snappedY = Math.round(my / gridSize) * gridSize;
 
         return new Point2D(snappedX, snappedY);
     }
@@ -150,7 +159,7 @@ public class DessinCanvas extends Canvas {
         double h = getHeight();
 
         // Espacement de la grille en pixels selon le zoom actuel
-        double gridPx = GRID_SIZE * zoomFactor;
+        double gridPx = gridSize * zoomFactor;
 
         // Grille fine
         gc.setStroke(Color.web("#E8E8E8"));

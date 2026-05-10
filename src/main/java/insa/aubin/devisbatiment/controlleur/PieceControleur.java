@@ -174,4 +174,22 @@ public class PieceControleur {
         this.vue.getCanvas().setPanActif(true);
         this.vue.getOptionsMurVue().setVisible(false);
     }
+    
+    public void btnEchelle(ActionEvent t) {
+        // Bascule la visibilité du panneau échelle
+        boolean visible = !this.vue.getEchelleVue().isVisible();
+        this.vue.getEchelleVue().setVisible(visible);
+
+        if (visible) {
+            // Écouter les changements d'échelle en temps réel
+            this.vue.getEchelleVue().getGroupeEchelle().selectedToggleProperty().addListener(
+                (obs, oldVal, newVal) -> {
+                    if (newVal != null) {
+                        double echelle = this.vue.getEchelleVue().getEchelleSelectionnee();
+                        this.vue.getCanvas().setGridSize(echelle);
+                    }
+                }
+            );
+        }
+    }
 }

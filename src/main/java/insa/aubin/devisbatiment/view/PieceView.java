@@ -18,10 +18,12 @@ public class PieceView extends BorderPane {
     String cheminCote = "/images/cote_icone.png";
     String cheminRetour = "/images/fleche_retour_icone.png";
     String cheminMain = "/images/main_icone.png";
+    String cheminEchelle = "/images/echelle_icone.png";
 
     private PieceControleur controleur;
     private Button murButton;
     private DessinCanvas canvas;
+    private EchelleVue echelleVue;
     private OptionsMurVue optionsMurVue;
     private TreeItem<String> root;
     private TreeItem<String> itemMurs;
@@ -60,6 +62,24 @@ public class PieceView extends BorderPane {
         navigationButton.setGraphic(iconeMain);
         navigationButton.setContentDisplay(ContentDisplay.TOP);
         navigationButton.setOnAction(e -> this.controleur.btnNavigation(e));
+        
+        // Bouton Échelle
+        Image imgEchelle = new Image(getClass().getResource(cheminEchelle).toExternalForm());
+        ImageView iconeEchelle = new ImageView(imgEchelle);
+        iconeEchelle.setFitHeight(50);
+        iconeEchelle.setFitWidth(30);
+        iconeEchelle.setPreserveRatio(true);
+
+        Button echelleButton = new Button("Échelle");
+        echelleButton.setStyle("-fx-cursor: hand;" +
+                "-fx-font-family: 'Arial';" +
+                "-fx-font-size: 13px;" +
+                "-fx-font-weight: bold;" +
+                "-fx-text-fill: #34495e;");
+        echelleButton.setPrefSize(70, 60);
+        echelleButton.setGraphic(iconeEchelle);
+        echelleButton.setContentDisplay(ContentDisplay.TOP);
+        echelleButton.setOnAction(e -> this.controleur.btnEchelle(e));
         
         // Séparateur 1
         Separator separation1 = new Separator();
@@ -165,7 +185,7 @@ public class PieceView extends BorderPane {
         retourButton.setOnAction(e -> controleur.retourDashboard());
         
         //Fin HBox
-        hBoxConstruction.getChildren().addAll(navigationButton, separation1, murButton,
+        hBoxConstruction.getChildren().addAll(navigationButton, echelleButton, separation1, murButton,
         separation2, porteButton, fenetreButton, separation3, coteButton, spacer, retourButton);
         tabConstruction.setContent(hBoxConstruction);
 
@@ -200,8 +220,12 @@ public class PieceView extends BorderPane {
         this.optionsMurVue = new OptionsMurVue();
         StackPane.setAlignment(optionsMurVue, Pos.TOP_RIGHT);
         StackPane.setMargin(optionsMurVue, new Insets(10));
+        
+        this.echelleVue = new EchelleVue();
+        StackPane.setAlignment(echelleVue, Pos.TOP_LEFT); // Aligné à gauche pour ne pas chevaucher OptionsMurVue
+        StackPane.setMargin(echelleVue, new Insets(10));
 
-        zoneCentrale.getChildren().addAll(canvas, optionsMurVue);
+        zoneCentrale.getChildren().addAll(canvas, optionsMurVue, echelleVue);
 
         // Gauche
         this.root = new TreeItem<>("Devis : Ma pièce");
@@ -235,4 +259,5 @@ public class PieceView extends BorderPane {
     public void redrawAll() { this.canvas.redrawAll(); }
     public OptionsMurVue getOptionsMurVue() { return optionsMurVue; }
     public TreeItem<String> getItemMurs() { return itemMurs; }
+    public EchelleVue getEchelleVue() { return echelleVue; }
 }
