@@ -23,6 +23,8 @@ public class ImmeubleView extends BorderPane {
     private ImmeubleControleur controleur;
     private Button btnAjouterNiveau;
     private Button btnValiderAire;
+    private Button btnMur;
+    private Button btnAppartement;
     private TreeView<String> treeView;
     private TreeItem<String> rootItem;
     private EchelleVue echelleVue;
@@ -90,6 +92,18 @@ public class ImmeubleView extends BorderPane {
         btnAjouterNiveau.setDisable(false);
         btnAjouterNiveau.setVisible(false); // Caché jusqu'à validation
 
+        // Bouton Mur (visible après validation de l'aire)
+        btnMur = new Button("Mur");
+        btnMur.setStyle("-fx-cursor: hand; -fx-font-weight: bold; -fx-text-fill: #34495e;");
+        btnMur.setPrefSize(60, 60);
+        btnMur.setVisible(false); // affiché après validation
+
+        // Bouton Appartement (visible après validation de l'aire)
+        btnAppartement = new Button("Appartement");
+        btnAppartement.setStyle("-fx-cursor: hand; -fx-font-weight: bold; -fx-text-fill: #34495e;");
+        btnAppartement.setPrefSize(100, 60);
+        btnAppartement.setVisible(false); // affiché après validation
+
         // Superposition des deux boutons dans un même StackPane
         StackPane btnZone = new StackPane(btnValiderAire, btnAjouterNiveau);
         btnZone.setPrefSize(80, 60);
@@ -111,7 +125,11 @@ public class ImmeubleView extends BorderPane {
         retourButton.setGraphic(iconeRetour);
         retourButton.setContentDisplay(ContentDisplay.TOP);
 
-        toolBar.getChildren().addAll(navigationButton, echelleButton, separation1, btnZone, spacer, retourButton);
+        toolBar.getChildren().addAll(
+            navigationButton, echelleButton, separation1,
+            btnZone, btnMur, btnAppartement,  // ← btnMur et btnAppartement ici
+            spacer, retourButton
+        );
         tabConstruction.setContent(toolBar);
         tabPaneImmeuble.getTabs().add(tabConstruction);
         this.setTop(tabPaneImmeuble);
@@ -181,6 +199,9 @@ public class ImmeubleView extends BorderPane {
                 controleur.annulerAire();
             }
         });
+        
+        btnMur.setOnAction(e -> controleur.btnMur(e));
+    btnAppartement.setOnAction(e -> controleur.btnAppartement(e));
     }
 
     /** Crée le voile gris semi-transparent avec un cadenas centré */
@@ -232,6 +253,23 @@ public class ImmeubleView extends BorderPane {
     public void basculerBoutonsApresValidation() {
         btnValiderAire.setVisible(false);
         btnAjouterNiveau.setVisible(true);
+        btnMur.setVisible(true);          // ← nouveau
+        btnAppartement.setVisible(true);  // ← nouveau
+    }
+    
+    /** Affiche la NiveauView dans la zone centrale (remplace le canvas courant). */
+    public void afficherNiveau(NiveauView niveauView) {
+        // Retire tous les canvas/niveaux sauf les overlays fixes (voile, echelle, label)
+        zoneDessin.getChildren().removeIf(n -> n instanceof DessinCanvas || n instanceof NiveauView);
+        // Bind la taille
+        niveauView.prefWidthProperty().bind(zoneDessin.widthProperty());
+        niveauView.prefHeightProperty().bind(zoneDessin.heightProperty());
+        niveauView.getCanvas().widthProperty().bind(zoneDessin.widthProperty());
+        niveauView.getCanvas().heightProperty().bind(zoneDessin.heightProperty());
+        // Insère en dessous des overlays (voile, echelle, label)
+        zoneDessin.getChildren().add(0, niveauView);
+        // Le voile cadenas ne concerne que l'aire — masqué dans les niveaux
+        voileValidation.setVisible(false);
     }
 
     //Getters

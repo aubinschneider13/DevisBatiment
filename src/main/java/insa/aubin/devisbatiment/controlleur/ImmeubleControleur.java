@@ -6,14 +6,12 @@ import insa.aubin.devisbatiment.modele.Point;
 import insa.aubin.devisbatiment.view.DessinCanvas;
 import insa.aubin.devisbatiment.view.DashBoardView;
 import insa.aubin.devisbatiment.view.ImmeubleView;
+import insa.aubin.devisbatiment.view.NiveauView;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.TextInputDialog;
-import javafx.scene.control.TreeItem;
+import javafx.scene.control.*;
 import javafx.stage.Stage;
 
 import java.util.ArrayList;
@@ -25,16 +23,18 @@ public class ImmeubleControleur {
     private Stage stage;
     private GestionnaireSauvegarde gestionnaire;
 
-    // Aire de l'immeuble
+    // --- Aire de l'immeuble ---
     private AireImmeuble aireImmeuble;
     private int etapeAire = 0;
     private boolean aireValidee = false;
     private int coteEnCoursDeDeplacement = -1;
 
-    // Niveaux : chaque niveau a son propre canvas
-    private List<DessinCanvas> canvasNiveaux = new ArrayList<>();
-    // TreeItems des niveaux
+    // --- Niveaux : un contrôleur par niveau ---
+    private final List<NiveauControleur> niveauControleurs = new ArrayList<>();
     private TreeItem<String> itemNiveaux;
+
+    // Contrôleur du niveau actuellement affiché (null = on est sur l'aire)
+    private NiveauControleur niveauActuel = null;
 
     public ImmeubleControleur(ImmeubleView vue, Stage stage, GestionnaireSauvegarde gestionnaire) {
         this.vue = vue;
@@ -49,41 +49,109 @@ public class ImmeubleControleur {
         TreeItem<String> itemAire = new TreeItem<>("Aire de l'immeuble");
         this.vue.getRootItem().getChildren().addAll(itemAire, itemNiveaux);
 
-        // Clic sur le TreeView → bascule de canvas
+        // Sélection dans le TreeView → bascule de canvas
         this.vue.getTreeView().getSelectionModel().selectedItemProperty().addListener(
             (obs, oldVal, newVal) -> {
                 if (newVal == null) return;
                 if (newVal == itemAire) {
-                    // Affiche le canvas de l'aire
+                    // Retour sur le canvas de l'aire
+                    niveauActuel = null;
                     this.vue.afficherCanvasAire();
                 } else {
-                    // Cherche si c'est un item de niveau
-                    int index = itemNiveaux.getChildren().indexOf(newVal);
-                    if (index >= 0 && index < canvasNiveaux.size()) {
-                        this.vue.afficherCanvas(canvasNiveaux.get(index));
+                    // Cherche le NiveauControleur correspondant (item direct ou enfant appartement)
+                    for (int i = 0; i < itemNiveaux.getChildren().size(); i++) {
+                        TreeItem<String> itemNiveau = itemNiveaux.getChildren().get(i);
+                        if (newVal == itemNiveau || itemNiveau.getChildren().contains(newVal)) {
+                            basculerVersNiveau(i);
+                            break;
+                        }
                     }
                 }
             }
         );
 
-        // Listeners de dessin de l'aire
+        // Listeners sur le canvas de l'aire
         this.vue.getCanvas().setOnMouseClicked(e -> {
             if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY
-                    && e.isStillSincePress()) {
-                this.clicAire(e);
-            }
+                    && e.isStillSincePress()) clicAire(e);
         });
-        this.vue.getCanvas().setOnMouseMoved(e -> this.mouvementAire(e));
+        this.vue.getCanvas().setOnMouseMoved(e -> mouvementAire(e));
         this.vue.getCanvas().setOnMousePressed(e -> {
-            if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
-                this.pressionAire(e);
-            }
+            if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY) pressionAire(e);
         });
-        this.vue.getCanvas().setOnMouseDragged(e -> this.glisserAire(e));
-        this.vue.getCanvas().setOnMouseReleased(e -> this.relacherAire(e));
+        this.vue.getCanvas().setOnMouseDragged(e -> glisserAire(e));
+        this.vue.getCanvas().setOnMouseReleased(e -> relacherAire(e));
 
         Platform.runLater(this::demanderNomImmeuble);
     }
+
+    // =========================================================================
+    // BASCULE ENTRE NIVEAUX
+    // =========================================================================
+
+    private void basculerVersNiveau(int index) {
+        niveauActuel = niveauControleurs.get(index);
+        // Affiche le canvas de ce niveau dans la zone centrale d'ImmeubleView
+        this.vue.afficherNiveau(niveauActuel.getVue());
+    }
+
+    // =========================================================================
+    // BOUTONS DE LA TOOLBAR (délégués au niveauActuel si pertinent)
+    // =========================================================================
+
+    public void btnNavigation(ActionEvent t) {
+        if (niveauActuel != null) niveauActuel.activerModeNavigation();
+        else this.vue.getCanvas().setPanActif(true);
+    }
+
+    public void btnMur(ActionEvent t) {
+        if (niveauActuel != null) niveauActuel.activerModeMur();
+    }
+
+    public void btnAppartement(ActionEvent t) {
+        if (niveauActuel != null) niveauActuel.activerModeAppartement();
+    }
+
+    public void btnEchelle(ActionEvent t) {
+        boolean visible = !this.vue.getEchelleVue().isVisible();
+        this.vue.getEchelleVue().setVisible(visible);
+
+        if (visible) {
+            this.vue.getEchelleVue().getGroupeEchelle().selectedToggleProperty().addListener(
+                (obs, oldVal, newVal) -> {
+                    if (newVal != null) {
+                        double echelle = this.vue.getEchelleVue().getEchelleSelectionnee();
+                        // Applique l'échelle au canvas actuellement affiché
+                        if (niveauActuel != null) {
+                            niveauActuel.getVue().getCanvas().setGridSize(echelle);
+                        } else {
+                            this.vue.getCanvas().setGridSize(echelle);
+                        }
+                    }
+                }
+            );
+        }
+    }
+
+    public void btnAjouterNiveau(ActionEvent t) {
+        int nb = niveauControleurs.size();
+        String nomNiveau = (nb == 0) ? "RDC" : "Niveau " + nb;
+
+        // Crée la vue et le contrôleur du nouveau niveau
+        NiveauView niveauView = new NiveauView();
+        TreeItem<String> itemNiveau = new TreeItem<>(nomNiveau);
+        itemNiveaux.getChildren().add(itemNiveau);
+
+        NiveauControleur ctrl = new NiveauControleur(niveauView, aireImmeuble, itemNiveau);
+        niveauControleurs.add(ctrl);
+
+        // Sélection automatique → déclenche basculerVersNiveau via le listener
+        this.vue.getTreeView().getSelectionModel().select(itemNiveau);
+    }
+
+    // =========================================================================
+    // GESTION DE L'AIRE (inchangée)
+    // =========================================================================
 
     private void demanderNomImmeuble() {
         TextInputDialog dialog = new TextInputDialog("Nouvel Immeuble");
@@ -92,7 +160,8 @@ public class ImmeubleControleur {
         dialog.setContentText("Veuillez entrer le nom de l'immeuble :");
         dialog.setGraphic(null);
 
-        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        javafx.scene.control.Button okButton =
+            (javafx.scene.control.Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
         okButton.addEventFilter(ActionEvent.ACTION, event -> {
             if (dialog.getEditor().getText().trim().isEmpty()) {
                 event.consume();
@@ -107,8 +176,6 @@ public class ImmeubleControleur {
             retourDashboard();
         }
     }
-
-    // --- Gestion de l'aire ---
 
     private void clicAire(javafx.scene.input.MouseEvent e) {
         if (aireValidee) return;
@@ -220,45 +287,6 @@ public class ImmeubleControleur {
         this.vue.getCanvas().setOnMousePressed(null);
         this.vue.getCanvas().setOnMouseDragged(null);
         this.vue.getCanvas().setOnMouseReleased(null);
-    }
-
-    /** Ajoute un niveau : RDC pour le premier, puis Niveau 1, 2, ... */
-    public void btnAjouterNiveau(ActionEvent t) {
-        int nb = canvasNiveaux.size();
-        String nomNiveau = (nb == 0) ? "RDC" : "Niveau " + nb;
-
-        // Nouveau canvas dédié à ce niveau
-        DessinCanvas canvasNiveau = new DessinCanvas();
-        canvasNiveaux.add(canvasNiveau);
-
-        // Ajout dans le TreeView
-        TreeItem<String> itemNiveau = new TreeItem<>(nomNiveau);
-        itemNiveaux.getChildren().add(itemNiveau);
-
-        // Sélection automatique du nouveau niveau → affiche son canvas
-        this.vue.getTreeView().getSelectionModel().select(itemNiveau);
-    }
-
-    // --- Autres boutons ---
-
-    public void btnNavigation(ActionEvent t) {
-        this.vue.getCanvas().setPanActif(true);
-    }
-
-    public void btnEchelle(ActionEvent t) {
-        boolean visible = !this.vue.getEchelleVue().isVisible();
-        this.vue.getEchelleVue().setVisible(visible);
-
-        if (visible) {
-            this.vue.getEchelleVue().getGroupeEchelle().selectedToggleProperty().addListener(
-                (obs, oldVal, newVal) -> {
-                    if (newVal != null) {
-                        double echelle = this.vue.getEchelleVue().getEchelleSelectionnee();
-                        this.vue.getCanvas().setGridSize(echelle);
-                    }
-                }
-            );
-        }
     }
 
     public void retourDashboard() {

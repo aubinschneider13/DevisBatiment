@@ -2,8 +2,11 @@ package insa.aubin.devisbatiment.modele;
 
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import java.util.ArrayList;
 import java.util.List;
+
 
 public class Appartement extends ElementDeConstruction implements Dessin {
 
@@ -11,22 +14,22 @@ public class Appartement extends ElementDeConstruction implements Dessin {
     private List<Piece> pieces;
 
     // --- Champs visuels ---
-    // Polygone délimitant l'appartement (en coordonnées modèle)
+    // Polygone de la zone délimitée par les murs (coordonnées modèle)
     private List<Point> polygone;
     private Color couleurFond;
     private Color couleurContour;
 
-    // Numérotation automatique par niveau (réinitialisée à l'extérieur si besoin)
+    // Numérotation automatique (statique, partagée entre tous les niveaux)
     private static int compteur = 0;
     private final int numero;
 
-    // Palette tournante pour distinguer les appartements
+    // Palette tournante pour distinguer visuellement les appartements
     private static final Color[] PALETTE_FOND = {
-        Color.web("#e74c3c", 0.18),
-        Color.web("#2ecc71", 0.18),
-        Color.web("#f39c12", 0.18),
-        Color.web("#9b59b6", 0.18),
-        Color.web("#1abc9c", 0.18),
+        Color.web("#e74c3c", 0.18), // rouge
+        Color.web("#2ecc71", 0.18), // vert
+        Color.web("#f39c12", 0.18), // orange
+        Color.web("#9b59b6", 0.18), // violet
+        Color.web("#1abc9c", 0.18), // turquoise
     };
     private static final Color[] PALETTE_CONTOUR = {
         Color.web("#c0392b"),
@@ -42,18 +45,21 @@ public class Appartement extends ElementDeConstruction implements Dessin {
         this.pieces = new ArrayList<>();
         this.polygone = new ArrayList<>();
 
+        // Attribution du numéro et de la couleur
         compteur++;
         this.numero = compteur;
         int idx = (numero - 1) % PALETTE_FOND.length;
-        this.couleurFond = PALETTE_FOND[idx];
+        this.couleurFond    = PALETTE_FOND[idx];
         this.couleurContour = PALETTE_CONTOUR[idx];
     }
 
-    /** Remet le compteur à zéro (utile si on recharge un projet) */
+    /** Réinitialise le compteur (utile au chargement d'un projet). */
     public static void resetCompteur() { compteur = 0; }
 
+    // --- Champs visuels : getters / setters ---
+
     public void setPolygone(List<Point> polygone) { this.polygone = polygone; }
-    public List<Point> getPolygone() { return polygone; }
+    public List<Point> getPolygone()              { return polygone; }
 
     // --- Implémentation Dessin ---
 
@@ -84,18 +90,19 @@ public class Appartement extends ElementDeConstruction implements Dessin {
         gc.setLineWidth(0.06);
         gc.strokePolygon(xs, ys, n);
 
-        // Label au barycentre — le canvas inverse Y, donc on inverse le signe
-        // de Y pour que le texte reste lisible (scale -Y dans redrawAll)
+        // Label au barycentre du polygone
+        // Le canvas applique un scale(1, -1) sur Y → on annule localement pour que
+        // le texte reste lisible (sinon il serait affiché à l'envers)
         double cx = 0, cy = 0;
         for (Point p : polygone) { cx += p.getX(); cy += p.getY(); }
-        cx /= n; cy /= n;
+        cx /= n;
+        cy /= n;
 
         gc.save();
-        // Annule l'inversion Y localement pour le texte
-        gc.scale(1, -1);
+        gc.scale(1, -1); // annule l'inversion Y du canvas
         gc.setFill(couleurContour);
-        gc.setFont(javafx.scene.text.Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 0.3));
-        gc.fillText(toString(), cx - 0.6, -cy + 0.15);
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 0.3));
+        gc.fillText(toString(), cx - 0.5, -cy + 0.15);
         gc.restore();
     }
 
@@ -107,10 +114,10 @@ public class Appartement extends ElementDeConstruction implements Dessin {
         return p;
     }
 
-    public int getNbPieces() { return pieces.size(); }
-    public double getHauteurPlafond() { return hauteurPlafond; }
-    public void setHauteurPlafond(double h) { this.hauteurPlafond = h; }
-    public List<Piece> getPieces() { return pieces; }
+    public int getNbPieces()                          { return pieces.size(); }
+    public double getHauteurPlafond()                 { return hauteurPlafond; }
+    public void setHauteurPlafond(double hauteurPlafond) { this.hauteurPlafond = hauteurPlafond; }
+    public List<Piece> getPieces()                    { return pieces; }
 
     @Override
     public String toCSV() {
