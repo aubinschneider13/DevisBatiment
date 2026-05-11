@@ -74,6 +74,36 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         return Math.sqrt(Math.pow(px - (x1 + t * (x2 - x1)), 2) + Math.pow(py - (y1 + t * (y2 - y1)), 2));
     }
 
+    /**
+     * Calcule la valeur t ∈ [0,1] correspondant à la projection
+     * d'un point P sur ce segment de mur.
+     * Retourne la position relative : 0 = point1, 1 = point2.
+     */
+    public double calculerPositionSurMur(Point p) {
+        double x1 = point1.getX(), y1 = point1.getY();
+        double x2 = point2.getX(), y2 = point2.getY();
+
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double l2 = dx*dx + dy*dy;
+
+        if (l2 == 0) return 0.5;
+
+        double t = ((p.getX()-x1)*dx + (p.getY()-y1)*dy) / l2;
+
+        // Simple clamp entre 0 et 1
+        return Math.max(0.0, Math.min(1.0, t));
+    }
+
+    /**
+     * Calcule les coordonnées XY d'un point à la position t sur le mur.
+     */
+    public Point getPointSurMur(double t) {
+        double x = point1.getX() + t * (point2.getX() - point1.getX());
+        double y = point1.getY() + t * (point2.getY() - point1.getY());
+        return new Point(x, y);
+    }
+
     //Getters et Setters
 
     public Point getPoint1() {
@@ -124,28 +154,102 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         // Dessin du mur
         gc.setStroke(this.color);
         gc.setLineWidth(0.1);
-        gc.strokeLine(point1.getX(), point1.getY(), point2.getX(), point2.getY());
+        gc.strokeLine(
+                point1.getX(), point1.getY(),
+                point2.getX(), point2.getY()
+        );
 
-        // Dessin des ouvertures sur le mur (petits traits colorés)
-        for(Ouverture o : listeOuvertures) {
-            gc.setLineWidth(0.15);
-            gc.setStroke(o instanceof Porte ? Color.BROWN : Color.DEEPSKYBLUE);
+        double angle = Math.toDegrees(Math.atan2(
+                point2.getY() - point1.getY(),
+                point2.getX() - point1.getX()
+        ));
 
-            // On dessine l'ouverture au milieu du mur pour simplifier
-            double midX = (point1.getX() + point2.getX()) / 2;
-            double midY = (point1.getY() + point2.getY()) / 2;
-            gc.strokeLine(midX - 0.2, midY, midX + 0.2, midY);
+        // ✅ Chaque ouverture à SA position réelle
+        for (Ouverture o : listeOuvertures) {
+            gc.save();
+
+            // Position exacte selon positionSurMur
+            Point pos = getPointSurMur(o.getPositionSurMur());
+            gc.translate(pos.getX(), pos.getY());
+            gc.rotate(angle);
+
+            if (o instanceof Porte) {
+                dessinerSymbolePorte(gc, o.getLargeur());
+            } else if (o instanceof Fenetre) {
+                dessinerSymboleFenetre(gc, o.getLargeur());
+            }
+
+            gc.restore();
         }
 
-        // Les coins
+        // Coins du mur
         double rayon = 0.08;
         gc.setFill(Color.WHITE);
         gc.setStroke(Color.BLUE);
         gc.setLineWidth(0.02);
-        gc.fillOval(point1.getX() - rayon, point1.getY() - rayon, rayon * 2, rayon * 2);
-        gc.strokeOval(point1.getX() - rayon, point1.getY() - rayon, rayon * 2, rayon * 2);
-        gc.fillOval(point2.getX() - rayon, point2.getY() - rayon, rayon * 2, rayon * 2);
-        gc.strokeOval(point2.getX() - rayon, point2.getY() - rayon, rayon * 2, rayon * 2);
+        gc.fillOval(point1.getX()-rayon, point1.getY()-rayon, rayon*2, rayon*2);
+        gc.strokeOval(point1.getX()-rayon, point1.getY()-rayon, rayon*2, rayon*2);
+        gc.fillOval(point2.getX()-rayon, point2.getY()-rayon, rayon*2, rayon*2);
+        gc.strokeOval(point2.getX()-rayon, point2.getY()-rayon, rayon*2, rayon*2);
+    }
+
+    /**
+     * Symbole architectural d'une porte :
+     * - Ouverture dans le mur (trait blanc)
+     * - Arc de cercle montrant le débattement
+     */
+    private void dessinerSymbolePorte(GraphicsContext gc, double largeur) {
+        double l = largeur;
+
+        // 1. Effacer le mur là où est la porte (simulé par trait blanc épais)
+        gc.setStroke(Color.WHITE);
+        gc.setLineWidth(0.15);
+        gc.strokeLine(-l/2, 0, l/2, 0);
+
+        // 2. Encadrements de la porte (petits tirets aux extrémités)
+        gc.setStroke(Color.BLACK);
+        gc.setLineWidth(0.05);
+        gc.strokeLine(-l/2, -0.08, -l/2, 0.08);
+        gc.strokeLine( l/2, -0.08,  l/2, 0.08);
+
+        // 3. Arc de débattement (quart de cercle)
+        gc.setStroke(Color.web("#8B4513")); // marron
+        gc.setLineWidth(0.04);
+        gc.setLineDashes(0.05, 0.05);
+        gc.strokeArc(-l/2, -l, l, l, 270, 90, javafx.scene.shape.ArcType.OPEN);
+        gc.setLineDashes(0); // reset
+
+        // 4. Vantail de la porte (trait plein)
+        gc.setStroke(Color.web("#8B4513"));
+        gc.setLineWidth(0.05);
+        gc.strokeLine(-l/2, 0, -l/2, -l);
+    }
+
+    /**
+     * Symbole architectural d'une fenêtre :
+     * - Ouverture dans le mur
+     * - Double trait représentant le vitrage
+     */
+    private void dessinerSymboleFenetre(GraphicsContext gc, double largeur) {
+        double l = largeur;
+        double ep = 0.06; // épaisseur du vitrage
+
+        // 1. Effacer le mur (trait blanc)
+        gc.setStroke(Color.WHITE);
+        gc.setLineWidth(0.15);
+        gc.strokeLine(-l/2, 0, l/2, 0);
+
+        // 2. Encadrements
+        gc.setStroke(Color.BLACK);
+        gc.setLineWidth(0.05);
+        gc.strokeLine(-l/2, -0.08, -l/2, 0.08);
+        gc.strokeLine( l/2, -0.08,  l/2, 0.08);
+
+        // 3. Double trait du vitrage
+        gc.setStroke(Color.DEEPSKYBLUE);
+        gc.setLineWidth(0.04);
+        gc.strokeLine(-l/2, -ep, l/2, -ep);
+        gc.strokeLine(-l/2,  ep, l/2,  ep);
     }
 
     @Override

@@ -29,6 +29,7 @@ public class PieceView extends BorderPane {
     private TreeItem<String> itemMurs;
     private TreeItem<String> itemOuvertures;
     private TreeItem<String> itemSurfaces;
+    private Label labelInstructions;
 
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire) {
         this.controleur = new PieceControleur(this, stage, gestionnaire);
@@ -235,7 +236,20 @@ public class PieceView extends BorderPane {
         StackPane.setAlignment(echelleVue, Pos.TOP_LEFT); // Aligné à gauche pour ne pas chevaucher OptionsMurVue
         StackPane.setMargin(echelleVue, new Insets(10));
 
-        zoneCentrale.getChildren().addAll(canvas, optionsMurVue, echelleVue);
+        // Label d'instructions en bas
+        labelInstructions = new Label("Sélectionnez un outil pour commencer");
+        labelInstructions.setStyle(
+                "-fx-background-color: rgba(240,240,240,0.9);" +
+                        "-fx-padding: 6 12 6 12;" +
+                        "-fx-border-radius: 4;" +
+                        "-fx-background-radius: 4;" +
+                        "-fx-text-fill: #2c3e50;" +
+                        "-fx-font-size: 13px;"
+        );
+        StackPane.setAlignment(labelInstructions, Pos.BOTTOM_CENTER);
+        StackPane.setMargin(labelInstructions, new Insets(0, 0, 15, 0));
+
+        zoneCentrale.getChildren().addAll(canvas, optionsMurVue, echelleVue, labelInstructions);
 
         // Gauche
         this.root = new TreeItem<>("Devis : Ma pièce");
@@ -270,4 +284,5 @@ public class PieceView extends BorderPane {
     public OptionsMurVue getOptionsMurVue() { return optionsMurVue; }
     public TreeItem<String> getItemMurs() { return itemMurs; }
     public EchelleVue getEchelleVue() { return echelleVue; }
+    public void setInstructions(String texte) { labelInstructions.setText(texte); }
 }

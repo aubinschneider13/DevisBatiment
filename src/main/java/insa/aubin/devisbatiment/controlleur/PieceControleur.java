@@ -27,6 +27,7 @@ public class PieceControleur {
     private Point p1, p2;
     private Mur mur1, mur2;
     private int etapeRectangle;
+    private Mur murSurvolé;
 
     public PieceControleur(PieceView vue, Stage stage, GestionnaireSauvegarde gestionnaire) {
         this.vue = vue;
@@ -58,6 +59,33 @@ public class PieceControleur {
         this.etat = nouvelEtat;
         this.vue.getCanvas().setPanActif(this.etat == ETAT_RIEN);
         this.vue.getOptionsMurVue().setVisible(this.etat == ETAT_MUR);
+
+        // ✅ Message contextuel selon l'outil actif
+        switch (nouvelEtat) {
+            case ETAT_RIEN ->
+                    this.vue.setInstructions(
+                            "Navigation active — Clic droit ou molette pour déplacer la vue"
+                    );
+            case ETAT_MUR -> {
+                if (this.vue.getOptionsMurVue().estRectangulaire()) {
+                    this.vue.setInstructions(
+                            "Mode rectangle — Cliquez pour définir le premier coin"
+                    );
+                } else {
+                    this.vue.setInstructions(
+                            "Mode libre — Cliquez pour définir le début du mur"
+                    );
+                }
+            }
+            case ETAT_PORTE ->
+                    this.vue.setInstructions(
+                            "Survolez un mur puis cliquez pour insérer une porte — Échap pour annuler"
+                    );
+            case ETAT_FENETRE ->
+                    this.vue.setInstructions(
+                            "Survolez un mur puis cliquez pour insérer une fenêtre — Échap pour annuler"
+                    );
+        }
     }
 
     /**
@@ -74,30 +102,39 @@ public class PieceControleur {
         this.vue.getOptionsMurVue().setVisible(true);
     }
 
-    public void clicDansZoneDeDessin(MouseEvent t) {
-        Point pClic = this.posInModel(t.getX(), t.getY());
+    public void clicDansZoneDeDessin(MouseEvent event) {
+        Point pClic = this.posInModel(event.getX(), event.getY());
         //CAS MUR
         if (this.etat == ETAT_MUR) {
             genererDessinMur(pClic);
         }
-        //CAS PORTE
+
         else if (this.etat == ETAT_PORTE) {
             Mur cible = trouverMurProche(pClic);
             if (cible != null) {
-                    Porte nouvellePorte = new Porte();
-                    cible.ajouterOuverture(nouvellePorte);
+                double t = cible.calculerPositionSurMur(pClic);
+
+                // ✅ Marge appliquée ici, où on connaît la largeur
+                double marge = Porte.LARGEUR_PORTE / (2 * cible.calculerLongueur());
+                t = Math.max(marge, Math.min(1.0 - marge, t));
+
+                Porte nouvellePorte = new Porte(t);
+                cible.ajouterOuverture(nouvellePorte);
             }
         }
-        //CAS FENETRE
         else if (this.etat == ETAT_FENETRE) {
             Mur cible = trouverMurProche(pClic);
             if (cible != null) {
-                Fenetre nouvelleFenetre = new Fenetre();
+                double t = cible.calculerPositionSurMur(pClic);
+
+                // ✅ Même logique pour la fenêtre
+                double marge = Fenetre.COTE_FENETRE / (2 * cible.calculerLongueur());
+                t = Math.max(marge, Math.min(1.0 - marge, t));
+
+                Fenetre nouvelleFenetre = new Fenetre(t);
                 cible.ajouterOuverture(nouvelleFenetre);
             }
         }
-        this.rafraichirNavigateur();
-        this.vue.redrawAll();
     }
 
     public void genererDessinMur(Point pClic){
@@ -108,6 +145,7 @@ public class PieceControleur {
                     this.p1 = pClic;
                     this.mur1 = new Mur(p1, p1);
                     this.vue.getCanvas().ajouterElement(this.mur1);
+                    this.vue.setInstructions("Premier coin posé — Cliquez pour définir la longueur");
                     this.etapeRectangle = 1;
                     break;
                 case 1:
@@ -115,6 +153,7 @@ public class PieceControleur {
                     this.mur1.setPoint2(p2);
                     this.mur2 = new Mur(p2, p2);
                     this.vue.getCanvas().ajouterElement(this.mur2);
+                    this.vue.setInstructions("Longueur définie — Cliquez pour définir la largeur");
                     this.etapeRectangle = 2;
                     break;
                 case 2:
@@ -123,6 +162,7 @@ public class PieceControleur {
                     Point p4 = new Point(p1.getX() + (p3.getX() - p2.getX()), p1.getY() + (p3.getY() - p2.getY()));
                     this.vue.getCanvas().ajouterElement(new Mur(p3, p4));
                     this.vue.getCanvas().ajouterElement(new Mur(p4, p1));
+                    this.vue.setInstructions("Rectangle créé — Cliquez pour un nouveau mur ou changez d'outil");
                     this.etapeRectangle = 0;
                     this.mur1 = null;
                     this.mur2 = null;
@@ -133,16 +173,18 @@ public class PieceControleur {
             if (this.mur1 == null) {
                 this.mur1 = new Mur(pClic, pClic);
                 this.vue.getCanvas().ajouterElement(this.mur1);
+                this.vue.setInstructions("Début du mur posé — Cliquez pour définir la fin");
             } else {
                 this.mur1.setPoint2(pClic);
                 this.mur1 = null;
+                this.vue.setInstructions("Mur créé — Cliquez pour un nouveau mur ou changez d'outil");
             }
         }
     }
 
     public void mouseMovedDansZoneDessin(MouseEvent t) {
+        Point pSouris = this.posInModel(t.getX(), t.getY());
         if (this.etat == ETAT_MUR) {
-            Point pSouris = this.posInModel(t.getX(), t.getY());
             boolean modRect = this.vue.getOptionsMurVue().estRectangulaire();
             if (modRect) {
                 if (etapeRectangle == 1) {
@@ -157,7 +199,70 @@ public class PieceControleur {
                 }
             }
             this.vue.redrawAll();
+            // Dans PieceControleur.java - remplacer le bloc ETAT_PORTE/FENETRE
+
+        } else if (this.etat == ETAT_PORTE || this.etat == ETAT_FENETRE) {
+
+            this.murSurvolé = trouverMurProche(pSouris);
+
+            // Créer le bon fantôme selon l'outil actif
+            Fantome fantome = (this.etat == ETAT_PORTE)
+                    ? new Porte()
+                    : new Fenetre();
+
+            if (this.murSurvolé != null) {
+                // ✅ Mur détecté : ancrer et aligner sur le mur
+                double angle = Math.toDegrees(Math.atan2(
+                        murSurvolé.getPoint2().getY() - murSurvolé.getPoint1().getY(),
+                        murSurvolé.getPoint2().getX() - murSurvolé.getPoint1().getX()
+                ));
+
+                // Projeter le curseur sur le mur (position d'accrochage)
+                Point posAccrochage = projeterSurMur(pSouris, murSurvolé);
+
+                this.vue.getCanvas().setFantome(
+                        fantome,
+                        posAccrochage.getX(),
+                        posAccrochage.getY(),
+                        angle,
+                        true  // actif = vert
+                );
+            } else {
+                // ❌ Pas de mur : fantôme libre suivant le curseur
+                this.vue.getCanvas().setFantome(
+                        fantome,
+                        pSouris.getX(),
+                        pSouris.getY(),
+                        0,
+                        false  // inactif = gris
+                );
+            }
+            this.vue.redrawAll();
         }
+    }
+
+    /**
+     * Projette orthogonalement un point sur le segment du mur.
+     * Retourne le point d'accrochage sur le mur.
+     */
+    private Point projeterSurMur(Point p, Mur mur) {
+        double x1 = mur.getPoint1().getX(), y1 = mur.getPoint1().getY();
+        double x2 = mur.getPoint2().getX(), y2 = mur.getPoint2().getY();
+
+        double dx = x2 - x1, dy = y2 - y1;
+        double l2 = dx*dx + dy*dy;
+        if (l2 == 0) return mur.getPoint1();
+
+        double t = ((p.getX()-x1)*dx + (p.getY()-y1)*dy) / l2;
+
+        // ✅ Marge dynamique selon la largeur de l'ouverture
+        double largeur = (this.etat == ETAT_PORTE)
+                ? Porte.LARGEUR_PORTE
+                : Fenetre.COTE_FENETRE;
+        double marge = largeur / (2 * mur.calculerLongueur());
+        t = Math.max(marge, Math.min(1.0 - marge, t));
+
+        return new Point(x1 + t*dx, y1 + t*dy);
     }
 
     public Point calculerPointOrthogonal(Point centre, Point cible) {

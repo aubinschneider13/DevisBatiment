@@ -1,6 +1,7 @@
 package insa.aubin.devisbatiment.view;
 
 import insa.aubin.devisbatiment.modele.Dessin;
+import insa.aubin.devisbatiment.modele.Fantome;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -26,9 +27,14 @@ public class DessinCanvas extends Canvas {
     private double panStartX, panStartY;
     private double panStartOffsetX, panStartOffsetY;
 
-    private double gridSize = 1.0; // 1 unité modèle (modifiable via l'échelle)
+    private double gridSize = 1; // 1 unité modèle (modifiable via l'échelle)
     private boolean panActif = false;
     private boolean isPanning = false;
+
+    private Fantome fantomeCourant = null;
+    private double fantomeX = 0, fantomeY = 0;
+    private double fantomeAngle = 0;
+    private boolean fantomeActif = false;
     
     public void setGridSize(double gridSize) {
         this.gridSize = gridSize;
@@ -111,6 +117,18 @@ public class DessinCanvas extends Canvas {
             }
         });
     }
+    public void setFantome(Fantome f, double x, double y,
+                           double angle, boolean actif) {
+        this.fantomeCourant = f;
+        this.fantomeX = x;
+        this.fantomeY = y;
+        this.fantomeAngle = angle;
+        this.fantomeActif = actif;
+    }
+
+    public void clearFantome() {
+        this.fantomeCourant = null;
+    }
 
     /**
      * Convertit les coordonnées pixels en coordonnées modèle
@@ -150,6 +168,12 @@ public class DessinCanvas extends Canvas {
         gc.scale(zoomFactor, -zoomFactor);
         for (Dessin d : this.elements) {
             d.dessiner(gc);
+        }
+        // Fantôme par-dessus tout
+        if (fantomeCourant != null) {
+            fantomeCourant.dessinerFantome(
+                    gc, fantomeX, fantomeY, fantomeAngle, fantomeActif
+            );
         }
         gc.restore();
     }
