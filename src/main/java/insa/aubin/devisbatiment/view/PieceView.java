@@ -33,8 +33,6 @@ public class PieceView extends BorderPane {
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire) {
         this.controleur = new PieceControleur(this, stage, gestionnaire);
 
-        
-
         // TabPane
         TabPane tabPane = new TabPane();
         Tab tabConstruction = new Tab("Construction");
@@ -61,7 +59,9 @@ public class PieceView extends BorderPane {
         navigationButton.setPrefSize(80, 60);
         navigationButton.setGraphic(iconeMain);
         navigationButton.setContentDisplay(ContentDisplay.TOP);
-        navigationButton.setOnAction(e -> this.controleur.btnNavigation(e));
+        navigationButton.setOnAction(e ->
+                this.controleur.changerEtat(PieceControleur.ETAT_RIEN)
+        );
         
         // Bouton Échelle
         Image imgEchelle = new Image(getClass().getResource(cheminEchelle).toExternalForm());
@@ -101,7 +101,9 @@ public class PieceView extends BorderPane {
         this.murButton.setPrefSize(60, 60);
         this.murButton.setGraphic(iconeMur);
         this.murButton.setContentDisplay(ContentDisplay.TOP);
-        this.murButton.setOnAction(e -> this.controleur.btnMur(e));
+        this.murButton.setOnAction(e ->
+                this.controleur.changerEtat(PieceControleur.ETAT_MUR)
+        );
         
         //Séparateur 2
         Separator separation2 = new Separator();
@@ -123,6 +125,9 @@ public class PieceView extends BorderPane {
         porteButton.setPrefSize(60, 60);
         porteButton.setGraphic(iconePorte);
         porteButton.setContentDisplay(ContentDisplay.TOP);
+        porteButton.setOnAction(e -> {
+            this.controleur.changerEtat(PieceControleur.ETAT_PORTE);
+        });
 
         // Bouton Fenêtre
         Image imgFen = new Image(getClass().getResource(cheminFenetre).toExternalForm());
@@ -140,6 +145,9 @@ public class PieceView extends BorderPane {
         fenetreButton.setPrefSize(70, 60);
         fenetreButton.setGraphic(iconeFen);
         fenetreButton.setContentDisplay(ContentDisplay.TOP);
+        fenetreButton.setOnAction(e -> {
+            this.controleur.changerEtat(PieceControleur.ETAT_FENETRE);
+        });
         
         // Séparateur 3
         Separator separation3 = new Separator();
@@ -210,12 +218,14 @@ public class PieceView extends BorderPane {
         this.canvas = new DessinCanvas();
         this.canvas.widthProperty().bind(zoneCentrale.widthProperty());
         this.canvas.heightProperty().bind(zoneCentrale.heightProperty());
-        this.canvas.setOnMouseClicked(e -> this.controleur.clicDansZoneDeDessin(e));
         this.canvas.setOnMouseClicked(e -> {
-        if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
-            this.controleur.clicDansZoneDeDessin(e);
-        }
+            if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
+                this.controleur.clicDansZoneDeDessin(e);
+            }
         });
+        this.canvas.setOnMouseMoved(e ->
+                this.controleur.mouseMovedDansZoneDessin(e)
+        );
 
         this.optionsMurVue = new OptionsMurVue();
         StackPane.setAlignment(optionsMurVue, Pos.TOP_RIGHT);
