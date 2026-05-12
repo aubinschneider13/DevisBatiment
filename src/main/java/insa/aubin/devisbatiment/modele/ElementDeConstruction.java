@@ -14,7 +14,7 @@ public abstract class ElementDeConstruction {
         return id;
     }
     public String genererId(String prefixe) {
-        return prefixe + new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
+        return prefixe + "_" + java.util.UUID.randomUUID().toString();
     }
 
     public abstract String toCSV();
