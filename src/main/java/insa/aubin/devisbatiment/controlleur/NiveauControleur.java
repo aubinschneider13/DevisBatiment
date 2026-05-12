@@ -21,26 +21,32 @@ public class NiveauControleur {
     private final NiveauView vue;
     private final AireImmeuble aireImmeuble;
     private final TreeItem<String> itemNiveau;
+    private final Niveau niveau; // Modèle métier de ce niveau
+    
+    // Association TreeItem ↔ Appartement (ajout du collègue conservé)
     private final Map<TreeItem<String>, Appartement> mapItemAppartement = new HashMap<>();
 
     private String mode = "AUCUN";
     private Mur murEnCours = null;
 
-    private final List<Appartement> appartements = new ArrayList<>();
-    private int compteurAppartements = 0;
-
     // Tolérance zéro : le snap garantit des coordonnées exactes sur la grille
     private static final double TOL = 1e-9;
 
     public NiveauControleur(NiveauView vue, AireImmeuble aireImmeuble,
-                             TreeItem<String> itemNiveau) {
-        this.vue = vue;
+                             TreeItem<String> itemNiveau, Niveau niveau) {
+        this.vue          = vue;
         this.aireImmeuble = aireImmeuble;
-        this.itemNiveau = itemNiveau;
+        this.itemNiveau   = itemNiveau;
+        this.niveau       = niveau;
 
         // Affiche les limites de l'aire en fond (lecture seule, non interactif)
         if (aireImmeuble != null && aireImmeuble.isComplete()) {
             vue.getCanvas().ajouterElement(creerContourAire());
+        }
+
+        // Ajoute les 4 murs délimiteurs du niveau dans le canvas
+        for (Mur m : niveau.getMursDelimiteurs()) {
+            vue.getCanvas().ajouterElement(m);
         }
 
         brancherListeners();
@@ -122,30 +128,33 @@ public class NiveauControleur {
         double px = snap.getX(), py = snap.getY();
 
         // Vérifie qu'aucun appartement n'occupe déjà cette zone
-        for (Appartement a : appartements) {
+        for (Appartement a : niveau.getAppartements()) {
             if (pointDansPolygone(px, py, a.getPolygone())) {
                 vue.setInstructions("Un appartement existe déjà dans cette zone.");
                 return;
             }
         }
 
-        // Collecte tous les segments (aire + murs du canvas)
-        List<double[]> segments = collecterSegments();
+        // Collecte tous les segments avec leur Mur source
+        List<SegmentSource> segmentsSources = collecterSegmentsSources();
 
         // Cherche le cycle fermé minimal contenant le point cliqué
-        List<Point> polygone = trouverCycleMinimal(px, py, segments);
+        List<SegmentSource> cycleSources = trouverCycleMinimal(px, py, segmentsSources);
 
-        if (polygone == null || polygone.size() < 3) {
+        if (cycleSources == null || cycleSources.size() < 3) {
             vue.setInstructions(
                 "Aucune zone fermée ici — vérifiez que les murs se rejoignent bien.");
             return;
         }
 
-        // Crée l'appartement avec son polygone visuel
-        compteurAppartements++;
-        Appartement appart = new Appartement(0, 2.5);
-        appart.setPolygone(polygone);
-        appartements.add(appart);
+        // Reconstruit la liste de Mur ordonnés pour l'appartement
+        List<Mur> mursDelimiteurs = new ArrayList<>();
+        for (SegmentSource ss : cycleSources) {
+            mursDelimiteurs.add(ss.mur);
+        }
+
+        // Crée l'appartement via le modèle Niveau (qui gère la liste interne)
+        Appartement appart = niveau.ajouterAppartement(mursDelimiteurs);
         vue.getCanvas().ajouterElement(appart);
 
         // Nœud enfant dans le TreeView
@@ -153,6 +162,7 @@ public class NiveauControleur {
         itemNiveau.getChildren().add(itemAppart);
         itemNiveau.setExpanded(true);
 
+        // Conservation de la map TreeItem ↔ Appartement (ajout du collègue)
         mapItemAppartement.put(itemAppart, appart);
 
         vue.setInstructions(
@@ -160,93 +170,93 @@ public class NiveauControleur {
     }
 
     // =========================================================================
-    // COLLECTE DES SEGMENTS
+    // COLLECTE DES SEGMENTS AVEC SOURCE
     // =========================================================================
 
     /**
-     * Collecte tous les segments disponibles :
-     * — les 4 côtés de l'AireImmeuble (frontières extérieures)
-     * — tous les Mur du canvas (frontières intérieures)
-     * Retourne une liste de [x1, y1, x2, y2].
+     * Collecte tous les segments disponibles en associant chacun à son Mur source.
+     * — Côtés de l'aire → Mur synthétiques (non ajoutés au canvas)
+     * — Murs du canvas → objets Mur réels
      */
-    private List<double[]> collecterSegments() {
-        List<double[]> segments = new ArrayList<>();
+    private List<SegmentSource> collecterSegmentsSources() {
+        List<SegmentSource> sources = new ArrayList<>();
 
+        // Frontières de l'aire (murs synthétiques — servent de limites extérieures)
         if (aireImmeuble != null && aireImmeuble.isComplete()) {
             Point p1 = aireImmeuble.getP1(), p2 = aireImmeuble.getP2();
             Point p3 = aireImmeuble.getP3(), p4 = aireImmeuble.getP4();
-            segments.add(new double[]{p1.getX(), p1.getY(), p2.getX(), p2.getY()});
-            segments.add(new double[]{p2.getX(), p2.getY(), p3.getX(), p3.getY()});
-            segments.add(new double[]{p3.getX(), p3.getY(), p4.getX(), p4.getY()});
-            segments.add(new double[]{p4.getX(), p4.getY(), p1.getX(), p1.getY()});
+            sources.add(new SegmentSource(p1, p2, new Mur(p1, p2)));
+            sources.add(new SegmentSource(p2, p3, new Mur(p2, p3)));
+            sources.add(new SegmentSource(p3, p4, new Mur(p3, p4)));
+            sources.add(new SegmentSource(p4, p1, new Mur(p4, p1)));
         }
 
+        // Murs dessinés dans le canvas (murs intérieurs + murs délimiteurs du niveau)
         for (Object el : vue.getCanvas().getElements()) {
             if (el instanceof Mur) {
                 Mur m = (Mur) el;
-                segments.add(new double[]{
-                    m.getPoint1().getX(), m.getPoint1().getY(),
-                    m.getPoint2().getX(), m.getPoint2().getY()
-                });
+                sources.add(new SegmentSource(m.getPoint1(), m.getPoint2(), m));
             }
         }
-        return segments;
+        return sources;
     }
 
     // =========================================================================
     // ALGORITHME : CYCLE MINIMAL CONTENANT UN POINT
     //
-    // Étapes :
-    //   1. Construire un graphe de nœuds (extrémités uniques) + arêtes (segments)
-    //   2. Pour chaque nœud du graphe, DFS pour trouver tous les cycles simples
-    //   3. Parmi les cycles dont l'intérieur contient (px,py), garder le plus
-    //      petit en surface (= zone minimale encadrante)
+    // 1. Construire un graphe nœuds/arêtes depuis les segments
+    // 2. DFS depuis chaque nœud pour énumérer tous les cycles simples,
+    //    en traçant en parallèle les segments parcourus
+    // 3. Sélectionner le cycle de surface minimale contenant (px,py)
     // =========================================================================
 
-    private List<Point> trouverCycleMinimal(double px, double py,
-                                             List<double[]> segments) {
+    private List<SegmentSource> trouverCycleMinimal(double px, double py,
+                                                     List<SegmentSource> sources) {
         // --- 1. Nœuds uniques ---
         List<double[]> noeuds = new ArrayList<>();
-        for (double[] s : segments) {
-            ajouterNoeudSiAbsent(noeuds, s[0], s[1]);
-            ajouterNoeudSiAbsent(noeuds, s[2], s[3]);
+        for (SegmentSource ss : sources) {
+            ajouterNoeudSiAbsent(noeuds, ss.x1, ss.y1);
+            ajouterNoeudSiAbsent(noeuds, ss.x2, ss.y2);
         }
         int N = noeuds.size();
         if (N < 3) return null;
 
-        // --- 2. Liste d'adjacence ---
-        List<List<Integer>> adj = new ArrayList<>();
+        // --- 2. Liste d'adjacence : index nœud → liste de [index voisin, index segment] ---
+        List<List<int[]>> adj = new ArrayList<>();
         for (int i = 0; i < N; i++) adj.add(new ArrayList<>());
 
-        for (double[] s : segments) {
-            int i = indexNoeud(noeuds, s[0], s[1]);
-            int j = indexNoeud(noeuds, s[2], s[3]);
+        for (int s = 0; s < sources.size(); s++) {
+            SegmentSource ss = sources.get(s);
+            int i = indexNoeud(noeuds, ss.x1, ss.y1);
+            int j = indexNoeud(noeuds, ss.x2, ss.y2);
             if (i == -1 || j == -1 || i == j) continue;
-            if (!adj.get(i).contains(j)) adj.get(i).add(j);
-            if (!adj.get(j).contains(i)) adj.get(j).add(i);
+            adj.get(i).add(new int[]{j, s});
+            adj.get(j).add(new int[]{i, s});
         }
 
-        // --- 3. DFS depuis chaque nœud → collecte tous les cycles simples ---
-        List<List<Integer>> tousLesCycles = new ArrayList<>();
-        boolean[] visite = new boolean[N];
+        // --- 3. DFS depuis chaque nœud ---
+        List<List<Integer>> tousChemins    = new ArrayList<>();
+        List<List<Integer>> tousCheminSegs = new ArrayList<>();
 
         for (int depart = 0; depart < N; depart++) {
-            List<Integer> chemin = new ArrayList<>();
+            List<Integer> chemin    = new ArrayList<>();
+            List<Integer> cheminSeg = new ArrayList<>();
             chemin.add(depart);
-            dfsCycles(depart, depart, -1, chemin, adj, tousLesCycles, visite, N);
-            // On ne marque pas visite[depart] = true car un nœud peut appartenir
-            // à plusieurs cycles différents
+            dfsCycles(depart, depart, -1, chemin, cheminSeg,
+                      adj, tousChemins, tousCheminSegs, N);
         }
 
-        // --- 4. Sélection du cycle minimal contenant (px, py) ---
-        List<Point> meilleur = null;
+        // --- 4. Sélection du cycle minimal contenant (px,py) ---
+        List<SegmentSource> meilleur = null;
         double meilleureAire = Double.MAX_VALUE;
 
-        for (List<Integer> cycle : tousLesCycles) {
-            if (cycle.size() < 3) continue;
+        for (int c = 0; c < tousChemins.size(); c++) {
+            List<Integer> chemin    = tousChemins.get(c);
+            List<Integer> cheminSeg = tousCheminSegs.get(c);
+            if (chemin.size() < 3) continue;
 
             List<Point> polygone = new ArrayList<>();
-            for (int idx : cycle) {
+            for (int idx : chemin) {
                 polygone.add(new Point(noeuds.get(idx)[0], noeuds.get(idx)[1]));
             }
 
@@ -255,7 +265,8 @@ public class NiveauControleur {
             double aire = Math.abs(calculerAire(polygone));
             if (aire < meilleureAire) {
                 meilleureAire = aire;
-                meilleur = polygone;
+                meilleur = new ArrayList<>();
+                for (int si : cheminSeg) meilleur.add(sources.get(si));
             }
         }
 
@@ -263,36 +274,44 @@ public class NiveauControleur {
     }
 
     /**
-     * DFS récursif pour trouver les cycles simples.
+     * DFS récursif pour énumérer les cycles simples.
+     * Trace en parallèle le chemin de nœuds ET les index de segments,
+     * ce qui permet de retrouver les SegmentSource exacts du cycle.
      *
-     * Règle de déduplication : on n'explore un voisin que si son index
-     * est > depart (évite d'énumérer A→B→C→A et A→C→B→A comme deux cycles).
-     * On revient au nœud de départ uniquement quand le chemin a ≥ 3 sommets.
+     * Déduplication : on n'explore que les voisins d'index > depart,
+     * ce qui évite d'énumérer le même cycle dans les deux sens.
      */
-    private void dfsCycles(int depart, int courant, int parent,
-                            List<Integer> chemin,
-                            List<List<Integer>> adj,
-                            List<List<Integer>> cycles,
-                            boolean[] visite, int N) {
+    private void dfsCycles(int depart, int courant, int parentSeg,
+                            List<Integer> chemin, List<Integer> cheminSeg,
+                            List<List<int[]>> adj,
+                            List<List<Integer>> tousChemins,
+                            List<List<Integer>> tousCheminSegs,
+                            int N) {
 
-        // Limite la profondeur pour éviter une explosion combinatoire
-        if (chemin.size() > N) return;
+        if (chemin.size() > N) return; // borne de sécurité anti-explosion
 
-        for (int voisin : adj.get(courant)) {
-            if (voisin == parent) continue; // ne pas rebrousser chemin immédiatement
+        for (int[] arete : adj.get(courant)) {
+            int voisin = arete[0];
+            int idxSeg = arete[1];
+
+            // Ne pas rebrousser immédiatement sur le segment qu'on vient de parcourir
+            if (idxSeg == parentSeg) continue;
 
             if (voisin == depart && chemin.size() >= 3) {
-                // Cycle fermé trouvé — on l'enregistre
-                cycles.add(new ArrayList<>(chemin));
+                // Cycle fermé valide — on l'enregistre
+                tousChemins.add(new ArrayList<>(chemin));
+                tousCheminSegs.add(new ArrayList<>(cheminSeg));
                 continue;
             }
 
-            // N'explore les nœuds non visités et d'index > depart
-            // (garantit qu'on ne génère pas deux fois le même cycle)
+            // N'explore que les nœuds non encore dans le chemin et d'index > depart
             if (!chemin.contains(voisin) && voisin > depart) {
                 chemin.add(voisin);
-                dfsCycles(depart, voisin, courant, chemin, adj, cycles, visite, N);
+                cheminSeg.add(idxSeg);
+                dfsCycles(depart, voisin, idxSeg, chemin, cheminSeg,
+                          adj, tousChemins, tousCheminSegs, N);
                 chemin.remove(chemin.size() - 1);
+                cheminSeg.remove(cheminSeg.size() - 1);
             }
         }
     }
@@ -301,7 +320,6 @@ public class NiveauControleur {
     // UTILITAIRES GÉOMÉTRIQUES
     // =========================================================================
 
-    /** Ajoute [x,y] dans la liste si aucun nœud existant n'est à TOL près. */
     private void ajouterNoeudSiAbsent(List<double[]> noeuds, double x, double y) {
         for (double[] n : noeuds) {
             if (Math.abs(n[0] - x) < TOL && Math.abs(n[1] - y) < TOL) return;
@@ -309,7 +327,6 @@ public class NiveauControleur {
         noeuds.add(new double[]{x, y});
     }
 
-    /** Retourne l'index du nœud correspondant à (x,y), ou -1 si absent. */
     private int indexNoeud(List<double[]> noeuds, double x, double y) {
         for (int i = 0; i < noeuds.size(); i++) {
             double[] n = noeuds.get(i);
@@ -318,10 +335,7 @@ public class NiveauControleur {
         return -1;
     }
 
-    /**
-     * Ray casting : retourne true si (px,py) est strictement à l'intérieur
-     * du polygone (liste ordonnée de sommets).
-     */
+    /** Ray casting : true si (px,py) est strictement à l'intérieur du polygone. */
     private boolean pointDansPolygone(double px, double py, List<Point> poly) {
         if (poly == null || poly.size() < 3) return false;
         int n = poly.size(), intersections = 0;
@@ -329,7 +343,6 @@ public class NiveauControleur {
             Point a = poly.get(i);
             Point b = poly.get((i + 1) % n);
             double ax = a.getX(), ay = a.getY(), bx = b.getX(), by = b.getY();
-            // Rayon horizontal vers +∞
             if ((ay <= py && by > py) || (by <= py && ay > py)) {
                 double xInter = ax + (py - ay) / (by - ay) * (bx - ax);
                 if (px < xInter) intersections++;
@@ -338,10 +351,7 @@ public class NiveauControleur {
         return (intersections % 2) == 1;
     }
 
-    /**
-     * Formule du lacet (shoelace) pour l'aire signée d'un polygone.
-     * Signe positif = sens antihoraire, négatif = sens horaire.
-     */
+    /** Formule du lacet (shoelace) pour l'aire signée d'un polygone. */
     private double calculerAire(List<Point> poly) {
         double aire = 0;
         int n = poly.size();
@@ -381,7 +391,7 @@ public class NiveauControleur {
                 gc.setLineDashes(0.2, 0.15);
                 gc.strokePolygon(xs, ys, 4);
 
-                // Remet le trait plein pour les éléments dessinés après
+                // Remet le trait plein pour les éléments suivants
                 gc.setLineDashes();
             }
 
@@ -407,8 +417,7 @@ public class NiveauControleur {
         annulerMurEnCours();
         mode = "APPARTEMENT";
         vue.getCanvas().setPanActif(false);
-        vue.setInstructions(
-            "Cliquez à l'intérieur d'une zone fermée pour créer un appartement");
+        vue.setInstructions("Cliquez à l'intérieur d'une zone fermée pour créer un appartement");
     }
 
     /** Active le mode navigation (pan uniquement, aucun dessin). */
@@ -419,9 +428,27 @@ public class NiveauControleur {
         vue.setInstructions("Navigation — molette pour zoomer, clic droit pour déplacer");
     }
 
-    public NiveauView getVue() { return vue; }
+    public NiveauView getVue()                                          { return vue; }
+    public Niveau getNiveau()                                           { return niveau; }
+    public Map<TreeItem<String>, Appartement> getMapItemAppartement()   { return mapItemAppartement; }
 
-    public Map<TreeItem<String>, Appartement> getMapItemAppartement() {
-        return mapItemAppartement;
+    // =========================================================================
+    // CLASSE INTERNE : association segment ↔ Mur source
+    // =========================================================================
+
+    /**
+     * Associe un segment géométrique [x1,y1]-[x2,y2] à son Mur source.
+     * Pour les côtés de l'aire, le Mur est synthétique (créé à la volée,
+     * non présent dans le canvas).
+     */
+    private static class SegmentSource {
+        final double x1, y1, x2, y2;
+        final Mur mur;
+
+        SegmentSource(Point a, Point b, Mur mur) {
+            this.x1  = a.getX(); this.y1 = a.getY();
+            this.x2  = b.getX(); this.y2 = b.getY();
+            this.mur = mur;
+        }
     }
-}
+} 

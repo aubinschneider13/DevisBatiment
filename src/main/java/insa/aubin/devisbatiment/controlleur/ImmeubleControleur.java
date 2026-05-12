@@ -1,9 +1,6 @@
 package insa.aubin.devisbatiment.controlleur;
 
-import insa.aubin.devisbatiment.modele.AireImmeuble;
-import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
-import insa.aubin.devisbatiment.modele.Point;
-import insa.aubin.devisbatiment.view.DessinCanvas;
+import insa.aubin.devisbatiment.modele.*;
 import insa.aubin.devisbatiment.view.DashBoardView;
 import insa.aubin.devisbatiment.view.ImmeubleView;
 import insa.aubin.devisbatiment.view.NiveauView;
@@ -28,6 +25,9 @@ public class ImmeubleControleur {
     private int etapeAire = 0;
     private boolean aireValidee = false;
     private int coteEnCoursDeDeplacement = -1;
+
+    // --- Modèle métier du bâtiment (créé à la validation de l'aire) ---
+    private Immeuble immeuble = null;
 
     // --- Niveaux : un contrôleur par niveau ---
     private final List<NiveauControleur> niveauControleurs = new ArrayList<>();
@@ -54,11 +54,9 @@ public class ImmeubleControleur {
             (obs, oldVal, newVal) -> {
                 if (newVal == null) return;
                 if (newVal == itemAire) {
-                    // Retour sur le canvas de l'aire
                     niveauActuel = null;
                     this.vue.afficherCanvasAire();
                 } else {
-                    // Cherche le NiveauControleur correspondant (item direct ou enfant appartement)
                     for (int i = 0; i < itemNiveaux.getChildren().size(); i++) {
                         TreeItem<String> itemNiveau = itemNiveaux.getChildren().get(i);
                         if (newVal == itemNiveau || itemNiveau.getChildren().contains(newVal)) {
@@ -91,12 +89,11 @@ public class ImmeubleControleur {
 
     private void basculerVersNiveau(int index) {
         niveauActuel = niveauControleurs.get(index);
-        // Affiche le canvas de ce niveau dans la zone centrale d'ImmeubleView
         this.vue.afficherNiveau(niveauActuel.getVue());
     }
 
     // =========================================================================
-    // BOUTONS DE LA TOOLBAR (délégués au niveauActuel si pertinent)
+    // BOUTONS DE LA TOOLBAR
     // =========================================================================
 
     public void btnNavigation(ActionEvent t) {
@@ -121,7 +118,6 @@ public class ImmeubleControleur {
                 (obs, oldVal, newVal) -> {
                     if (newVal != null) {
                         double echelle = this.vue.getEchelleVue().getEchelleSelectionnee();
-                        // Applique l'échelle au canvas actuellement affiché
                         if (niveauActuel != null) {
                             niveauActuel.getVue().getCanvas().setGridSize(echelle);
                         } else {
@@ -133,16 +129,27 @@ public class ImmeubleControleur {
         }
     }
 
+    /**
+     * Ajoute un niveau : crée le Niveau via le modèle Immeuble (qui génère
+     * les 4 murs délimiteurs depuis les coins du bâtiment), puis instancie
+     * le NiveauControleur avec ce Niveau.
+     */
     public void btnAjouterNiveau(ActionEvent t) {
+        if (immeuble == null) return; // sécurité : aire doit être validée
+
         int nb = niveauControleurs.size();
         String nomNiveau = (nb == 0) ? "RDC" : "Niveau " + nb;
 
-        // Crée la vue et le contrôleur du nouveau niveau
+        // Le modèle crée le Niveau avec ses 4 murs délimiteurs issus des coins du bâtiment
+        Niveau niveau = immeuble.ajouterNiveau(2.5);
+
+        // Vue et item TreeView du nouveau niveau
         NiveauView niveauView = new NiveauView();
         TreeItem<String> itemNiveau = new TreeItem<>(nomNiveau);
         itemNiveaux.getChildren().add(itemNiveau);
 
-        NiveauControleur ctrl = new NiveauControleur(niveauView, aireImmeuble, itemNiveau);
+        // Le contrôleur reçoit le Niveau : il ajoutera ses murs au canvas
+        NiveauControleur ctrl = new NiveauControleur(niveauView, aireImmeuble, itemNiveau, niveau);
         niveauControleurs.add(ctrl);
 
         // Sélection automatique → déclenche basculerVersNiveau via le listener
@@ -150,7 +157,7 @@ public class ImmeubleControleur {
     }
 
     // =========================================================================
-    // GESTION DE L'AIRE (inchangée)
+    // GESTION DE L'AIRE
     // =========================================================================
 
     private void demanderNomImmeuble() {
@@ -160,8 +167,7 @@ public class ImmeubleControleur {
         dialog.setContentText("Veuillez entrer le nom de l'immeuble :");
         dialog.setGraphic(null);
 
-        javafx.scene.control.Button okButton =
-            (javafx.scene.control.Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
         okButton.addEventFilter(ActionEvent.ACTION, event -> {
             if (dialog.getEditor().getText().trim().isEmpty()) {
                 event.consume();
@@ -224,7 +230,6 @@ public class ImmeubleControleur {
             );
             aireImmeuble.setP3(p3Contraint);
         } else if (etapeAire == 3) {
-            // Surbrillance du côté survolé
             int coteSurvole = aireImmeuble.detecterCote(snap.getX(), snap.getY(), 0.3);
             aireImmeuble.setCoteGlisse(coteSurvole);
         }
@@ -271,10 +276,19 @@ public class ImmeubleControleur {
         this.vue.getCanvas().redrawAll();
     }
 
+    /**
+     * Valide l'aire et instancie le modèle Immeuble depuis les 4 coins de l'aire.
+     * Le nom saisi dans le TreeView est récupéré depuis le rootItem.
+     */
     public void btnValiderAire(ActionEvent t) {
         if (aireImmeuble == null || etapeAire != 3) return;
         aireImmeuble.valider();
         aireValidee = true;
+        
+        // Instancie le modèle Immeuble depuis l'aire validée
+        // Le nom est extrait du rootItem (ex: "Aire de l'Immeuble : ( MonImmeuble )")
+        String nomImmeuble = extraireNomImmeuble(this.vue.getRootItem().getValue());
+        immeuble = new Immeuble(nomImmeuble, aireImmeuble);
 
         // Voile cadenas + bascule des boutons
         this.vue.activerVoile();
@@ -287,6 +301,20 @@ public class ImmeubleControleur {
         this.vue.getCanvas().setOnMousePressed(null);
         this.vue.getCanvas().setOnMouseDragged(null);
         this.vue.getCanvas().setOnMouseReleased(null);
+    }
+
+    /**
+     * Extrait le nom de l'immeuble depuis le label du rootItem.
+     * Format attendu : "Aire de l'Immeuble : ( NomImmeuble )"
+     * Retourne "Immeuble" par défaut si le format ne correspond pas.
+     */
+    private String extraireNomImmeuble(String label) {
+        int debut = label.indexOf("( ");
+        int fin   = label.indexOf(" )");
+        if (debut != -1 && fin != -1 && fin > debut) {
+            return label.substring(debut + 2, fin);
+        }
+        return "Immeuble";
     }
 
     public void retourDashboard() {
