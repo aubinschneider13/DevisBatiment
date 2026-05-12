@@ -28,7 +28,7 @@ public class NiveauView extends StackPane {
             "-fx-text-fill: #2c3e50;" +
             "-fx-font-size: 13px;"
         );
-        StackPane.setAlignment(labelInstructions, Pos.BOTTOM_CENTER);
+        StackPane.setAlignment( labelInstructions, Pos.BOTTOM_CENTER);
         StackPane.setMargin(labelInstructions, new Insets(0, 0, 15, 0));
 
         // Le canvas se bind à la taille du parent au moment de l'affichage

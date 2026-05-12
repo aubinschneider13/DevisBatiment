@@ -272,6 +272,24 @@ public class ImmeubleView extends BorderPane {
         voileValidation.setVisible(false);
     }
 
+    public void afficherPiece(PieceView pieceView) {
+        // Retire le canvas actuel
+        zoneDessin.getChildren().removeIf(n ->
+                n instanceof DessinCanvas || n instanceof NiveauView
+                        || n instanceof PieceView
+        );
+
+        // Bind la taille
+        pieceView.prefWidthProperty().bind(zoneDessin.widthProperty());
+        pieceView.prefHeightProperty().bind(zoneDessin.heightProperty());
+
+        // Insère en dessous des overlays
+        zoneDessin.getChildren().add(0, pieceView);
+
+        // Masque le voile cadenas (pas pertinent dans la vue pièce)
+        voileValidation.setVisible(false);
+    }
+
     //Getters
     
     public TreeItem<String> getRootItem() { return rootItem; }

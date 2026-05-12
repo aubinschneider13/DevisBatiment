@@ -1,12 +1,10 @@
 package insa.aubin.devisbatiment.controlleur;
 
 import insa.aubin.devisbatiment.modele.AireImmeuble;
+import insa.aubin.devisbatiment.modele.Appartement;
 import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
 import insa.aubin.devisbatiment.modele.Point;
-import insa.aubin.devisbatiment.view.DessinCanvas;
-import insa.aubin.devisbatiment.view.DashBoardView;
-import insa.aubin.devisbatiment.view.ImmeubleView;
-import insa.aubin.devisbatiment.view.NiveauView;
+import insa.aubin.devisbatiment.view.*;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.geometry.Point2D;
@@ -50,24 +48,39 @@ public class ImmeubleControleur {
         this.vue.getRootItem().getChildren().addAll(itemAire, itemNiveaux);
 
         // Sélection dans le TreeView → bascule de canvas
+        // Dans ImmeubleControleur.java
+// Modifier le listener selectedItemProperty
+
         this.vue.getTreeView().getSelectionModel().selectedItemProperty().addListener(
-            (obs, oldVal, newVal) -> {
-                if (newVal == null) return;
-                if (newVal == itemAire) {
-                    // Retour sur le canvas de l'aire
-                    niveauActuel = null;
-                    this.vue.afficherCanvasAire();
-                } else {
-                    // Cherche le NiveauControleur correspondant (item direct ou enfant appartement)
+                (obs, oldVal, newVal) -> {
+                    if (newVal == null) return;
+
+                    if (newVal == itemAire) {
+                        niveauActuel = null;
+                        this.vue.afficherCanvasAire();
+                        return;
+                    }
+
+                    // Cherche dans les niveaux
                     for (int i = 0; i < itemNiveaux.getChildren().size(); i++) {
                         TreeItem<String> itemNiveau = itemNiveaux.getChildren().get(i);
-                        if (newVal == itemNiveau || itemNiveau.getChildren().contains(newVal)) {
+                        NiveauControleur ctrl = niveauControleurs.get(i);
+
+                        if (newVal == itemNiveau) {
+                            // Clic sur le niveau → afficher le canvas du niveau
                             basculerVersNiveau(i);
-                            break;
+                            return;
+                        }
+
+                        // ✅ Clic sur un appartement → ouvrir PieceView
+                        Appartement appart = ctrl.getMapItemAppartement().get(newVal);
+                        if (appart != null) {
+                            basculerVersNiveau(i); // s'assurer qu'on est sur le bon niveau
+                            ouvrirPieceDepuisAppartement(appart);
+                            return;
                         }
                     }
                 }
-            }
         );
 
         // Listeners sur le canvas de l'aire
@@ -306,5 +319,20 @@ public class ImmeubleControleur {
         double uy = cible.getY() - centre.getY();
         double scalaire = (ux * perpX + uy * perpY) / (perpX * perpX + perpY * perpY);
         return new Point(centre.getX() + scalaire * perpX, centre.getY() + scalaire * perpY);
+    }
+
+    // Dans ImmeubleControleur.java
+
+    private void ouvrirPieceDepuisAppartement(Appartement appartement) {
+        // Crée la PieceView avec le contour de l'appartement
+        PieceView pieceView = new PieceView(stage, gestionnaire, appartement);
+
+        // L'affiche dans la zone centrale d'ImmeubleView
+        this.vue.afficherPiece(pieceView);
+
+        // Met à jour les instructions
+        this.vue.setInstructions(
+                "Vue pièce de « " + appartement + " » — dessinez les murs intérieurs"
+        );
     }
 }

@@ -6,12 +6,16 @@ import insa.aubin.devisbatiment.view.PieceView;
 import javafx.event.ActionEvent;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.TreeItem;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
 import javafx.application.Platform;
+
+import java.util.List;
 
 public class PieceControleur {
     // CONSTANTES D'ÉTAT
@@ -292,6 +296,43 @@ public class PieceControleur {
             }
         }
         return plusProche;
+    }
+
+    /**
+     * Dessine le contour de l'appartement en fond du canvas.
+     * Lecture seule — non interactif, juste une référence visuelle.
+     */
+    public void initialiserAvecContourAppartement(List<Point> polygone) {
+        if (polygone == null || polygone.size() < 3) return;
+
+        // Créer un Dessin anonyme pour le contour
+        Dessin contour = new Dessin() {
+            @Override
+            public void dessiner(GraphicsContext gc) {
+                double[] xs = polygone.stream()
+                        .mapToDouble(Point::getX).toArray();
+                double[] ys = polygone.stream()
+                        .mapToDouble(Point::getY).toArray();
+
+                // Fond légèrement bleuté
+                gc.setFill(Color.web("#4a90d9", 0.05));
+                gc.fillPolygon(xs, ys, polygone.size());
+
+                // Contour en pointillés gris
+                gc.setStroke(Color.web("#999999", 0.8));
+                gc.setLineWidth(0.05);
+                gc.setLineDashes(0.2, 0.15);
+                gc.strokePolygon(xs, ys, polygone.size());
+                gc.setLineDashes(); // reset
+            }
+
+            @Override public Color getColor() { return Color.GRAY; }
+            @Override public void setColor(Color c) { /* lecture seule */ }
+        };
+
+        // Insérer en premier (en dessous de tout)
+        this.vue.getCanvas().getElements().add(0, contour);
+        this.vue.getCanvas().redrawAll();
     }
 
     public void annulerConstruction() {

@@ -1,6 +1,7 @@
 package insa.aubin.devisbatiment.view;
 
 import insa.aubin.devisbatiment.controlleur.PieceControleur;
+import insa.aubin.devisbatiment.modele.Appartement;
 import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -277,6 +278,23 @@ public class PieceView extends BorderPane {
                 this.controleur.annulerConstruction();
             }
         });
+    }
+
+    // Dans PieceView.java
+
+    // Constructeur avec appartement (depuis la vue Immeuble)
+    public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
+                     Appartement appartement) {
+        this(stage, gestionnaire); // appelle le constructeur existant
+
+        // ✅ Dessiner le contour de l'appartement en fond
+        if (appartement != null && appartement.getPolygone() != null) {
+            this.controleur.initialiserAvecContourAppartement(
+                    appartement.getPolygone()
+            );
+            // Mettre à jour le titre du navigateur
+            this.root.setValue("Devis : " + appartement.toString());
+        }
     }
 
     public DessinCanvas getCanvas() { return canvas; }
