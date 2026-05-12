@@ -21,6 +21,7 @@ public class NiveauControleur {
     private final NiveauView vue;
     private final AireImmeuble aireImmeuble;
     private final TreeItem<String> itemNiveau;
+    private final Map<TreeItem<String>, Appartement> mapItemAppartement = new HashMap<>();
 
     private String mode = "AUCUN";
     private Mur murEnCours = null;
@@ -151,6 +152,8 @@ public class NiveauControleur {
         TreeItem<String> itemAppart = new TreeItem<>(appart.toString());
         itemNiveau.getChildren().add(itemAppart);
         itemNiveau.setExpanded(true);
+
+        mapItemAppartement.put(itemAppart, appart);
 
         vue.setInstructions(
             "« " + appart + " » créé — cliquez dans une autre zone pour en ajouter un.");
@@ -417,4 +420,8 @@ public class NiveauControleur {
     }
 
     public NiveauView getVue() { return vue; }
+
+    public Map<TreeItem<String>, Appartement> getMapItemAppartement() {
+        return mapItemAppartement;
+    }
 }
