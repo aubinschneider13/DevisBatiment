@@ -1,8 +1,9 @@
 package insa.aubin.devisbatiment.modele;
 
 public class Immeuble extends Batiment {
-    public Immeuble(String nomBatiment, Point point1, Point point2, Point point3) {
-        super(nomBatiment, "Immeuble", point1, point2, point3);
+
+    public Immeuble(String nomBatiment, AireImmeuble aire) {
+        super(nomBatiment, "Immeuble", aire);
     }
 
     @Override
