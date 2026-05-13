@@ -199,7 +199,7 @@ public class ImmeubleControleur {
         Optional<String> result = dialog.showAndWait();
         if (result.isPresent() && !result.get().trim().isEmpty()) {
             this.vue.getRootItem().setValue(
-                    "Aire de l'Immeuble : ( " + result.get().trim() + " )"
+                    "Immeuble : ( " + result.get().trim() + " )"
             );
         } else {
             retourDashboard();

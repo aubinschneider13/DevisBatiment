@@ -138,7 +138,7 @@ public class ImmeubleView extends BorderPane {
         SplitPane splitPane = new SplitPane();
 
         // Gauche : Navigateur TreeView
-        rootItem = new TreeItem<>("Aire de l'Immeuble (en attente...)");
+        rootItem = new TreeItem<>("Immeuble (en attente...)");
         rootItem.setExpanded(true);
         treeView = new TreeView<>(rootItem);
 

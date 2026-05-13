@@ -216,25 +216,96 @@ public class NiveauControleur {
     private List<SegmentSource> collecterSegmentsSources() {
         List<SegmentSource> sources = new ArrayList<>();
 
-        // Frontières de l'aire
+        // 1. Collecter tous les segments bruts (frontières + murs intérieurs)
+        List<SegmentSource> bruts = new ArrayList<>();
+
         if (aireImmeuble != null && aireImmeuble.isComplete()) {
             Point p1 = aireImmeuble.getP1(), p2 = aireImmeuble.getP2();
             Point p3 = aireImmeuble.getP3(), p4 = aireImmeuble.getP4();
-            ajouterSegmentSiAbsent(sources, p1, p2, new Mur(p1, p2));
-            ajouterSegmentSiAbsent(sources, p2, p3, new Mur(p2, p3));
-            ajouterSegmentSiAbsent(sources, p3, p4, new Mur(p3, p4));
-            ajouterSegmentSiAbsent(sources, p4, p1, new Mur(p4, p1));
+            bruts.add(new SegmentSource(p1, p2, new Mur(p1, p2)));
+            bruts.add(new SegmentSource(p2, p3, new Mur(p2, p3)));
+            bruts.add(new SegmentSource(p3, p4, new Mur(p3, p4)));
+            bruts.add(new SegmentSource(p4, p1, new Mur(p4, p1)));
         }
 
-        // Murs du canvas (murs intérieurs + murs délimiteurs du niveau)
+        List<Mur> mursDelimiteurs = niveau.getMursDelimiteurs();
         for (Object el : vue.getCanvas().getElements()) {
             if (el instanceof Mur) {
                 Mur m = (Mur) el;
-                ajouterSegmentSiAbsent(
-                        sources, m.getPoint1(), m.getPoint2(), m);
+                if (mursDelimiteurs.contains(m)) continue;
+                bruts.add(new SegmentSource(m.getPoint1(), m.getPoint2(), m));
             }
         }
+
+        // 2. Collecter tous les points de tous les segments
+        List<double[]> tousLesPoints = new ArrayList<>();
+        for (SegmentSource ss : bruts) {
+            ajouterNoeudSiAbsent(tousLesPoints, ss.x1, ss.y1);
+            ajouterNoeudSiAbsent(tousLesPoints, ss.x2, ss.y2);
+        }
+
+        // 3. Pour chaque segment, trouver les points intermédiaires qui tombent
+        //    dessus et le subdiviser
+        for (SegmentSource ss : bruts) {
+            List<double[]> pointsSurSegment = new ArrayList<>();
+            pointsSurSegment.add(new double[]{ss.x1, ss.y1});
+            pointsSurSegment.add(new double[]{ss.x2, ss.y2});
+
+            for (double[] pt : tousLesPoints) {
+                if (pointSurSegment(pt[0], pt[1], ss.x1, ss.y1, ss.x2, ss.y2)) {
+                    // Pas déjà une extrémité
+                    boolean dejaDedans = false;
+                    for (double[] existing : pointsSurSegment) {
+                        if (Math.abs(existing[0] - pt[0]) < TOL
+                                && Math.abs(existing[1] - pt[1]) < TOL) {
+                            dejaDedans = true;
+                            break;
+                        }
+                    }
+                    if (!dejaDedans) pointsSurSegment.add(pt);
+                }
+            }
+
+            // Trier les points le long du segment (par paramètre t ∈ [0,1])
+            double dx = ss.x2 - ss.x1, dy = ss.y2 - ss.y1;
+            double len2 = dx * dx + dy * dy;
+            pointsSurSegment.sort((a, b) -> {
+                double ta = ((a[0] - ss.x1) * dx + (a[1] - ss.y1) * dy) / len2;
+                double tb = ((b[0] - ss.x1) * dx + (b[1] - ss.y1) * dy) / len2;
+                return Double.compare(ta, tb);
+            });
+
+            // Créer un sous-segment par paire consécutive
+            for (int i = 0; i < pointsSurSegment.size() - 1; i++) {
+                double[] a = pointsSurSegment.get(i);
+                double[] b = pointsSurSegment.get(i + 1);
+                Point pa = new Point(a[0], a[1]);
+                Point pb = new Point(b[0], b[1]);
+                ajouterSegmentSiAbsent(sources, pa, pb, new Mur(pa, pb));
+            }
+        }
+
         return sources;
+    }
+
+    /**
+     * Vérifie si le point (px, py) est strictement sur le segment (x1,y1)→(x2,y2),
+     * c'est-à-dire pas aux extrémités et colinéaire avec t ∈ (0, 1).
+     */
+    private boolean pointSurSegment(double px, double py,
+                                    double x1, double y1,
+                                    double x2, double y2) {
+        // Produit vectoriel nul = colinéaire
+        double cross = (px - x1) * (y2 - y1) - (py - y1) * (x2 - x1);
+        if (Math.abs(cross) > TOL) return false;
+
+        // Paramètre t le long du segment
+        double dx = x2 - x1, dy = y2 - y1;
+        double len2 = dx * dx + dy * dy;
+        if (len2 < TOL) return false;
+
+        double t = ((px - x1) * dx + (py - y1) * dy) / len2;
+        return t > TOL && t < 1.0 - TOL; // strictement entre les deux extrémités
     }
 
     /**
@@ -285,14 +356,14 @@ public class NiveauControleur {
         for (int i = 0; i < N; i++) {
             final double[] noeud = noeuds.get(i);
             adj.get(i).sort((a, b) -> {
-                double ax = noeuds.get(a[0])[0] - noeud[0];
-                double ay = noeuds.get(a[0])[1] - noeud[1];
-                double bx = noeuds.get(b[0])[0] - noeud[0];
-                double by = noeuds.get(b[0])[1] - noeud[1];
-                double angleA = Math.atan2(ay, ax);
-                double angleB = Math.atan2(by, bx);
-                return Double.compare(angleA, angleB);
-            });
+            double ax = noeuds.get(a[0])[0] - noeud[0];
+            double ay = noeuds.get(a[0])[1] - noeud[1];
+            double bx = noeuds.get(b[0])[0] - noeud[0];
+            double by = noeuds.get(b[0])[1] - noeud[1];
+            double angleA = Math.atan2(-ay, ax);  // ← Y inversé = canvas JavaFX
+            double angleB = Math.atan2(-by, bx);
+            return Double.compare(angleA, angleB);
+        });
         }
 
         // ✅ Énumérer toutes les faces par "Next Half-Edge"
@@ -331,8 +402,7 @@ public class NiveauControleur {
                     if (idxCourantDansSuivant == -1) break;
 
                     // Prédécesseur dans la liste triée (= tourner à droite depuis suivant)
-                    int idxPred = (idxCourantDansSuivant - 1 + voisinsSuivant.size())
-                            % voisinsSuivant.size();
+                    int idxPred = (idxCourantDansSuivant + 1) % voisinsSuivant.size();
                     int prochainNoeud = voisinsSuivant.get(idxPred)[0];
 
                     courant = suivant;
