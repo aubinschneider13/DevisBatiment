@@ -115,6 +115,7 @@ public class NiveauControleur {
     private void gererClicAppartement(Point2D snap) {
         double px = snap.getX(), py = snap.getY();
 
+        // Vérifie qu'aucun appartement n'occupe déjà cette zone
         for (Appartement a : appartements) {
             if (pointDansPolygone(px, py, a.getPolygone())) {
                 vue.setInstructions("Un appartement existe déjà dans cette zone.");
@@ -131,20 +132,20 @@ public class NiveauControleur {
             return;
         }
 
-        // Extraire les Mur depuis les SegmentSource
+        // Extraire et ordonner les murs
         List<Mur> mursDelimiteurs = new ArrayList<>();
         for (SegmentSource ss : cycle) {
             mursDelimiteurs.add(ss.mur);
         }
-
-        // ✅ Ordonner pour que point2(i) ≈ point1(i+1)
         mursDelimiteurs = ordonnerMurs(mursDelimiteurs);
 
+        // Créer et afficher l'appartement
         compteurAppartements++;
         Appartement appart = new Appartement(mursDelimiteurs, 2.5);
         appartements.add(appart);
         vue.getCanvas().ajouterElement(appart);
 
+        // Mettre à jour le TreeView
         TreeItem<String> itemAppart = new TreeItem<>(appart.toString());
         itemNiveau.getChildren().add(itemAppart);
         itemNiveau.setExpanded(true);
@@ -266,6 +267,7 @@ public class NiveauControleur {
         int N = noeuds.size();
         if (N < 3) return null;
 
+        // Liste d'adjacence : pour chaque nœud, liste de [voisin, idxSeg]
         List<List<int[]>> adj = new ArrayList<>();
         for (int i = 0; i < N; i++) adj.add(new ArrayList<>());
 
@@ -278,45 +280,115 @@ public class NiveauControleur {
             adj.get(j).add(new int[]{i, s});
         }
 
-        List<List<Integer>> tousChemins    = new ArrayList<>();
-        List<List<Integer>> tousCheminSegs = new ArrayList<>();
-
-        for (int depart = 0; depart < N; depart++) {
-            List<Integer> chemin    = new ArrayList<>();
-            List<Integer> cheminSeg = new ArrayList<>();
-            chemin.add(depart);
-            dfsCycles(depart, depart, -1, chemin, cheminSeg,
-                    adj, tousChemins, tousCheminSegs, N);
+        // ✅ Trier les voisins de chaque nœud par angle (sens antihoraire)
+        // C'est la clé de l'algorithme des faces planaires
+        for (int i = 0; i < N; i++) {
+            final double[] noeud = noeuds.get(i);
+            adj.get(i).sort((a, b) -> {
+                double ax = noeuds.get(a[0])[0] - noeud[0];
+                double ay = noeuds.get(a[0])[1] - noeud[1];
+                double bx = noeuds.get(b[0])[0] - noeud[0];
+                double by = noeuds.get(b[0])[1] - noeud[1];
+                double angleA = Math.atan2(ay, ax);
+                double angleB = Math.atan2(by, bx);
+                return Double.compare(angleA, angleB);
+            });
         }
 
+        // ✅ Énumérer toutes les faces par "Next Half-Edge"
+        // Pour chaque demi-arête (i→j), la prochaine demi-arête de la face
+        // est le prédécesseur de (j→i) dans la liste triée de j
+        List<List<Integer>> faces = new ArrayList<>();
+        Set<String> demiAretesVisitees = new HashSet<>();
+
+        for (int i = 0; i < N; i++) {
+            for (int[] arete : adj.get(i)) {
+                int j = arete[0];
+                String cle = i + "->" + j;
+                if (demiAretesVisitees.contains(cle)) continue;
+
+                // Parcourir la face en tournant toujours à gauche
+                List<Integer> face = new ArrayList<>();
+                int courant = i;
+                int suivant = j;
+
+                int maxIter = N + 2;
+                while (maxIter-- > 0) {
+                    String cleEtape = courant + "->" + suivant;
+                    if (demiAretesVisitees.contains(cleEtape)) break;
+                    demiAretesVisitees.add(cleEtape);
+                    face.add(courant);
+
+                    // Trouver le prédécesseur de (suivant→courant) dans adj[suivant]
+                    List<int[]> voisinsSuivant = adj.get(suivant);
+                    int idxCourantDansSuivant = -1;
+                    for (int k = 0; k < voisinsSuivant.size(); k++) {
+                        if (voisinsSuivant.get(k)[0] == courant) {
+                            idxCourantDansSuivant = k;
+                            break;
+                        }
+                    }
+                    if (idxCourantDansSuivant == -1) break;
+
+                    // Prédécesseur dans la liste triée (= tourner à droite depuis suivant)
+                    int idxPred = (idxCourantDansSuivant - 1 + voisinsSuivant.size())
+                            % voisinsSuivant.size();
+                    int prochainNoeud = voisinsSuivant.get(idxPred)[0];
+
+                    courant = suivant;
+                    suivant = prochainNoeud;
+
+                    if (suivant == i && courant == j) {
+                        // On a bouclé — face terminée mais déjà ajoutée
+                        break;
+                    }
+                    if (courant == i) {
+                        // Retour au départ — face complète
+                        faces.add(new ArrayList<>(face));
+                        break;
+                    }
+                }
+            }
+        }
+
+        // ✅ Parmi toutes les faces, trouver la plus petite contenant (px,py)
         List<SegmentSource> meilleur      = null;
         double              meilleureAire = Double.MAX_VALUE;
 
-        for (int c = 0; c < tousChemins.size(); c++) {
-            List<Integer> chemin    = tousChemins.get(c);
-            List<Integer> cheminSeg = tousCheminSegs.get(c);
-            if (chemin.size() < 3) continue;
+        for (List<Integer> face : faces) {
+            if (face.size() < 3) continue;
 
             List<Point> polygone = new ArrayList<>();
-            for (int idx : chemin) {
-                polygone.add(
-                        new Point(noeuds.get(idx)[0], noeuds.get(idx)[1]));
+            for (int idx : face) {
+                polygone.add(new Point(noeuds.get(idx)[0], noeuds.get(idx)[1]));
             }
 
             if (!pointDansPolygone(px, py, polygone)) continue;
 
             double aire = Math.abs(calculerAire(polygone));
-            if (aire < meilleureAire) {
+            if (aire < meilleureAire && aire > TOL) {
                 meilleureAire = aire;
+
+                // Reconstruire les SegmentSource du cycle
                 meilleur = new ArrayList<>();
-                for (int si : cheminSeg) meilleur.add(sources.get(si));
+                for (int k = 0; k < face.size(); k++) {
+                    int nA = face.get(k);
+                    int nB = face.get((k + 1) % face.size());
+                    // Trouver le segment correspondant
+                    for (int[] ar : adj.get(nA)) {
+                        if (ar[0] == nB) {
+                            meilleur.add(sources.get(ar[1]));
+                            break;
+                        }
+                    }
+                }
             }
         }
 
         return meilleur;
     }
 
-    private void dfsCycles(int depart, int courant, int parentSeg,
+    private void dfsCycles(int depart, int courant, int parentNoeud,
                            List<Integer> chemin, List<Integer> cheminSeg,
                            List<List<int[]>> adj,
                            List<List<Integer>> tousChemins,
@@ -329,7 +401,9 @@ public class NiveauControleur {
             int voisin = arete[0];
             int idxSeg = arete[1];
 
-            if (idxSeg == parentSeg) continue;
+            // ✅ Bloquer uniquement le nœud immédiatement précédent
+            // (pas le segment, qui peut avoir des index ambigus)
+            if (voisin == parentNoeud) continue;
 
             if (voisin == depart && chemin.size() >= 3) {
                 tousChemins.add(new ArrayList<>(chemin));
@@ -340,7 +414,8 @@ public class NiveauControleur {
             if (!chemin.contains(voisin) && voisin > depart) {
                 chemin.add(voisin);
                 cheminSeg.add(idxSeg);
-                dfsCycles(depart, voisin, idxSeg, chemin, cheminSeg,
+                dfsCycles(depart, voisin, courant, // ✅ passer courant comme parentNoeud
+                        chemin, cheminSeg,
                         adj, tousChemins, tousCheminSegs, N);
                 chemin.remove(chemin.size() - 1);
                 cheminSeg.remove(cheminSeg.size() - 1);
