@@ -46,4 +46,8 @@ public class OptionsMurVue extends VBox {
     public boolean estRectangulaire(){
         return  rbRectangulaire.isSelected();
     }
+    
+    public void setDefaultLibre() {
+        rbLibre.setSelected(true);
+    }
 }

@@ -19,6 +19,8 @@ public class ImmeubleView extends BorderPane {
     private String cheminRetour = "/images/fleche_retour_icone.png";
     private String cheminMain = "/images/main_icone.png";
     private String cheminEchelle = "/images/echelle_icone.png";
+    private String cheminMur = "/images/mur_icone.png";
+    private String cheminAppartement = "/images/appartement_icone.png";
 
     private ImmeubleControleur controleur;
     private Button btnAjouterNiveau;
@@ -85,28 +87,49 @@ public class ImmeubleView extends BorderPane {
         btnValiderAire.setVisible(true);
 
         // Bouton Ajouter Niveau (caché au début, même emplacement)
-        btnAjouterNiveau = new Button("Ajouter\nNiveau");
+        btnAjouterNiveau = new Button("Ajouter Niveau");
         btnAjouterNiveau.setStyle(
             "-fx-cursor: hand; -fx-font-weight: bold; -fx-text-alignment: center; -fx-text-fill: #34495e;");
-        btnAjouterNiveau.setPrefSize(80, 60);
+        btnAjouterNiveau.setPrefSize(110, 60);
+
+        Label labelPlus = new Label("+");
+        labelPlus.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #34495e;");
+        btnAjouterNiveau.setGraphic(labelPlus);
+        btnAjouterNiveau.setContentDisplay(ContentDisplay.TOP);
         btnAjouterNiveau.setDisable(false);
         btnAjouterNiveau.setVisible(false); // Caché jusqu'à validation
 
         // Bouton Mur (visible après validation de l'aire)
+        Image imgMur = new Image(getClass().getResource(cheminMur).toExternalForm());
+        ImageView iconeMur = new ImageView(imgMur);
+        iconeMur.setFitHeight(30);
+        iconeMur.setFitWidth(30);
+        iconeMur.setPreserveRatio(true);
+
         btnMur = new Button("Mur");
         btnMur.setStyle("-fx-cursor: hand; -fx-font-weight: bold; -fx-text-fill: #34495e;");
         btnMur.setPrefSize(60, 60);
-        btnMur.setVisible(false); // affiché après validation
+        btnMur.setGraphic(iconeMur);
+        btnMur.setContentDisplay(ContentDisplay.TOP);
+        btnMur.setVisible(false);
 
         // Bouton Appartement (visible après validation de l'aire)
+        Image imgAppart = new Image(getClass().getResource(cheminAppartement).toExternalForm());
+        ImageView iconeAppart = new ImageView(imgAppart);
+        iconeAppart.setFitHeight(30);
+        iconeAppart.setFitWidth(30);
+        iconeAppart.setPreserveRatio(true);
+
         btnAppartement = new Button("Appartement");
         btnAppartement.setStyle("-fx-cursor: hand; -fx-font-weight: bold; -fx-text-fill: #34495e;");
         btnAppartement.setPrefSize(100, 60);
-        btnAppartement.setVisible(false); // affiché après validation
+        btnAppartement.setGraphic(iconeAppart);
+        btnAppartement.setContentDisplay(ContentDisplay.TOP);
+        btnAppartement.setVisible(false);
 
         // Superposition des deux boutons dans un même StackPane
         StackPane btnZone = new StackPane(btnValiderAire, btnAjouterNiveau);
-        btnZone.setPrefSize(80, 60);
+        btnZone.setPrefSize(110, 60);
 
         // Espaceur
         Region spacer = new Region();

@@ -16,7 +16,8 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Insets;
 
 public class DashBoardView extends BorderPane {
-    String cheminImmeuble = "/images/appartement_icone.png";
+    String cheminImmeuble = "/images/immeuble_icone.png";
+    String cheminAppartement = "/images/appartement_icone.png";
     String cheminMaison = "/images/maison_icone.png";
     String cheminPiece = "/images/piece_icone.png";
     String cheminSettings = "/images/engrenage_icone.png";
@@ -96,8 +97,8 @@ public class DashBoardView extends BorderPane {
         immeubleButton.setStyle("-fx-cursor: hand;" + "-fx-font-family: 'Arial';" + "fx-font-size: 13px;" + "-fx-font-weight: bold;" + "-fx-text-fill: #34495e;");
         immeubleButton.setPrefSize(120, 100);
 
-                //Configuration du bouton Appartement
-        Image iconeAppartement = new Image(getClass().getResource(cheminImmeuble).toExternalForm());
+        //Configuration du bouton Appartement
+        Image iconeAppartement = new Image(getClass().getResource(cheminAppartement).toExternalForm());
         ImageView imgAppartement = new ImageView(iconeAppartement);
         imgAppartement.setFitWidth(50);
         imgAppartement.setFitHeight(50);

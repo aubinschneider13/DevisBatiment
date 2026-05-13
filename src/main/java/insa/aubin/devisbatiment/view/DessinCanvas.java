@@ -48,14 +48,12 @@ public class DessinCanvas extends Canvas {
     public DessinCanvas() {
         this.elements = new ArrayList<>();
 
-        // Redessiner lors du redimensionnement de la fenêtre
-        // et initialiser l'origine au centre du canvas
         this.heightProperty().addListener(o -> {
-            offsetY = getHeight() / 2;
+        if (offsetY == 0) offsetY = getHeight() / 2;  // init une seule fois
             redrawAll();
         });
         this.widthProperty().addListener(o -> {
-            offsetX = getWidth() / 2;
+        if (offsetX == 0) offsetX = getWidth() / 2;   // init une seule fois
             redrawAll();
         });
 

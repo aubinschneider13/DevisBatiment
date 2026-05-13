@@ -21,7 +21,11 @@ public class NiveauControleur {
     private int compteurAppartements = 0;
 
     private String mode = "AUCUN";
-    private Mur murEnCours = null;
+    private Mur mur1EnCours = null;
+    private Mur mur2EnCours = null;
+    private Point p1Rect = null;
+    private Point p2Rect = null;
+    private int etapeRectangle = 0;
 
     // ✅ TOL augmentée pour absorber les erreurs de virgule flottante
     private static final double TOL = 1e-6;
@@ -57,12 +61,16 @@ public class NiveauControleur {
         });
         vue.getCanvas().setOnMouseMoved(e -> mouvementCanvas(e));
 
-        vue.setFocusTraversable(true);
-        vue.setOnKeyPressed(e -> {
+        // ← Échap sur le canvas directement (il reçoit le focus au clic)
+        vue.getCanvas().setFocusTraversable(true);
+        vue.getCanvas().setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
                 annulerMurEnCours();
             }
         });
+
+        // Donner le focus au canvas dès qu'on clique dessus
+        vue.getCanvas().setOnMousePressed(e -> vue.getCanvas().requestFocus());
     }
 
     private void clicCanvas(javafx.scene.input.MouseEvent e) {
@@ -74,11 +82,24 @@ public class NiveauControleur {
     }
 
     private void mouvementCanvas(javafx.scene.input.MouseEvent e) {
-        if (mode.equals("MUR") && murEnCours != null) {
-            Point2D snap = vue.getCanvas().snapToGrid(e.getX(), e.getY());
-            murEnCours.setPoint2(new Point(snap.getX(), snap.getY()));
-            vue.getCanvas().redrawAll();
+        if (!mode.equals("MUR")) return;
+        Point2D snap = vue.getCanvas().snapToGrid(e.getX(), e.getY());
+        boolean modRect = vue.getOptionsMurVue().estRectangulaire();
+
+        if (modRect) {
+            if (etapeRectangle == 1 && mur1EnCours != null) {
+                mur1EnCours.setPoint2(new Point(snap.getX(), snap.getY()));
+            } else if (etapeRectangle == 2 && mur2EnCours != null) {
+                Point p3 = calculerPointOrthogonal(p2Rect,
+                        new Point(snap.getX(), snap.getY()));
+                mur2EnCours.setPoint2(p3);
+            }
+        } else {
+            if (mur1EnCours != null) {
+                mur1EnCours.setPoint2(new Point(snap.getX(), snap.getY()));
+            }
         }
+        vue.getCanvas().redrawAll();
     }
 
     // =========================================================================
@@ -86,26 +107,71 @@ public class NiveauControleur {
     // =========================================================================
 
     private void gererClicMur(Point2D snap) {
+        boolean modRect = vue.getOptionsMurVue().estRectangulaire();
         Point pClic = new Point(snap.getX(), snap.getY());
-        if (murEnCours == null) {
-            murEnCours = new Mur(pClic, pClic);
-            vue.getCanvas().ajouterElement(murEnCours);
-            vue.setInstructions(
-                    "Cliquez pour poser l'extrémité du mur — Échap pour annuler");
+
+        if (modRect) {
+            switch (etapeRectangle) {
+                case 0:
+                    p1Rect = pClic;
+                    mur1EnCours = new Mur(p1Rect, p1Rect);
+                    vue.getCanvas().ajouterElement(mur1EnCours);
+                    vue.setInstructions("Premier coin posé — cliquez pour la longueur");
+                    etapeRectangle = 1;
+                    break;
+                case 1:
+                    p2Rect = pClic;
+                    mur1EnCours.setPoint2(p2Rect);
+                    mur2EnCours = new Mur(p2Rect, p2Rect);
+                    vue.getCanvas().ajouterElement(mur2EnCours);
+                    vue.setInstructions("Longueur définie — cliquez pour la largeur");
+                    etapeRectangle = 2;
+                    break;
+                case 2:
+                    Point p3 = calculerPointOrthogonal(p2Rect, pClic);
+                    mur2EnCours.setPoint2(p3);
+                    Point p4 = new Point(
+                        p1Rect.getX() + (p3.getX() - p2Rect.getX()),
+                        p1Rect.getY() + (p3.getY() - p2Rect.getY())
+                    );
+                    vue.getCanvas().ajouterElement(new Mur(p3, p4));
+                    vue.getCanvas().ajouterElement(new Mur(p4, p1Rect));
+                    vue.setInstructions("Rectangle créé — cliquez pour un nouveau ou changez d'outil");
+                    etapeRectangle = 0;
+                    mur1EnCours = null;
+                    mur2EnCours = null;
+                    p1Rect = null;
+                    p2Rect = null;
+                    break;
+            }
         } else {
-            murEnCours.setPoint2(pClic);
-            murEnCours = null;
-            vue.setInstructions("Cliquez pour démarrer un nouveau mur");
+            // Mode libre — comportement existant
+            if (mur1EnCours == null) {
+                mur1EnCours = new Mur(pClic, pClic);
+                vue.getCanvas().ajouterElement(mur1EnCours);
+                vue.setInstructions("Cliquez pour poser l'extrémité — Échap pour annuler");
+            } else {
+                mur1EnCours.setPoint2(pClic);
+                mur1EnCours = null;
+                vue.setInstructions("Cliquez pour démarrer un nouveau mur");
+            }
         }
         vue.getCanvas().redrawAll();
     }
 
     public void annulerMurEnCours() {
-        if (murEnCours != null) {
-            vue.getCanvas().getElements().remove(murEnCours);
-            murEnCours = null;
-            vue.getCanvas().redrawAll();
+        if (mur1EnCours != null) {
+            vue.getCanvas().getElements().remove(mur1EnCours);
+            mur1EnCours = null;
         }
+        if (mur2EnCours != null) {
+            vue.getCanvas().getElements().remove(mur2EnCours);
+            mur2EnCours = null;
+        }
+        etapeRectangle = 0;
+        p1Rect = null;
+        p2Rect = null;
+        vue.getCanvas().redrawAll();
     }
 
     // =========================================================================
@@ -539,6 +605,16 @@ public class NiveauControleur {
         }
         return aire / 2.0;
     }
+    
+    private Point calculerPointOrthogonal(Point centre, Point cible) {
+        double dx = p2Rect.getX() - p1Rect.getX();
+        double dy = p2Rect.getY() - p1Rect.getY();
+        double perpX = -dy, perpY = dx;
+        double ux = cible.getX() - centre.getX();
+        double uy = cible.getY() - centre.getY();
+        double s = (ux*perpX + uy*perpY) / (perpX*perpX + perpY*perpY);
+        return new Point(centre.getX() + s*perpX, centre.getY() + s*perpY);
+    }
 
     // =========================================================================
     // CONTOUR DE L'AIRE (lecture seule)
@@ -577,6 +653,7 @@ public class NiveauControleur {
         annulerMurEnCours();
         mode = "MUR";
         vue.getCanvas().setPanActif(false);
+        vue.getOptionsMurVue().setVisible(true);   // ← ajout
         vue.setInstructions("Cliquez pour poser le premier point du mur");
     }
 
@@ -584,16 +661,16 @@ public class NiveauControleur {
         annulerMurEnCours();
         mode = "APPARTEMENT";
         vue.getCanvas().setPanActif(false);
-        vue.setInstructions(
-                "Cliquez à l'intérieur d'une zone fermée pour créer un appartement");
+        vue.getOptionsMurVue().setVisible(false);  // ← ajout
+        vue.setInstructions("Cliquez à l'intérieur d'une zone fermée pour créer un appartement");
     }
 
     public void activerModeNavigation() {
         annulerMurEnCours();
         mode = "AUCUN";
         vue.getCanvas().setPanActif(true);
-        vue.setInstructions(
-                "Navigation — molette pour zoomer, clic droit pour déplacer");
+        vue.getOptionsMurVue().setVisible(false);  // ← ajout
+        vue.setInstructions("Navigation — molette pour zoomer, clic droit pour déplacer");
     }
 
     // =========================================================================
@@ -620,4 +697,6 @@ public class NiveauControleur {
             this.mur = mur;
         }
     }
+    
+    
 }
