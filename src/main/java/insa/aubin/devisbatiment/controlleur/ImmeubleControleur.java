@@ -17,6 +17,7 @@ public class ImmeubleControleur {
     private ImmeubleView vue;
     private Stage stage;
     private GestionnaireSauvegarde gestionnaire;
+    private javafx.beans.value.ChangeListener<javafx.scene.control.Toggle> listenerEchelle = null;
 
     // --- Aire de l'immeuble ---
     private AireImmeuble aireImmeuble;
@@ -138,21 +139,19 @@ public class ImmeubleControleur {
         boolean visible = !this.vue.getEchelleVue().isVisible();
         this.vue.getEchelleVue().setVisible(visible);
 
-        if (visible) {
+        if (visible && listenerEchelle == null) {
+            listenerEchelle = (obs, oldVal, newVal) -> {
+                if (newVal != null) {
+                    double echelle = this.vue.getEchelleVue().getEchelleSelectionnee();
+                    if (niveauActuel != null) {
+                        niveauActuel.getVue().getCanvas().setGridSize(echelle);
+                    } else {
+                        this.vue.getCanvas().setGridSize(echelle);
+                    }
+                }
+            };
             this.vue.getEchelleVue().getGroupeEchelle()
-                    .selectedToggleProperty().addListener(
-                            (obs, oldVal, newVal) -> {
-                                if (newVal != null) {
-                                    double echelle = this.vue.getEchelleVue()
-                                            .getEchelleSelectionnee();
-                                    if (niveauActuel != null) {
-                                        niveauActuel.getVue().getCanvas().setGridSize(echelle);
-                                    } else {
-                                        this.vue.getCanvas().setGridSize(echelle);
-                                    }
-                                }
-                            }
-                    );
+                .selectedToggleProperty().addListener(listenerEchelle);
         }
     }
 

@@ -26,6 +26,7 @@ public class NiveauControleur {
     private Point p1Rect = null;
     private Point p2Rect = null;
     private int etapeRectangle = 0;
+    private javafx.beans.value.ChangeListener<javafx.scene.control.Toggle> listenerForme = null;
 
     // ✅ TOL augmentée pour absorber les erreurs de virgule flottante
     private static final double TOL = 1e-6;
@@ -75,6 +76,10 @@ public class NiveauControleur {
 
     private void clicCanvas(javafx.scene.input.MouseEvent e) {
         Point2D snap = vue.getCanvas().snapToGrid(e.getX(), e.getY());
+
+        // Bloquer si hors de l'aire de l'immeuble
+        if (!estDansAire(snap.getX(), snap.getY())) return;
+
         switch (mode) {
             case "MUR":         gererClicMur(snap);         break;
             case "APPARTEMENT": gererClicAppartement(snap); break;
@@ -84,8 +89,12 @@ public class NiveauControleur {
     private void mouvementCanvas(javafx.scene.input.MouseEvent e) {
         if (!mode.equals("MUR")) return;
         Point2D snap = vue.getCanvas().snapToGrid(e.getX(), e.getY());
-        boolean modRect = vue.getOptionsMurVue().estRectangulaire();
 
+        // Contraindre le point à l'aire
+        double[] contraint = contraindreAAire(snap.getX(), snap.getY());
+        snap = new Point2D(contraint[0], contraint[1]);
+
+        boolean modRect = vue.getOptionsMurVue().estRectangulaire();
         if (modRect) {
             if (etapeRectangle == 1 && mur1EnCours != null) {
                 mur1EnCours.setPoint2(new Point(snap.getX(), snap.getY()));
@@ -359,20 +368,18 @@ public class NiveauControleur {
      * c'est-à-dire pas aux extrémités et colinéaire avec t ∈ (0, 1).
      */
     private boolean pointSurSegment(double px, double py,
-                                    double x1, double y1,
-                                    double x2, double y2) {
-        // Produit vectoriel nul = colinéaire
-        double cross = (px - x1) * (y2 - y1) - (py - y1) * (x2 - x1);
-        if (Math.abs(cross) > TOL) return false;
+                                double x1, double y1,
+                                double x2, double y2) {
+    double cross = (px - x1) * (y2 - y1) - (py - y1) * (x2 - x1);
+    if (Math.abs(cross) > TOL) return false;
 
-        // Paramètre t le long du segment
-        double dx = x2 - x1, dy = y2 - y1;
-        double len2 = dx * dx + dy * dy;
-        if (len2 < TOL) return false;
+    double dx = x2 - x1, dy = y2 - y1;
+    double len2 = dx * dx + dy * dy;
+    if (len2 < TOL) return false;
 
-        double t = ((px - x1) * dx + (py - y1) * dy) / len2;
-        return t > TOL && t < 1.0 - TOL; // strictement entre les deux extrémités
-    }
+    double t = ((px - x1) * dx + (py - y1) * dy) / len2;
+    return t >= -TOL && t <= 1.0 + TOL; // ← inclut les extrémités
+}
 
     /**
      * ✅ Ajoute le segment seulement s'il n'existe pas déjà
@@ -615,6 +622,65 @@ public class NiveauControleur {
         double s = (ux*perpX + uy*perpY) / (perpX*perpX + perpY*perpY);
         return new Point(centre.getX() + s*perpX, centre.getY() + s*perpY);
     }
+    
+    /** Vérifie si un point est dans le polygone de l'aire de l'immeuble */
+    private boolean estDansAire(double px, double py) {
+        if (aireImmeuble == null || !aireImmeuble.isComplete()) return true;
+
+        // Vérifier si le point est dans le polygone
+        List<Point> poly = List.of(
+            aireImmeuble.getP1(), aireImmeuble.getP2(),
+            aireImmeuble.getP3(), aireImmeuble.getP4()
+        );
+        if (pointDansPolygone(px, py, poly)) return true;
+
+        // Vérifier si le point est sur un des bords (tolérance pour le snap)
+        Point[] coins = {
+            aireImmeuble.getP1(), aireImmeuble.getP2(),
+            aireImmeuble.getP3(), aireImmeuble.getP4()
+        };
+        for (int i = 0; i < 4; i++) {
+            Point a = coins[i];
+            Point b = coins[(i + 1) % 4];
+            if (pointSurSegment(px, py, a.getX(), a.getY(), b.getX(), b.getY())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Contraint un point à l'intérieur de l'aire.
+     * Si le point est dedans, le retourne tel quel.
+     * Sinon, le projette sur le bord le plus proche.
+     */
+    private double[] contraindreAAire(double px, double py) {
+        if (estDansAire(px, py)) return new double[]{px, py};
+
+        // Projeter sur chaque côté et garder la projection la plus proche
+        Point[] coins = {
+            aireImmeuble.getP1(), aireImmeuble.getP2(),
+            aireImmeuble.getP3(), aireImmeuble.getP4()
+        };
+
+        double bestX = px, bestY = py, bestDist = Double.MAX_VALUE;
+        for (int i = 0; i < 4; i++) {
+            Point a = coins[i];
+            Point b = coins[(i + 1) % 4];
+            double dx = b.getX() - a.getX(), dy = b.getY() - a.getY();
+            double l2 = dx*dx + dy*dy;
+            if (l2 < 1e-10) continue;
+            double t = Math.max(0, Math.min(1,
+                ((px - a.getX())*dx + (py - a.getY())*dy) / l2));
+            double cx = a.getX() + t*dx;
+            double cy = a.getY() + t*dy;
+            double dist = Math.hypot(px - cx, py - cy);
+            if (dist < bestDist) {
+                bestDist = dist; bestX = cx; bestY = cy;
+            }
+        }
+        return new double[]{bestX, bestY};
+    }
 
     // =========================================================================
     // CONTOUR DE L'AIRE (lecture seule)
@@ -653,8 +719,30 @@ public class NiveauControleur {
         annulerMurEnCours();
         mode = "MUR";
         vue.getCanvas().setPanActif(false);
-        vue.getOptionsMurVue().setVisible(true);   // ← ajout
-        vue.setInstructions("Cliquez pour poser le premier point du mur");
+        vue.getOptionsMurVue().setVisible(true);
+
+        // Supprimer l'ancien listener avant d'en ajouter un nouveau
+        if (listenerForme != null) {
+            vue.getOptionsMurVue().getGroupeForme()
+               .selectedToggleProperty().removeListener(listenerForme);
+        }
+
+        listenerForme = (obs, oldVal, newVal) -> {
+            if (vue.getOptionsMurVue().estRectangulaire()) {
+                vue.setInstructions("Mode rectangle — cliquez pour le premier coin");
+            } else {
+                vue.setInstructions("Mode libre — cliquez pour le début du mur");
+            }
+        };
+        vue.getOptionsMurVue().getGroupeForme()
+           .selectedToggleProperty().addListener(listenerForme);
+
+        // Label initial selon le mode courant
+        if (vue.getOptionsMurVue().estRectangulaire()) {
+            vue.setInstructions("Mode rectangle — cliquez pour le premier coin");
+        } else {
+            vue.setInstructions("Mode libre — cliquez pour le début du mur");
+        }
     }
 
     public void activerModeAppartement() {
