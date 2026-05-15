@@ -3,6 +3,7 @@ package insa.aubin.devisbatiment.controlleur;
 import insa.aubin.devisbatiment.view.DashBoardView;
 import insa.aubin.devisbatiment.view.ImmeubleView;
 import insa.aubin.devisbatiment.view.PieceView;
+import insa.aubin.devisbatiment.view.AppView;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
@@ -34,11 +35,11 @@ public class DashBoardControleur {
     }
 
     public void ouvrirImmeuble(){
-        ImmeubleView immeubleView = new ImmeubleView(stage,gestionnaire);
-        Scene immeubleScene = new Scene(immeubleView);
-
+        AppView appView = new AppView();
+        Scene immeubleScene = new Scene(appView);
         stage.setScene(immeubleScene);
         stage.setTitle("InsaBuilder - Nouveau devis pour un Immeuble");
+        new AppControleur(appView, stage, gestionnaire);
         mettreFenetrePleinEcran();
     }
 

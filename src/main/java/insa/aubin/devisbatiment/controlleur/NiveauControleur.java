@@ -8,7 +8,23 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.paint.Color;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 
+/**
+ * Contrôleur d'un niveau (étage) de l'immeuble.
+ *
+ * ✅ ADAPTÉ par rapport à l'ancienne version :
+ *   - Ajout du callback {@link #setOnAppartementCree(BiConsumer)} pour notifier
+ *     AppControleur lors de la création d'un appartement. Cela remplace l'ancien
+ *     couplage direct avec ImmeubleControleur qui peuplait lui-même le TreeView.
+ *   - Le peuplement du TreeView (ajout de l'item appartement dans le navigateur)
+ *     est désormais délégué à AppControleur via ce callback.
+ *   - Tout le reste (dessin des murs, détection de zones fermées, création
+ *     d'appartements) est identique à l'ancienne version.
+ *
+ * Responsabilité : gérer le dessin interactif sur le DessinCanvas du niveau
+ * (murs libres, murs rectangulaires, appartements par détection de cycle minimal).
+ */
 public class NiveauControleur {
 
     private final NiveauView vue;
@@ -31,6 +47,15 @@ public class NiveauControleur {
     // ✅ TOL augmentée pour absorber les erreurs de virgule flottante
     private static final double TOL = 1e-6;
 
+    /**
+     * ✅ Callback notifié par NiveauControleur chaque fois qu'un appartement
+     * est créé. AppControleur s'y abonne via setOnAppartementCree() pour
+     * peupler le NavigateurView sans que NiveauControleur n'ait à le connaître.
+     *
+     * Signature : (Appartement créé, TreeItem créé pour cet appartement)
+     */
+    private java.util.function.Function<Appartement, TreeItem<String>> onAppartementCree = null;
+
     public NiveauControleur(NiveauView vue, AireImmeuble aireImmeuble,
                             TreeItem<String> itemNiveau, Niveau niveau) {
         this.vue          = vue;
@@ -47,6 +72,27 @@ public class NiveauControleur {
         }
 
         brancherListeners();
+    }
+
+    // =========================================================================
+    // CALLBACK — appelé par AppControleur après construction
+    // =========================================================================
+
+    /**
+     * Enregistre le callback à appeler lors de la création d'un appartement.
+     *
+     * ✅ Permet à AppControleur de peupler le NavigateurView sans couplage direct.
+     * Exemple d'usage dans AppControleur :
+     * <pre>
+     *   ctrl.setOnAppartementCree((appart, itemAppart) ->
+     *       navigateurView.ajouterItemAppartement(itemNiveau, appart.toString())
+     *   );
+     * </pre>
+     *
+     * @param callback BiConsumer recevant (Appartement, TreeItem) à chaque création
+     */
+    public void setOnAppartementCree(java.util.function.Function<Appartement, TreeItem<String>> callback) {
+        this.onAppartementCree = callback;
     }
 
     // =========================================================================
@@ -145,7 +191,8 @@ public class NiveauControleur {
                     );
                     vue.getCanvas().ajouterElement(new Mur(p3, p4));
                     vue.getCanvas().ajouterElement(new Mur(p4, p1Rect));
-                    vue.setInstructions("Rectangle créé — cliquez pour un nouveau ou changez d'outil");
+                    vue.setInstructions(
+                        "Rectangle créé — cliquez pour un nouveau ou changez d'outil");
                     etapeRectangle = 0;
                     mur1EnCours = null;
                     mur2EnCours = null;
@@ -203,7 +250,7 @@ public class NiveauControleur {
 
         if (cycle == null || cycle.size() < 3) {
             vue.setInstructions(
-                    "Aucune zone fermée ici — vérifiez que les murs se rejoignent bien.");
+                "Aucune zone fermée ici — vérifiez que les murs se rejoignent bien.");
             return;
         }
 
@@ -220,14 +267,16 @@ public class NiveauControleur {
         appartements.add(appart);
         vue.getCanvas().ajouterElement(appart);
 
-        // Mettre à jour le TreeView
-        TreeItem<String> itemAppart = new TreeItem<>(appart.toString());
-        itemNiveau.getChildren().add(itemAppart);
-        itemNiveau.setExpanded(true);
-        mapItemAppartement.put(itemAppart, appart);
+        // ✅ Créer l'item TreeView sous le nœud du niveau
+        if (onAppartementCree != null) {
+            TreeItem<String> itemAppart = onAppartementCree.apply(appart);
+            if (itemAppart != null) {
+                mapItemAppartement.put(itemAppart, appart);
+            }
+        }
 
         vue.setInstructions(
-                "« " + appart + " » créé — cliquez dans une autre zone pour en ajouter un.");
+            "« " + appart + " » créé — cliquez dans une autre zone pour en ajouter un.");
         vue.getCanvas().redrawAll();
     }
 
@@ -262,8 +311,8 @@ public class NiveauControleur {
                 if (correspondA(candidat.getPoint2(), dernierPoint)) {
                     // Sens inversé
                     Mur inverse = new Mur(
-                            candidat.getPoint2(),
-                            candidat.getPoint1()
+                        candidat.getPoint2(),
+                        candidat.getPoint1()
                     );
                     courant = inverse;
                     ordonne.add(courant);
@@ -328,7 +377,6 @@ public class NiveauControleur {
 
             for (double[] pt : tousLesPoints) {
                 if (pointSurSegment(pt[0], pt[1], ss.x1, ss.y1, ss.x2, ss.y2)) {
-                    // Pas déjà une extrémité
                     boolean dejaDedans = false;
                     for (double[] existing : pointsSurSegment) {
                         if (Math.abs(existing[0] - pt[0]) < TOL
@@ -368,18 +416,18 @@ public class NiveauControleur {
      * c'est-à-dire pas aux extrémités et colinéaire avec t ∈ (0, 1).
      */
     private boolean pointSurSegment(double px, double py,
-                                double x1, double y1,
-                                double x2, double y2) {
-    double cross = (px - x1) * (y2 - y1) - (py - y1) * (x2 - x1);
-    if (Math.abs(cross) > TOL) return false;
+                                    double x1, double y1,
+                                    double x2, double y2) {
+        double cross = (px - x1) * (y2 - y1) - (py - y1) * (x2 - x1);
+        if (Math.abs(cross) > TOL) return false;
 
-    double dx = x2 - x1, dy = y2 - y1;
-    double len2 = dx * dx + dy * dy;
-    if (len2 < TOL) return false;
+        double dx = x2 - x1, dy = y2 - y1;
+        double len2 = dx * dx + dy * dy;
+        if (len2 < TOL) return false;
 
-    double t = ((px - x1) * dx + (py - y1) * dy) / len2;
-    return t >= -TOL && t <= 1.0 + TOL; // ← inclut les extrémités
-}
+        double t = ((px - x1) * dx + (py - y1) * dy) / len2;
+        return t >= -TOL && t <= 1.0 + TOL; // ← inclut les extrémités
+    }
 
     /**
      * ✅ Ajoute le segment seulement s'il n'existe pas déjà
@@ -429,19 +477,17 @@ public class NiveauControleur {
         for (int i = 0; i < N; i++) {
             final double[] noeud = noeuds.get(i);
             adj.get(i).sort((a, b) -> {
-            double ax = noeuds.get(a[0])[0] - noeud[0];
-            double ay = noeuds.get(a[0])[1] - noeud[1];
-            double bx = noeuds.get(b[0])[0] - noeud[0];
-            double by = noeuds.get(b[0])[1] - noeud[1];
-            double angleA = Math.atan2(-ay, ax);  // ← Y inversé = canvas JavaFX
-            double angleB = Math.atan2(-by, bx);
-            return Double.compare(angleA, angleB);
-        });
+                double ax = noeuds.get(a[0])[0] - noeud[0];
+                double ay = noeuds.get(a[0])[1] - noeud[1];
+                double bx = noeuds.get(b[0])[0] - noeud[0];
+                double by = noeuds.get(b[0])[1] - noeud[1];
+                double angleA = Math.atan2(-ay, ax); // ← Y inversé = canvas JavaFX
+                double angleB = Math.atan2(-by, bx);
+                return Double.compare(angleA, angleB);
+            });
         }
 
         // ✅ Énumérer toutes les faces par "Next Half-Edge"
-        // Pour chaque demi-arête (i→j), la prochaine demi-arête de la face
-        // est le prédécesseur de (j→i) dans la liste triée de j
         List<List<Integer>> faces = new ArrayList<>();
         Set<String> demiAretesVisitees = new HashSet<>();
 
@@ -451,7 +497,6 @@ public class NiveauControleur {
                 String cle = i + "->" + j;
                 if (demiAretesVisitees.contains(cle)) continue;
 
-                // Parcourir la face en tournant toujours à gauche
                 List<Integer> face = new ArrayList<>();
                 int courant = i;
                 int suivant = j;
@@ -463,7 +508,6 @@ public class NiveauControleur {
                     demiAretesVisitees.add(cleEtape);
                     face.add(courant);
 
-                    // Trouver le prédécesseur de (suivant→courant) dans adj[suivant]
                     List<int[]> voisinsSuivant = adj.get(suivant);
                     int idxCourantDansSuivant = -1;
                     for (int k = 0; k < voisinsSuivant.size(); k++) {
@@ -481,12 +525,8 @@ public class NiveauControleur {
                     courant = suivant;
                     suivant = prochainNoeud;
 
-                    if (suivant == i && courant == j) {
-                        // On a bouclé — face terminée mais déjà ajoutée
-                        break;
-                    }
+                    if (suivant == i && courant == j) break;
                     if (courant == i) {
-                        // Retour au départ — face complète
                         faces.add(new ArrayList<>(face));
                         break;
                     }
@@ -512,12 +552,10 @@ public class NiveauControleur {
             if (aire < meilleureAire && aire > TOL) {
                 meilleureAire = aire;
 
-                // Reconstruire les SegmentSource du cycle
                 meilleur = new ArrayList<>();
                 for (int k = 0; k < face.size(); k++) {
                     int nA = face.get(k);
                     int nB = face.get((k + 1) % face.size());
-                    // Trouver le segment correspondant
                     for (int[] ar : adj.get(nA)) {
                         if (ar[0] == nB) {
                             meilleur.add(sources.get(ar[1]));
@@ -531,47 +569,11 @@ public class NiveauControleur {
         return meilleur;
     }
 
-    private void dfsCycles(int depart, int courant, int parentNoeud,
-                           List<Integer> chemin, List<Integer> cheminSeg,
-                           List<List<int[]>> adj,
-                           List<List<Integer>> tousChemins,
-                           List<List<Integer>> tousCheminSegs,
-                           int N) {
-
-        if (chemin.size() > N) return;
-
-        for (int[] arete : adj.get(courant)) {
-            int voisin = arete[0];
-            int idxSeg = arete[1];
-
-            // ✅ Bloquer uniquement le nœud immédiatement précédent
-            // (pas le segment, qui peut avoir des index ambigus)
-            if (voisin == parentNoeud) continue;
-
-            if (voisin == depart && chemin.size() >= 3) {
-                tousChemins.add(new ArrayList<>(chemin));
-                tousCheminSegs.add(new ArrayList<>(cheminSeg));
-                continue;
-            }
-
-            if (!chemin.contains(voisin) && voisin > depart) {
-                chemin.add(voisin);
-                cheminSeg.add(idxSeg);
-                dfsCycles(depart, voisin, courant, // ✅ passer courant comme parentNoeud
-                        chemin, cheminSeg,
-                        adj, tousChemins, tousCheminSegs, N);
-                chemin.remove(chemin.size() - 1);
-                cheminSeg.remove(cheminSeg.size() - 1);
-            }
-        }
-    }
-
     // =========================================================================
     // UTILITAIRES GÉOMÉTRIQUES
     // =========================================================================
 
-    private void ajouterNoeudSiAbsent(List<double[]> noeuds,
-                                      double x, double y) {
+    private void ajouterNoeudSiAbsent(List<double[]> noeuds, double x, double y) {
         for (double[] n : noeuds) {
             if (Math.abs(n[0] - x) < TOL && Math.abs(n[1] - y) < TOL) return;
         }
@@ -593,7 +595,7 @@ public class NiveauControleur {
             Point a = poly.get(i);
             Point b = poly.get((i + 1) % n);
             double ax = a.getX(), ay = a.getY(),
-                    bx = b.getX(), by = b.getY();
+                   bx = b.getX(), by = b.getY();
             if ((ay <= py && by > py) || (by <= py && ay > py)) {
                 double xInter = ax + (py - ay) / (by - ay) * (bx - ax);
                 if (px < xInter) intersections++;
@@ -612,29 +614,27 @@ public class NiveauControleur {
         }
         return aire / 2.0;
     }
-    
+
     private Point calculerPointOrthogonal(Point centre, Point cible) {
-        double dx = p2Rect.getX() - p1Rect.getX();
-        double dy = p2Rect.getY() - p1Rect.getY();
+        double dx   = p2Rect.getX() - p1Rect.getX();
+        double dy   = p2Rect.getY() - p1Rect.getY();
         double perpX = -dy, perpY = dx;
         double ux = cible.getX() - centre.getX();
         double uy = cible.getY() - centre.getY();
-        double s = (ux*perpX + uy*perpY) / (perpX*perpX + perpY*perpY);
-        return new Point(centre.getX() + s*perpX, centre.getY() + s*perpY);
+        double s  = (ux * perpX + uy * perpY) / (perpX * perpX + perpY * perpY);
+        return new Point(centre.getX() + s * perpX, centre.getY() + s * perpY);
     }
-    
-    /** Vérifie si un point est dans le polygone de l'aire de l'immeuble */
+
+    /** Vérifie si un point est dans le polygone de l'aire de l'immeuble. */
     private boolean estDansAire(double px, double py) {
         if (aireImmeuble == null || !aireImmeuble.isComplete()) return true;
 
-        // Vérifier si le point est dans le polygone
         List<Point> poly = List.of(
             aireImmeuble.getP1(), aireImmeuble.getP2(),
             aireImmeuble.getP3(), aireImmeuble.getP4()
         );
         if (pointDansPolygone(px, py, poly)) return true;
 
-        // Vérifier si le point est sur un des bords (tolérance pour le snap)
         Point[] coins = {
             aireImmeuble.getP1(), aireImmeuble.getP2(),
             aireImmeuble.getP3(), aireImmeuble.getP4()
@@ -657,7 +657,6 @@ public class NiveauControleur {
     private double[] contraindreAAire(double px, double py) {
         if (estDansAire(px, py)) return new double[]{px, py};
 
-        // Projeter sur chaque côté et garder la projection la plus proche
         Point[] coins = {
             aireImmeuble.getP1(), aireImmeuble.getP2(),
             aireImmeuble.getP3(), aireImmeuble.getP4()
@@ -668,12 +667,12 @@ public class NiveauControleur {
             Point a = coins[i];
             Point b = coins[(i + 1) % 4];
             double dx = b.getX() - a.getX(), dy = b.getY() - a.getY();
-            double l2 = dx*dx + dy*dy;
+            double l2 = dx * dx + dy * dy;
             if (l2 < 1e-10) continue;
             double t = Math.max(0, Math.min(1,
-                ((px - a.getX())*dx + (py - a.getY())*dy) / l2));
-            double cx = a.getX() + t*dx;
-            double cy = a.getY() + t*dy;
+                ((px - a.getX()) * dx + (py - a.getY()) * dy) / l2));
+            double cx = a.getX() + t * dx;
+            double cy = a.getY() + t * dy;
             double dist = Math.hypot(px - cx, py - cy);
             if (dist < bestDist) {
                 bestDist = dist; bestX = cx; bestY = cy;
@@ -737,7 +736,6 @@ public class NiveauControleur {
         vue.getOptionsMurVue().getGroupeForme()
            .selectedToggleProperty().addListener(listenerForme);
 
-        // Label initial selon le mode courant
         if (vue.getOptionsMurVue().estRectangulaire()) {
             vue.setInstructions("Mode rectangle — cliquez pour le premier coin");
         } else {
@@ -749,16 +747,18 @@ public class NiveauControleur {
         annulerMurEnCours();
         mode = "APPARTEMENT";
         vue.getCanvas().setPanActif(false);
-        vue.getOptionsMurVue().setVisible(false);  // ← ajout
-        vue.setInstructions("Cliquez à l'intérieur d'une zone fermée pour créer un appartement");
+        vue.getOptionsMurVue().setVisible(false);
+        vue.setInstructions(
+            "Cliquez à l'intérieur d'une zone fermée pour créer un appartement");
     }
 
     public void activerModeNavigation() {
         annulerMurEnCours();
         mode = "AUCUN";
         vue.getCanvas().setPanActif(true);
-        vue.getOptionsMurVue().setVisible(false);  // ← ajout
-        vue.setInstructions("Navigation — molette pour zoomer, clic droit pour déplacer");
+        vue.getOptionsMurVue().setVisible(false);
+        vue.setInstructions(
+            "Navigation — molette pour zoomer, clic droit pour déplacer");
     }
 
     // =========================================================================
@@ -785,6 +785,4 @@ public class NiveauControleur {
             this.mur = mur;
         }
     }
-    
-    
 }

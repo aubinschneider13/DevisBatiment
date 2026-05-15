@@ -2,22 +2,48 @@ package insa.aubin.devisbatiment.controlleur;
 
 import insa.aubin.devisbatiment.modele.*;
 import insa.aubin.devisbatiment.view.*;
-import javafx.application.Platform;
-import javafx.event.ActionEvent;
 import javafx.geometry.Point2D;
-import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.stage.Stage;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
+/**
+ * Contrôleur de l'aire de l'immeuble.
+ *
+ * ✅ ALLÉGÉ par rapport à l'ancienne version :
+ *   - Ne connaît plus le Stage (c'est AppControleur qui gère la navigation).
+ *   - Ne connaît plus le TreeView (c'est NavigateurView + AppControleur).
+ *   - Ne gère plus les niveaux ni les appartements.
+ *   - Ne dialogue plus avec NiveauControleur.
+ *   - N'instancie plus ImmeubleView : il reçoit le canvas depuis AppView
+ *     via AppControleur, conformément au pattern State.
+ *
+ * Responsabilité unique : piloter le dessin interactif de l'AireImmeuble
+ * sur le DessinCanvas qui lui est fourni, et exposer l'état de cette aire
+ * à AppControleur via des getters.
+ *
+ * Cycle de vie :
+ *   1. AppControleur instancie ImmeubleControleur en lui passant le canvasAire
+ *      extrait d'AppView.
+ *   2. L'utilisateur clique pour poser les 3 points de l'aire.
+ *   3. ContexteAire appelle btnValiderAire() puis AppControleur.onAireValidee()
+ *      pour basculer de contexte.
+ */
 public class ImmeubleControleur {
-    private ImmeubleView vue;
-    private Stage stage;
-    private GestionnaireSauvegarde gestionnaire;
-    private javafx.beans.value.ChangeListener<javafx.scene.control.Toggle> listenerEchelle = null;
+
+    // --- Vue canvas (reçu d'AppView, pas possédé) ---
+    private final DessinCanvas canvas;
+
+    // --- AppView : uniquement pour setInstructions() et getToolBarView() ---
+    // ✅ On conserve AppView plutôt que Stage : ImmeubleControleur n'a pas
+    //    besoin de changer de scène, il met juste à jour le label et la toolbar.
+    private final AppView appView;
+
+    // --- Service de sauvegarde (transmis pour usage futur) ---
+    private final GestionnaireSauvegarde gestionnaire;
+
+    // ✅ Listener d'échelle — conservé pour btnEchelle(), branché une seule fois
+    private javafx.beans.value.ChangeListener<javafx.scene.control.Toggle>
+            listenerEchelle = null;
 
     // --- Aire de l'immeuble ---
     private AireImmeuble aireImmeuble;
@@ -25,339 +51,272 @@ public class ImmeubleControleur {
     private boolean aireValidee = false;
     private int coteEnCoursDeDeplacement = -1;
 
-    // ✅ DOC 13 : modèle métier
-    private Immeuble immeuble = null;
-
-    // --- Niveaux ---
-    private final List<NiveauControleur> niveauControleurs = new ArrayList<>();
-    private TreeItem<String> itemNiveaux;
-    private NiveauControleur niveauActuel = null;
-
-    // ✅ DOC 11 : PieceView courante
-    private PieceView pieceVueCourante = null;
-
-    public ImmeubleControleur(ImmeubleView vue, Stage stage,
-                              GestionnaireSauvegarde gestionnaire) {
-        this.vue = vue;
-        this.stage = stage;
+    /**
+     * Unique constructeur valide dans la nouvelle architecture.
+     *
+     * ✅ L'ancien constructeur (Stage, ImmeubleView, GestionnaireSauvegarde)
+     * est supprimé : ImmeubleControleur ne connaît plus ni le Stage ni
+     * ImmeubleView. C'est AppControleur qui possède le Stage et AppView.
+     *
+     * @param canvas       canvas de l'aire fourni par AppView
+     * @param appView      vue racine (pour setInstructions et getToolBarView)
+     * @param gestionnaire service de sauvegarde
+     */
+    public ImmeubleControleur(DessinCanvas canvas,
+                               AppView appView,
+                               GestionnaireSauvegarde gestionnaire) {
+        this.canvas       = canvas;
+        this.appView      = appView;
         this.gestionnaire = gestionnaire;
 
-        itemNiveaux = new TreeItem<>("Niveaux");
-        itemNiveaux.setExpanded(true);
-
-        TreeItem<String> itemAire = new TreeItem<>("Aire de l'immeuble");
-        this.vue.getRootItem().getChildren().addAll(itemAire, itemNiveaux);
-
-        // ✅ FUSION : listener complet avec guard aireValidee + logique appartement
-        this.vue.getTreeView().getSelectionModel().selectedItemProperty().addListener(
-                (obs, oldVal, newVal) -> {
-                    if (newVal == null) return;
-
-                    // ✅ DOC 11 : guard — ne pas traiter avant validation de l'aire
-                    if (!aireValidee) return;
-
-                    if (newVal == itemAire) {
-                        niveauActuel = null;
-                        pieceVueCourante = null;
-                        this.vue.afficherCanvasAire();
-                        return;
-                    }
-
-                    for (int i = 0; i < itemNiveaux.getChildren().size(); i++) {
-                        TreeItem<String> itemNiveau = itemNiveaux.getChildren().get(i);
-                        NiveauControleur ctrl = niveauControleurs.get(i); // ✅ ctrl déclaré ici
-
-                        if (newVal == itemNiveau) {
-                            // Clic sur le niveau → canvas du niveau
-                            pieceVueCourante = null;
-                            basculerVersNiveau(i);
-                            return;
-                        }
-
-                        // ✅ DOC 11 : clic sur un appartement → PieceView
-                        Appartement appart = ctrl.getMapItemAppartement().get(newVal);
-                        if (appart != null) {
-                            basculerVersNiveau(i);
-                            ouvrirPieceDepuisAppartement(appart);
-                            return;
-                        }
-                    }
-                }
-        );
-
-        // Listeners canvas de l'aire
-        this.vue.getCanvas().setOnMouseClicked(e -> {
+        // Branchement des listeners souris sur le canvas de l'aire.
+        // ✅ Identiques à l'ancienne version — la logique de dessin est inchangée.
+        this.canvas.setOnMouseClicked(e -> {
             if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY
                     && e.isStillSincePress()) clicAire(e);
         });
-        this.vue.getCanvas().setOnMouseMoved(e -> mouvementAire(e));
-        this.vue.getCanvas().setOnMousePressed(e -> {
+        this.canvas.setOnMouseMoved(e   -> mouvementAire(e));
+        this.canvas.setOnMousePressed(e -> {
             if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY) pressionAire(e);
         });
-        this.vue.getCanvas().setOnMouseDragged(e -> glisserAire(e));
-        this.vue.getCanvas().setOnMouseReleased(e -> relacherAire(e));
-
-        Platform.runLater(this::demanderNomImmeuble);
+        this.canvas.setOnMouseDragged(e -> glisserAire(e));
+        this.canvas.setOnMouseReleased(e -> relacherAire(e));
     }
 
     // =========================================================================
-    // BASCULE ENTRE NIVEAUX
+    // BOUTONS TOOLBAR — appelés par ContexteAire
     // =========================================================================
 
-    private void basculerVersNiveau(int index) {
-        niveauActuel = niveauControleurs.get(index);
-        this.vue.afficherNiveau(niveauActuel.getVue());
+    /**
+     * Active le mode navigation (pan/zoom) sur le canvas de l'aire.
+     * Appelé par ContexteAire.onBtnNavigation().
+     *
+     * @param t événement ActionEvent (peut être null si appelé programmatiquement)
+     */
+    public void btnNavigation(javafx.event.ActionEvent t) {
+        canvas.setPanActif(true);
     }
 
-    // ✅ DOC 11 : ouverture de la PieceView
-    private void ouvrirPieceDepuisAppartement(Appartement appartement) {
-        pieceVueCourante = new PieceView(stage, gestionnaire, appartement);
-        this.vue.afficherPiece(pieceVueCourante);
-        this.vue.setInstructions(
-                "Vue pièce de « " + appartement + " » — dessinez les murs intérieurs"
-        );
-    }
-
-    // =========================================================================
-    // BOUTONS DE LA TOOLBAR
-    // =========================================================================
-
-    public void btnNavigation(ActionEvent t) {
-        if (niveauActuel != null) niveauActuel.activerModeNavigation();
-        else this.vue.getCanvas().setPanActif(true);
-    }
-
-    public void btnMur(ActionEvent t) {
-        if (niveauActuel != null) niveauActuel.activerModeMur();
-    }
-
-    public void btnAppartement(ActionEvent t) {
-        if (niveauActuel != null) niveauActuel.activerModeAppartement();
-    }
-
-    public void btnEchelle(ActionEvent t) {
-        boolean visible = !this.vue.getEchelleVue().isVisible();
-        this.vue.getEchelleVue().setVisible(visible);
+    /**
+     * Bascule la visibilité du panneau EchelleVue et branche son listener
+     * la première fois.
+     * Appelé par ContexteAire.onBtnEchelle().
+     *
+     * ✅ Le listener n'est branché qu'une seule fois (guard listenerEchelle != null)
+     * pour éviter les doublons si l'utilisateur clique plusieurs fois sur "Échelle".
+     *
+     * @param t événement ActionEvent (peut être null si appelé programmatiquement)
+     */
+    public void btnEchelle(javafx.event.ActionEvent t) {
+        EchelleVue echelleVue = appView.getEchelleVue();
+        boolean visible = !echelleVue.isVisible();
+        echelleVue.setVisible(visible);
 
         if (visible && listenerEchelle == null) {
             listenerEchelle = (obs, oldVal, newVal) -> {
                 if (newVal != null) {
-                    double echelle = this.vue.getEchelleVue().getEchelleSelectionnee();
-                    if (niveauActuel != null) {
-                        niveauActuel.getVue().getCanvas().setGridSize(echelle);
-                    } else {
-                        this.vue.getCanvas().setGridSize(echelle);
-                    }
+                    canvas.setGridSize(echelleVue.getEchelleSelectionnee());
                 }
             };
-            this.vue.getEchelleVue().getGroupeEchelle()
-                .selectedToggleProperty().addListener(listenerEchelle);
+            echelleVue.getGroupeEchelle()
+                      .selectedToggleProperty()
+                      .addListener(listenerEchelle);
         }
     }
 
-    // ✅ DOC 13 : utilise immeuble.ajouterNiveau()
-    public void btnAjouterNiveau(ActionEvent t) {
-        if (immeuble == null) return;
+    /**
+     * Valide l'emprise de l'immeuble :
+     *   - marque l'aire comme validée dans le modèle
+     *   - débranche les listeners souris du canvas (l'aire ne sera plus modifiable)
+     *   - met à jour le label d'instructions
+     *
+     * ✅ L'instanciation du modèle Immeuble et la bascule de contexte sont
+     * gérées par AppControleur.onAireValidee(), appelé par ContexteAire
+     * juste après cette méthode. Séparation des responsabilités respectée.
+     *
+     * @param t événement ActionEvent (peut être null si appelé programmatiquement)
+     */
+    public void btnValiderAire(javafx.event.ActionEvent t) {
+        if (aireImmeuble == null || etapeAire != 3) return;
 
-        int nb = niveauControleurs.size();
-        String nomNiveau = (nb == 0) ? "RDC" : "Niveau " + nb;
+        aireImmeuble.valider();
+        aireValidee = true;
 
-        Niveau niveau = immeuble.ajouterNiveau(2.5);
+        // Débrancher les listeners souris : l'aire ne peut plus être modifiée
+        canvas.setOnMouseClicked(null);
+        canvas.setOnMouseMoved(null);
+        canvas.setOnMousePressed(null);
+        canvas.setOnMouseDragged(null);
+        canvas.setOnMouseReleased(null);
 
-        NiveauView niveauView = new NiveauView();
-        TreeItem<String> itemNiveau = new TreeItem<>(nomNiveau);
-        itemNiveaux.getChildren().add(itemNiveau);
-
-        NiveauControleur ctrl = new NiveauControleur(
-                niveauView, aireImmeuble, itemNiveau, niveau
+        appView.setInstructions(
+            "Aire validée — ajoutez des niveaux via le bouton ou le navigateur"
         );
-        niveauControleurs.add(ctrl);
 
-        this.vue.getTreeView().getSelectionModel().select(itemNiveau);
+        // Le voile cadenas et la bascule de contexte sont gérés par AppControleur
     }
 
-    // =========================================================================
-    // GESTION DE L'AIRE
-    // =========================================================================
-
-    private void demanderNomImmeuble() {
-        TextInputDialog dialog = new TextInputDialog("Nouvel Immeuble");
-        dialog.setTitle("Nom de l'immeuble");
-        dialog.setHeaderText("Initialisation du projet");
-        dialog.setContentText("Veuillez entrer le nom de l'immeuble :");
-        dialog.setGraphic(null);
-
-        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-        okButton.addEventFilter(ActionEvent.ACTION, event -> {
-            if (dialog.getEditor().getText().trim().isEmpty()) {
-                event.consume();
-                dialog.getEditor().setStyle("-fx-border-color: red;");
-            }
-        });
-
-        Optional<String> result = dialog.showAndWait();
-        if (result.isPresent() && !result.get().trim().isEmpty()) {
-            this.vue.getRootItem().setValue(
-                    "Immeuble : ( " + result.get().trim() + " )"
-            );
-        } else {
-            retourDashboard();
+    /**
+     * Annule le dessin de l'aire en cours et remet l'état à zéro.
+     * Appelé par AppControleur quand l'utilisateur appuie sur Échap.
+     */
+    public void annulerAire() {
+        if (aireValidee) return;
+        if (aireImmeuble != null) {
+            canvas.getElements().remove(aireImmeuble);
         }
+        aireImmeuble = null;
+        etapeAire = 0;
+        coteEnCoursDeDeplacement = -1;
+        appView.getToolBarView().setBtnValiderAireActif(false);
+        appView.setInstructions(
+            "Cliquez pour définir le premier coin de l'immeuble"
+        );
+        canvas.redrawAll();
     }
+
+    // =========================================================================
+    // GESTION DES CLICS SUR LE CANVAS DE L'AIRE
+    // =========================================================================
+    // ✅ Logique identique à l'ancienne version — aucun changement fonctionnel.
 
     private void clicAire(javafx.scene.input.MouseEvent e) {
         if (aireValidee) return;
 
-        Point2D snap = this.vue.getCanvas().snapToGrid(e.getX(), e.getY());
-        Point pClic = new Point(snap.getX(), snap.getY());
+        Point2D snap = canvas.snapToGrid(e.getX(), e.getY());
+        Point pClic  = new Point(snap.getX(), snap.getY());
 
         switch (etapeAire) {
             case 0:
                 aireImmeuble = new AireImmeuble(pClic);
-                this.vue.getCanvas().ajouterElement(aireImmeuble);
+                canvas.ajouterElement(aireImmeuble);
                 etapeAire = 1;
-                this.vue.setInstructions(
-                        "Cliquez pour définir le deuxième coin (côté 1)");
+                appView.setInstructions(
+                    "Cliquez pour définir le deuxième coin (côté 1)");
                 break;
             case 1:
                 aireImmeuble.setP2(pClic);
                 etapeAire = 2;
-                this.vue.setInstructions(
-                        "Cliquez pour définir la largeur (côté 2)");
+                appView.setInstructions(
+                    "Cliquez pour définir la largeur (côté 2)");
                 break;
             case 2:
                 Point p3Contraint = calculerPointOrthogonal(
-                        aireImmeuble.getP2(), pClic,
-                        aireImmeuble.getP1(), aireImmeuble.getP2()
+                    aireImmeuble.getP2(), pClic,
+                    aireImmeuble.getP1(), aireImmeuble.getP2()
                 );
                 aireImmeuble.setP3(p3Contraint);
                 etapeAire = 3;
-                this.vue.setInstructions(
-                        "Glissez les côtés pour ajuster, puis cliquez sur « Valider »");
-                this.vue.getBtnValiderAire().setDisable(false);
+                appView.setInstructions(
+                    "Glissez les côtés pour ajuster, puis cliquez sur « Valider »");
+                // ✅ Active le bouton "Valider l'aire" dans la toolbar commune
+                appView.getToolBarView().setBtnValiderAireActif(true);
                 break;
         }
-        this.vue.getCanvas().redrawAll();
+        canvas.redrawAll();
     }
 
     private void mouvementAire(javafx.scene.input.MouseEvent e) {
         if (aireValidee || aireImmeuble == null) return;
 
-        Point2D snap = this.vue.getCanvas().snapToGrid(e.getX(), e.getY());
+        Point2D snap  = canvas.snapToGrid(e.getX(), e.getY());
         Point pSouris = new Point(snap.getX(), snap.getY());
 
         if (etapeAire == 1) {
             aireImmeuble.setP2(pSouris);
         } else if (etapeAire == 2) {
             Point p3Contraint = calculerPointOrthogonal(
-                    aireImmeuble.getP2(), pSouris,
-                    aireImmeuble.getP1(), aireImmeuble.getP2()
+                aireImmeuble.getP2(), pSouris,
+                aireImmeuble.getP1(), aireImmeuble.getP2()
             );
             aireImmeuble.setP3(p3Contraint);
         } else if (etapeAire == 3) {
-            int coteSurvole = aireImmeuble.detecterCote(
-                    snap.getX(), snap.getY(), 0.3);
+            int coteSurvole = aireImmeuble.detecterCote(snap.getX(), snap.getY(), 0.3);
             aireImmeuble.setCoteGlisse(coteSurvole);
         }
-        this.vue.getCanvas().redrawAll();
+        canvas.redrawAll();
     }
 
     private void pressionAire(javafx.scene.input.MouseEvent e) {
         if (aireValidee || aireImmeuble == null || etapeAire != 3) return;
 
-        Point2D snap = this.vue.getCanvas().snapToGrid(e.getX(), e.getY());
+        Point2D snap = canvas.snapToGrid(e.getX(), e.getY());
         coteEnCoursDeDeplacement = aireImmeuble.detecterCote(
-                snap.getX(), snap.getY(), 0.3);
+            snap.getX(), snap.getY(), 0.3);
         if (coteEnCoursDeDeplacement != -1) {
             aireImmeuble.setCoteGlisse(coteEnCoursDeDeplacement);
-            this.vue.getCanvas().redrawAll();
+            canvas.redrawAll();
         }
     }
 
     private void glisserAire(javafx.scene.input.MouseEvent e) {
         if (coteEnCoursDeDeplacement == -1 || aireImmeuble == null) return;
 
-        Point2D snap = this.vue.getCanvas().snapToGrid(e.getX(), e.getY());
+        Point2D snap = canvas.snapToGrid(e.getX(), e.getY());
         aireImmeuble.deplacerCote(
-                coteEnCoursDeDeplacement, snap.getX(), snap.getY());
-        this.vue.getCanvas().redrawAll();
+            coteEnCoursDeDeplacement, snap.getX(), snap.getY());
+        canvas.redrawAll();
     }
 
     private void relacherAire(javafx.scene.input.MouseEvent e) {
         if (coteEnCoursDeDeplacement != -1) {
             coteEnCoursDeDeplacement = -1;
             aireImmeuble.setCoteGlisse(-1);
-            this.vue.getCanvas().redrawAll();
+            canvas.redrawAll();
         }
     }
 
-    public void annulerAire() {
-        if (aireValidee) return;
-        if (aireImmeuble != null) {
-            this.vue.getCanvas().getElements().remove(aireImmeuble);
-        }
-        aireImmeuble = null;
-        etapeAire = 0;
-        coteEnCoursDeDeplacement = -1;
-        this.vue.getBtnValiderAire().setDisable(true);
-        this.vue.setInstructions(
-                "Cliquez pour définir le premier coin de l'immeuble");
-        this.vue.getCanvas().redrawAll();
-    }
+    // =========================================================================
+    // UTILITAIRE GÉOMÉTRIQUE
+    // =========================================================================
 
-    // ✅ DOC 13 : instancie Immeuble + extraireNomImmeuble
-    public void btnValiderAire(ActionEvent t) {
-        if (aireImmeuble == null || etapeAire != 3) return;
-        aireImmeuble.valider();
-        aireValidee = true;
-
-        String nomImmeuble = extraireNomImmeuble(
-                this.vue.getRootItem().getValue());
-        immeuble = new Immeuble(nomImmeuble, aireImmeuble);
-
-        this.vue.activerVoile();
-        this.vue.basculerBoutonsApresValidation();
-        this.vue.setInstructions(
-                "Aire validée — ajoutez des niveaux via le bouton ou le navigateur");
-
-        this.vue.getCanvas().setOnMouseClicked(null);
-        this.vue.getCanvas().setOnMouseMoved(null);
-        this.vue.getCanvas().setOnMousePressed(null);
-        this.vue.getCanvas().setOnMouseDragged(null);
-        this.vue.getCanvas().setOnMouseReleased(null);
-    }
-
-    // ✅ DOC 13
-    private String extraireNomImmeuble(String label) {
-        int debut = label.indexOf("( ");
-        int fin   = label.indexOf(" )");
-        if (debut != -1 && fin != -1 && fin > debut) {
-            return label.substring(debut + 2, fin);
-        }
-        return "Immeuble";
-    }
-
-    public void retourDashboard() {
-        DashBoardView dashBoardView = new DashBoardView();
-        Scene dashScene = new Scene(dashBoardView);
-        stage.setScene(dashScene);
-        stage.setTitle("InsaBuilder - Tableau de bord");
-        new DashBoardControleur(dashBoardView, stage, gestionnaire);
-    }
-
+    /**
+     * Calcule le point orthogonal à la direction (refP1→refP2) passant par
+     * {@code centre} et le plus proche de {@code cible}.
+     * Utilisé pour contraindre le troisième coin de l'aire à être
+     * perpendiculaire au premier côté.
+     */
     private Point calculerPointOrthogonal(Point centre, Point cible,
                                           Point refP1, Point refP2) {
-        double dx = refP2.getX() - refP1.getX();
-        double dy = refP2.getY() - refP1.getY();
+        double dx    = refP2.getX() - refP1.getX();
+        double dy    = refP2.getY() - refP1.getY();
         double perpX = -dy;
         double perpY = dx;
-        double ux = cible.getX() - centre.getX();
-        double uy = cible.getY() - centre.getY();
-        double scalaire = (ux * perpX + uy * perpY)
-                / (perpX * perpX + perpY * perpY);
+        double ux    = cible.getX() - centre.getX();
+        double uy    = cible.getY() - centre.getY();
+        double s     = (ux * perpX + uy * perpY) / (perpX * perpX + perpY * perpY);
         return new Point(
-                centre.getX() + scalaire * perpX,
-                centre.getY() + scalaire * perpY
+            centre.getX() + s * perpX,
+            centre.getY() + s * perpY
         );
     }
+
+    // =========================================================================
+    // GETTERS — exposés à AppControleur
+    // =========================================================================
+
+    /**
+     * Retourne l'aire de l'immeuble telle que dessinée par l'utilisateur.
+     * Utilisé par AppControleur pour instancier le modèle Immeuble et par
+     * NiveauControleur pour afficher le contour en fond de canvas.
+     *
+     * @return AireImmeuble courante, ou null si aucun point n'a encore été posé
+     */
+    public AireImmeuble getAireImmeuble() { return aireImmeuble; }
+
+    /**
+     * Indique si l'aire a été validée par l'utilisateur.
+     * Utilisé par AppControleur pour conditionner l'ajout de niveaux.
+     *
+     * @return true si btnValiderAire() a été appelé avec succès
+     */
+    public boolean isAireValidee() { return aireValidee; }
+
+    /**
+     * Expose le canvas de l'aire pour que NiveauControleur puisse y lire
+     * la taille de grille courante si nécessaire.
+     *
+     * @return le DessinCanvas de l'aire
+     */
+    public DessinCanvas getCanvas() { return canvas; }
 }

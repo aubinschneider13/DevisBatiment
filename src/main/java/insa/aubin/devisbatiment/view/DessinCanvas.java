@@ -266,4 +266,11 @@ public class DessinCanvas extends Canvas {
     public void setPanActif(boolean panActif) {
         this.panActif = panActif;
     }
+    
+    public void centrerSur(double cx, double cy, double zoom) {
+        this.zoomFactor = zoom;
+        this.offsetX = getWidth() / 2 - cx * zoom;
+        this.offsetY = getHeight() / 2 + cy * zoom; // Y inversé
+        redrawAll();
+    }
 }
