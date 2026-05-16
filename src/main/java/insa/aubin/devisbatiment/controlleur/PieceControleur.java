@@ -3,6 +3,7 @@ package insa.aubin.devisbatiment.controlleur;
 import insa.aubin.devisbatiment.modele.*;
 import insa.aubin.devisbatiment.view.DashBoardView;
 import insa.aubin.devisbatiment.view.PieceView;
+import java.util.ArrayList;
 import javafx.event.ActionEvent;
 import javafx.geometry.Point2D;
 import javafx.scene.Scene;
@@ -163,6 +164,7 @@ public class PieceControleur {
                 case 0:
                     this.p1   = pClic;
                     this.mur1 = new Mur(p1, p1);
+                    this.mur1.setTypeMur(Mur.TypeMur.NORMAL);
                     this.vue.getCanvas().ajouterElement(this.mur1);
                     this.vue.setInstructions(
                         "Premier coin posé — Cliquez pour définir la longueur");
@@ -172,6 +174,7 @@ public class PieceControleur {
                     this.p2   = pClic;
                     this.mur1.setPoint2(p2);
                     this.mur2 = new Mur(p2, p2);
+                    this.mur2.setTypeMur(Mur.TypeMur.NORMAL);
                     this.vue.getCanvas().ajouterElement(this.mur2);
                     this.vue.setInstructions(
                         "Longueur définie — Cliquez pour définir la largeur");
@@ -184,8 +187,12 @@ public class PieceControleur {
                         p1.getX() + (p3.getX() - p2.getX()),
                         p1.getY() + (p3.getY() - p2.getY())
                     );
-                    this.vue.getCanvas().ajouterElement(new Mur(p3, p4));
-                    this.vue.getCanvas().ajouterElement(new Mur(p4, p1));
+                    Mur mur3 = new Mur(p3, p4);
+                    mur3.setTypeMur(Mur.TypeMur.NORMAL);
+                    this.vue.getCanvas().ajouterElement(mur3);
+                    Mur mur4 = new Mur(p4, p1);
+                    mur4.setTypeMur(Mur.TypeMur.NORMAL);
+                    this.vue.getCanvas().ajouterElement(mur4);
                     this.vue.setInstructions(
                         "Rectangle créé — Cliquez pour un nouveau mur ou changez d'outil");
                     this.etapeRectangle = 0;
@@ -237,13 +244,16 @@ public class PieceControleur {
             this.murSurvolé = trouverMurProche(pSouris);
             Fantome fantome = (this.etat == ETAT_PORTE) ? new Porte() : new Fenetre();
             if (this.murSurvolé != null) {
-                double angle = Math.toDegrees(Math.atan2(
-                        murSurvolé.getPoint2().getY() - murSurvolé.getPoint1().getY(),
-                        murSurvolé.getPoint2().getX() - murSurvolé.getPoint1().getX()
-                ));
+                // ✅ Fenêtre : actif seulement sur mur extérieur
+                // ✅ Porte : actif seulement sur mur non extérieur
+                boolean compatible = (this.etat == ETAT_FENETRE)
+                    ? this.murSurvolé.getTypeMur() == Mur.TypeMur.EXTERIEUR
+                    : this.murSurvolé.getTypeMur() != Mur.TypeMur.EXTERIEUR;
+                double angle = Math.toDegrees(Math.atan2(murSurvolé.getPoint2().getY() - murSurvolé.getPoint1().getY(),
+                murSurvolé.getPoint2().getX() - murSurvolé.getPoint1().getX()));
                 Point posAccrochage = projeterSurMur(pSouris, murSurvolé);
                 this.vue.getCanvas().setFantome(fantome, posAccrochage.getX(),
-                        posAccrochage.getY(), angle, true);
+                        posAccrochage.getY(), angle, compatible);
             } else {
                 this.vue.getCanvas().setFantome(fantome, pSouris.getX(),
                         pSouris.getY(), 0, false);
@@ -312,18 +322,18 @@ public class PieceControleur {
      * Dessine le contour de l'appartement en fond du canvas.
      * Lecture seule — non interactif, juste une référence visuelle.
      */
-    public void initialiserAvecContourAppartement(List<Point> polygone) {
-        // Dessiner les murs délimiteurs comme contour de fond
+    public void initialiserAvecContourAppartement(List<Point> polygone,
+                                               List<Mur> mursDelimiteurs,
+                                               AireImmeuble aire) {
         this.polygoneAppartement = polygone;
         if (polygone == null || polygone.size() < 3) return;
-        
-        // ✅ Fond bleuté identique à NiveauControleur.creerContourAire()
+
+        // Fond bleuté
         Dessin fond = new Dessin() {
             @Override
             public void dessiner(GraphicsContext gc) {
                 double[] xs = polygone.stream().mapToDouble(Point::getX).toArray();
                 double[] ys = polygone.stream().mapToDouble(Point::getY).toArray();
-
                 gc.setFill(Color.web("#4a90d9", 0.05));
                 gc.fillPolygon(xs, ys, polygone.size());
             }
@@ -331,44 +341,59 @@ public class PieceControleur {
             @Override public void setColor(Color c) { }
         };
         this.vue.getCanvas().getElements().add(0, fond);
-        
-        // ✅ Vrais murs interactifs
-        for (int i = 0; i < polygone.size(); i++) {
-            Point a = polygone.get(i);
-            Point b = polygone.get((i + 1) % polygone.size());
-            Mur mur = new Mur(a, b);
-            // Insérer en premier (sous les futurs murs intérieurs)
-            this.vue.getCanvas().getElements().add(0, mur);
-        }
-        
-        this.vue.getCanvas().redrawAll();
-            
-        javafx.beans.value.ChangeListener<Number> listener = new javafx.beans.value.ChangeListener<Number>() {
-            @Override
-            public void changed(javafx.beans.value.ObservableValue<? extends Number> obs,
-                                Number oldVal, Number newVal) {
-                double w = vue.getCanvas().getWidth();
-                double h = vue.getCanvas().getHeight();
-                // ✅ Attendre que les DEUX dimensions soient > 0
-                if (w > 0 && h > 0) {
-                    vue.getCanvas().widthProperty().removeListener(this);
-                    vue.getCanvas().heightProperty().removeListener(this);
 
-                    double minX = polygone.stream().mapToDouble(Point::getX).min().orElse(0);
-                    double maxX = polygone.stream().mapToDouble(Point::getX).max().orElse(10);
-                    double minY = polygone.stream().mapToDouble(Point::getY).min().orElse(0);
-                    double maxY = polygone.stream().mapToDouble(Point::getY).max().orElse(10);
-                    double centreX = (minX + maxX) / 2;
-                    double centreY = (minY + maxY) / 2;
-                    double tailleMax = Math.max(maxX - minX, maxY - minY);
-                    double zoom = Math.min(w, h) / (tailleMax * 1.4);
-                    vue.getCanvas().centrerSur(centreX, centreY, zoom);
+        // Récupérer les 4 côtés de l'aire
+        List<double[]> cotesBatiment = new ArrayList<>();
+        if (aire != null && aire.isComplete()) {
+            Point p1 = aire.getP1(), p2 = aire.getP2();
+            Point p3 = aire.getP3(), p4 = aire.getP4();
+            cotesBatiment.add(new double[]{p1.getX(), p1.getY(), p2.getX(), p2.getY()});
+            cotesBatiment.add(new double[]{p2.getX(), p2.getY(), p3.getX(), p3.getY()});
+            cotesBatiment.add(new double[]{p3.getX(), p3.getY(), p4.getX(), p4.getY()});
+            cotesBatiment.add(new double[]{p4.getX(), p4.getY(), p1.getX(), p1.getY()});
+        }
+
+        for (Mur mur : mursDelimiteurs) {
+            // ✅ Extérieur si le mur est inclus dans un côté du bâtiment
+            boolean exterieur = false;
+            for (double[] cote : cotesBatiment) {
+                if (murInclsDansCote(mur, cote)) {
+                    exterieur = true;
+                    break;
                 }
             }
+            mur.setTypeMur(exterieur ? Mur.TypeMur.EXTERIEUR : Mur.TypeMur.NORMAL);
+            this.vue.getCanvas().getElements().add(mur);
+        }
+
+        this.vue.getCanvas().redrawAll();
+        // ... listener centrage inchangé
+    }
+
+    // ✅ Vérifie si un mur est colinéaire et inclus dans un côté du bâtiment
+    private boolean murInclsDansCote(Mur mur, double[] cote) {
+        double TOL = 1e-6;
+        double ax = cote[0], ay = cote[1], bx = cote[2], by = cote[3];
+        double dx = bx - ax, dy = by - ay;
+        double len2 = dx*dx + dy*dy;
+        if (len2 < TOL) return false;
+
+        // Vérifier que les deux extrémités du mur sont sur la droite du côté
+        double[] pts = {
+            mur.getPoint1().getX(), mur.getPoint1().getY(),
+            mur.getPoint2().getX(), mur.getPoint2().getY()
         };
-        
-        vue.getCanvas().widthProperty().addListener(listener);
-        vue.getCanvas().heightProperty().addListener(listener);
+
+        for (int i = 0; i < 4; i += 2) {
+            double px = pts[i], py = pts[i+1];
+            // Distance à la droite portant le côté
+            double cross = (px - ax) * dy - (py - ay) * dx;
+            if (Math.abs(cross) / Math.sqrt(len2) > TOL) return false;
+            // Vérifier que t ∈ [0,1] (point dans le segment)
+            double t = ((px - ax)*dx + (py - ay)*dy) / len2;
+            if (t < -TOL || t > 1 + TOL) return false;
+        }
+        return true;
     }
     
     private boolean estDansAppartement(double px, double py) {

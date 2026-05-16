@@ -12,7 +12,9 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     private Point point2;
     private double hauteur;
     private List<Ouverture> listeOuvertures;
-    private Color color = Color.BLACK;
+    public enum TypeMur { NORMAL, EXTERIEUR, ADJ_COULOIR }
+    private TypeMur typeMur = TypeMur.NORMAL;
+    private Color color;
     private static int compteurMurs = 0;
     private int numeroUnique;
 
@@ -22,7 +24,7 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         this.point2 = point2;
         this.hauteur = hauteur;
         this.listeOuvertures = new ArrayList<>();
-
+        this.color = couleurPourType(TypeMur.NORMAL);
         compteurMurs++;
         this.numeroUnique = compteurMurs;
     }
@@ -32,12 +34,29 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     }
     
     //Méthode pour ajouter une ouverture dans la liste
-    public void ajouterOuverture(Ouverture o){
-        if(o != null){
-            this.listeOuvertures.add(o);
+    public void ajouterOuverture(Ouverture o) {
+        if (o == null) return;
+        if (o instanceof Fenetre && typeMur != TypeMur.EXTERIEUR) {
+            return; // fenêtre uniquement sur mur extérieur
         }
+        if (o instanceof Porte && typeMur == TypeMur.EXTERIEUR) {
+            return; // pas de porte sur mur extérieur
+        }
+        this.listeOuvertures.add(o);
     }
     
+    private Color couleurPourType(TypeMur type) {
+        return switch (type) {
+            case NORMAL      -> Color.web("#1a1a1a");       // noir
+            case EXTERIEUR   -> Color.web("#7733b8");       // violet très foncé
+            case ADJ_COULOIR -> Color.web("#4e0a0a");       // rouge très foncé
+        };
+    }
+    
+    public void setTypeMur(TypeMur type) {
+        this.typeMur = type;
+        this.color = couleurPourType(type);
+    }
     public double calculerLongueur(){
         double dX = this.point2.getX() - this.point1.getX();
         double dY = this.point2.getY() - this.point1.getY();
@@ -137,7 +156,8 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     public void setListeOuvertures(List<Ouverture> listeOuvertures){
         this.listeOuvertures = listeOuvertures;
     }
-
+    public TypeMur getTypeMur() { return typeMur; }
+    
     //Méthodes pour éléments graphiques
     @Override
     public Color getColor() {

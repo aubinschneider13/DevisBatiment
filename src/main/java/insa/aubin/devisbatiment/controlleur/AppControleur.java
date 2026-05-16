@@ -295,15 +295,11 @@ public class AppControleur {
      * annuler un dessin en cours.
      */
     private void onEchap() {
-        appView.setOnKeyPressed(e -> {
-            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
-                if (contexteActif instanceof ContexteNiveau ctx) {
-                    ctx.getNiveauControleur().annulerMurEnCours();
-                } else if (contexteActif instanceof ContexteAire) {
-                    immeubleControleur.annulerAire();
-                }
-            }
-        });
+        if (contexteActif instanceof ContexteNiveau ctx) {
+            ctx.getNiveauControleur().annulerMurEnCours();
+        } else if (contexteActif instanceof ContexteAire) {
+            immeubleControleur.annulerAire();
+        }
     }
 
     // =========================================================================
@@ -376,5 +372,9 @@ public class AppControleur {
             return label.substring(debut + 2, fin);
         }
         return "Immeuble";
+    }
+    
+    public AireImmeuble getAireImmeuble() {
+        return immeubleControleur.getAireImmeuble();
     }
 }

@@ -319,4 +319,5 @@ public class ImmeubleControleur {
      * @return le DessinCanvas de l'aire
      */
     public DessinCanvas getCanvas() { return canvas; }
+    
 }

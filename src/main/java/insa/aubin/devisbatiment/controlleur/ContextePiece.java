@@ -78,7 +78,8 @@ public class ContextePiece implements Contexte {
      */
     @Override
     public void installer() {
-        pieceView = new PieceView(stage, gestionnaire, appartement);
+        pieceView = new PieceView(stage, gestionnaire, appartement,
+                                  appControleur.getAireImmeuble()); // ✅
         pieceControleur = pieceView.getControleur();
         appView.afficherPiece(pieceView);
         appView.setInstructions(
