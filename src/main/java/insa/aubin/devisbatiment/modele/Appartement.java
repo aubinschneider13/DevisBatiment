@@ -96,6 +96,19 @@ public class Appartement extends ElementDeConstruction implements Dessin {
         return Math.abs(aire) / 2.0;
     }
 
+
+    /**
+     * Calcule le devis total de l'appartement :
+     * somme des devis de toutes ses pièces.
+     */
+    public double calculerDevis() {
+        double total = 0;
+        for (Piece p : pieces) {
+            total += p.calculerDevis();
+        }
+        return total;
+    }
+
     // =========================================================================
     // GESTION DES PIÈCES
     // =========================================================================
@@ -104,8 +117,8 @@ public class Appartement extends ElementDeConstruction implements Dessin {
      * Ajoute une pièce à l'appartement, définie par ses points de contour.
      * La hauteur sous plafond de l'appartement est transmise à la pièce.
      */
-    public Piece ajouterPiece(List<Point> points) {
-        Piece p = new Piece(points, this.hauteurPlafond);
+    public Piece ajouterPiece(List<Mur> murs) {
+        Piece p = new Piece(murs, this.hauteurPlafond);
         this.pieces.add(p);
         return p;
     }
