@@ -13,10 +13,14 @@ import javafx.scene.text.Font;
 import javafx.scene.transform.Affine;
 import java.util.ArrayList;
 import java.util.List;
+import insa.aubin.devisbatiment.modele.SurfaceAvecRevetement;
+import insa.aubin.devisbatiment.modele.Mur;
+import insa.aubin.devisbatiment.modele.Sol;
 
 public class DessinCanvas extends Canvas {
 
     private List<Dessin> elements;
+    private List<SurfaceAvecRevetement> selection = new ArrayList<>();
 
     // Zoom et translation
     private double zoomFactor = 50.0; // 50px = 1 unité modèle
@@ -164,9 +168,26 @@ public class DessinCanvas extends Canvas {
         gc.save();
         gc.translate(offsetX, offsetY);
         gc.scale(zoomFactor, -zoomFactor);
+
         for (Dessin d : this.elements) {
             d.dessiner(gc);
         }
+
+        if (selection != null) {
+            for (SurfaceAvecRevetement surface : selection) {
+                if (surface instanceof Mur) {
+                    Mur m = (Mur) surface;
+                    gc.setStroke(Color.web("#00E5FF", 0.6)); // Cyan semi-transparent très visible
+                    gc.setLineWidth(0.4); // Plus épais qu'un mur normal pour bien l'entourer
+                    gc.strokeLine(m.getPoint1().getX(), m.getPoint1().getY(),
+                            m.getPoint2().getX(), m.getPoint2().getY());
+                }
+                // Note : Pour le 'Sol', le retour visuel est plus complexe car il faut
+                // redessiner le polygone de la pièce. Vous pouvez le laisser invisible
+                // pour l'instant ou afficher une alerte textuelle.
+            }
+        }
+
         // Fantôme par-dessus tout
         if (fantomeCourant != null) {
             fantomeCourant.dessinerFantome(
@@ -272,5 +293,9 @@ public class DessinCanvas extends Canvas {
         this.offsetX = getWidth() / 2 - cx * zoom;
         this.offsetY = getHeight() / 2 + cy * zoom; // Y inversé
         redrawAll();
+    }
+
+    public void setSelection(List<SurfaceAvecRevetement> selection) {
+        this.selection = selection;
     }
 }

@@ -1,12 +1,18 @@
 package insa.aubin.devisbatiment.modele;
 
 public class Revetement extends ElementDeConstruction {
-    private String typeRevetement;
+    private String designation;
+    private boolean pourMur;
+    private boolean pourSol;
+    private boolean pourPlafond;
     private double prixUnitaire;
 
-    public Revetement(String typeRevetement, double prixUnitaire){
+    public Revetement(String designation, boolean pourMur, boolean pourSol, boolean pourPlafond, double prixUnitaire){
         super("Revetement");
-        this.typeRevetement = typeRevetement;
+        this.designation = designation;
+        this.pourMur = pourMur;
+        this.pourSol = pourSol;
+        this.pourPlafond = pourPlafond;
         this.prixUnitaire = prixUnitaire;
     }
 
@@ -16,20 +22,35 @@ public class Revetement extends ElementDeConstruction {
 
     @Override
     public String toCSV() {
-        return "REVETEMENT;" + getId() + ";" + typeRevetement + ";" + prixUnitaire;
+        int pMur = pourMur ? 1 : 0;
+        int pSol = pourSol ? 1 : 0;
+        int pPlaf = pourPlafond ? 1 : 0;
+        return "REVETEMENT;" + getId() + ";" + designation + ";" + pMur + ";" + pSol + ";" + pPlaf + ";" + prixUnitaire;
     }
 
     @Override
     public String toString() {
-        return "Revetement [id=" + getId() + ", type=" + typeRevetement + ", prixUnitaire=" + prixUnitaire + "]";
+        return "Revetement [id=" + getId() + ", type=" + designation + ", prixUnitaire=" + prixUnitaire + "]";
     }
 
-    public String getTypeRevetement() {
-        return typeRevetement;
+    public String getDesignation() {
+        return designation;
     }
 
-    public void setTypeRevetement(String typeRevetement) {
-        this.typeRevetement = typeRevetement;
+    public void setDesignation(String designation) {
+        this.designation = designation;
+    }
+
+    public boolean isPourMur() {
+        return pourMur;
+    }
+
+    public boolean isPourSol() {
+        return pourSol;
+    }
+
+    public boolean isPourPlafond() {
+        return pourPlafond;
     }
 
     public double getPrixUnitaire() {

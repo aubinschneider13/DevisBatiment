@@ -1,11 +1,11 @@
 package insa.aubin.devisbatiment.controlleur;
 
-import insa.aubin.devisbatiment.controlleur.*;
 import insa.aubin.devisbatiment.modele.*;
 import insa.aubin.devisbatiment.view.*;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.TreeItem;
 import javafx.stage.Stage;
 
@@ -20,18 +20,12 @@ import java.util.Optional;
  *
  * AppControleur remplace ImmeubleControleur dans son rôle de coordinateur
  * global. Il est le seul à :
- *   - connaître le Stage et à en changer la scène (retour dashboard)
- *   - instancier et basculer les contextes (ContexteAire, ContexteNiveau, ContextePiece)
- *   - peupler le NavigateurView (ajout de niveaux et d'appartements)
- *   - brancher tous les listeners de la ToolBarView et du TreeView
- *
- * ImmeubleControleur est allégé : il ne gère plus que le dessin de l'aire
- * (clics, glissés, validation). PieceControleur ne gère plus que le dessin
- * intérieur. Aucun des deux ne connaît AppControleur.
+ * - connaître le Stage et à en changer la scène (retour dashboard)
+ * - instancier et basculer les contextes (ContexteAire, ContexteNiveau, ContextePiece)
+ * - peupler le NavigateurView (ajout de niveaux et d'appartements)
+ * - brancher tous les listeners de la ToolBarView, ToolBarDevisView et du TreeView
  *
  * Pattern utilisé : State (via l'interface Contexte).
- * AppControleur délègue chaque événement toolbar/TreeView au contexteActif,
- * qui sait quoi faire sans qu'AppControleur ait à tester le mode courant.
  */
 public class AppControleur {
 
@@ -42,6 +36,9 @@ public class AppControleur {
 
     // --- Modèle métier ---
     private Immeuble immeuble = null;
+
+    // --- Catalogue des revêtements ---
+    private CatalogueRevetements catalogue;
 
     // --- Contexte actif (pattern State) ---
     private Contexte contexteActif = null;
@@ -55,8 +52,8 @@ public class AppControleur {
 
     // --- Item TreeView actuellement sélectionné comme "niveau actif" ---
     private TreeItem<String> itemNiveauActif = null;
-    
-    // Dans AppControleur, ajouter :
+
+    // --- Maps de suivi ---
     private final Map<TreeItem<String>, Piece> mapItemPiece = new HashMap<>();
     private final Map<TreeItem<String>, TreeItem<String>> mapPieceVersAppart = new HashMap<>();
     private final Map<Appartement, ContextePiece> contextePieces = new HashMap<>();
@@ -68,8 +65,14 @@ public class AppControleur {
         this.stage        = stage;
         this.gestionnaire = gestionnaire;
 
-        // Branchement de la toolbar
+        // Initialisation du catalogue
+        this.catalogue = new CatalogueRevetements("src/main/resources/data/revetements.txt");
+
+        // Branchement de la toolbar Construction
         brancherToolBar();
+
+        // Branchement de la toolbar Devis
+        brancherToolBarDevis();
 
         // Branchement du TreeView
         brancherNavigateur();
@@ -83,7 +86,7 @@ public class AppControleur {
 
         // Instanciation d'ImmeubleControleur (gestion du canvas de l'aire uniquement)
         immeubleControleur = new ImmeubleControleur(
-            appView.getCanvasAire(), appView, gestionnaire
+                appView.getCanvasAire(), appView, gestionnaire
         );
 
         // Démarrage : contexte Aire + saisie du nom de l'immeuble
@@ -95,11 +98,6 @@ public class AppControleur {
     // BRANCHEMENT LISTENERS
     // =========================================================================
 
-    /**
-     * Branche les actions de chaque bouton de la ToolBarView.
-     * Les boutons délèguent toujours au contexteActif — AppControleur ne
-     * teste jamais le mode courant lui-même.
-     */
     private void brancherToolBar() {
         ToolBarView tb = appView.getToolBarView();
 
@@ -107,7 +105,7 @@ public class AppControleur {
         tb.getBtnEchelle()      .setOnAction(e -> contexteActif.onBtnEchelle());
         tb.getBtnMur()          .setOnAction(e -> contexteActif.onBtnMur());
         tb.getBtnAppartement()  .setOnAction(e -> contexteActif.onBtnAppartement());
-        tb.getBtnPiece().setOnAction(e -> contexteActif.onBtnPiece());
+        tb.getBtnPiece()        .setOnAction(e -> contexteActif.onBtnPiece());
         tb.getBtnPorte()        .setOnAction(e -> contexteActif.onBtnPorte());
         tb.getBtnFenetre()      .setOnAction(e -> contexteActif.onBtnFenetre());
         tb.getBtnValiderAire()  .setOnAction(e -> contexteActif.onBtnValiderAire());
@@ -115,34 +113,86 @@ public class AppControleur {
         tb.getBtnRetour()       .setOnAction(e -> retourDashboard());
     }
 
-    /**
-     * Branche le listener de sélection du TreeView.
-     * Toute sélection est transmise à onSelectionArbre() qui décide si
-     * un changement de contexte est nécessaire.
-     */
+    private void brancherToolBarDevis() {
+        ToolBarDevisView tbDevis = appView.getToolBarDevisView();
+
+        // --- Clic sur "Appliquer un revêtement" ---
+        tbDevis.getBtnAppliquerRevetement().setOnAction(e -> {
+            if (contexteActif instanceof ContexteSousPiece ctx) {
+                ctx.activerModeSelection();
+                appView.setInstructions("Mode Matériaux : Cliquez sur les surfaces de la pièce, puis validez.");
+            } else if (contexteActif instanceof ContextePiece ctx) {
+                ctx.activerModeSelection();
+                appView.setInstructions("Mode Matériaux : Cliquez sur les murs de l'appartement, puis validez.");
+            } else {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION, "Veuillez d'abord entrer dans une pièce ou un appartement pour appliquer des matériaux.");
+                alert.setHeaderText("Action impossible");
+                alert.showAndWait();
+            }
+        });
+
+        // --- Clic sur "Valider la sélection" ---
+        tbDevis.getBtnValiderRevetement().setOnAction(e -> {
+            List<SurfaceAvecRevetement> selection = null;
+
+            if (contexteActif instanceof ContexteSousPiece ctx) {
+                selection = ctx.getSurfacesSelectionnees();
+            } else if (contexteActif instanceof ContextePiece ctx) {
+                selection = ctx.getSurfacesSelectionnees();
+            }
+
+            if (selection == null || selection.isEmpty()) {
+                Alert alert = new Alert(Alert.AlertType.WARNING, "Vous n'avez sélectionné aucune surface ! Cliquez d'abord sur 'Appliquer un revêtement' puis choisissez des murs.");
+                alert.showAndWait();
+                return;
+            }
+
+            // Ouverture de la boîte de dialogue
+            ChoixRevetementDialog dialog = new ChoixRevetementDialog(catalogue);
+            Optional<Revetement> resultat = dialog.showAndWait();
+
+            // Si l'utilisateur a choisi et validé un matériau
+            if (resultat.isPresent()) {
+                Revetement revChoisi = resultat.get();
+
+                for (SurfaceAvecRevetement surface : selection) {
+                    surface.getRevetements().clear();
+                    surface.ajouterRevetement(revChoisi);
+                }
+
+                // Nettoyage via les contextes et recalcul financier
+                if (contexteActif instanceof ContexteSousPiece ctx) {
+                    ctx.viderSelection();
+                    // ✅ Recalcul dynamique du coût de la pièce
+                    double totalDevis = ctx.getPiece().calculerDevis();
+                    tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
+                } else if (contexteActif instanceof ContextePiece ctx) {
+                    ctx.viderSelection();
+                    // ✅ Recalcul dynamique du coût de l'appartement complet
+                    double totalDevis = ctx.getAppartement().calculerDevis();
+                    tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
+                }
+
+                appView.setInstructions("Matériau " + revChoisi.getDesignation() + " appliqué avec succès !");
+            }
+        });
+    }
+
     private void brancherNavigateur() {
         appView.getNavigateurView()
-               .getTreeView()
-               .getSelectionModel()
-               .selectedItemProperty()
-               .addListener((obs, oldVal, newVal) -> {
-                   if (newVal == null) return;
-                   onSelectionArbre(newVal);
-               });
+                .getTreeView()
+                .getSelectionModel()
+                .selectedItemProperty()
+                .addListener((obs, oldVal, newVal) -> {
+                    if (newVal == null) return;
+                    onSelectionArbre(newVal);
+                });
     }
 
     // =========================================================================
     // GESTION DES CONTEXTES
     // =========================================================================
 
-    /**
-     * Bascule vers un nouveau contexte :
-     *   1. Désinstalle le contexte sortant (nettoyage).
-     *   2. Met à jour les boutons visibles de la toolbar.
-     *   3. Installe le nouveau contexte (affiche le bon canvas, initialise l'état).
-     *
-     * @param nouveau contexte à activer
-     */
     public void basculerContexte(Contexte nouveau) {
         if (contexteActif != null) {
             contexteActif.desinstaller();
@@ -156,22 +206,14 @@ public class AppControleur {
     // SÉLECTION DANS LE TREE VIEW
     // =========================================================================
 
-    /**
-     * Interprète la sélection dans le TreeView et bascule de contexte si nécessaire.
-     *
-     * Cas traités :
-     *   - Item "Aire de l'immeuble" → ContexteAire
-     *   - Item de niveau            → ContexteNiveau du niveau correspondant
-     *   - Item d'appartement        → ContextePiece de l'appartement correspondant
-     *
-     * @param item item sélectionné (non null, garanti par le listener)
-     */
     public void onSelectionArbre(TreeItem<String> item) {
         NavigateurView nav = appView.getNavigateurView();
+        ToolBarDevisView tbDevis = appView.getToolBarDevisView();
 
         // --- Clic sur "Aire de l'immeuble" ---
         if (item == nav.getItemAire()) {
             basculerContexte(new ContexteAire(immeubleControleur, appView, this));
+            tbDevis.getLabelTotalDevis().setText("Total estimé : 0.00 €");
             return;
         }
 
@@ -181,32 +223,40 @@ public class AppControleur {
             NiveauControleur ctrl = niveauControleurs.get(idxNiveau);
             itemNiveauActif = item;
             basculerContexte(new ContexteNiveau(ctrl, appView, this));
+            // Afficher le coût global estimé du niveau (si implémenté dans votre modèle)
+            tbDevis.getLabelTotalDevis().setText("Total estimé : -- €");
             return;
         }
 
-        // --- Clic sur un appartement (enfant d'un item de niveau) ---
+        // --- Clic sur un appartement ---
         for (int i = 0; i < niveauControleurs.size(); i++) {
             NiveauControleur ctrl = niveauControleurs.get(i);
             Appartement appart = ctrl.getMapItemAppartement().get(item);
-                if (appart != null) {
-                    itemNiveauActif = itemsNiveau.get(i);
-                    ContextePiece ctx = contextePieces.computeIfAbsent(appart, a ->
+            if (appart != null) {
+                itemNiveauActif = itemsNiveau.get(i);
+                ContextePiece ctx = contextePieces.computeIfAbsent(appart, a ->
                         new ContextePiece(a, appView, this, stage, gestionnaire, item)
-                    );
-                    basculerContexte(ctx);
-                    return;
-}
+                );
+                basculerContexte(ctx);
+
+                // ✅ Met à jour la barre d'outils devis avec le prix cumulé de l'appartement
+                double totalDevis = appart.calculerDevis();
+                tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
+                return;
+            }
         }
-        
+
         // --- Clic sur une pièce ---
         Piece piece = mapItemPiece.get(item);
-        System.out.println("Item cliqué : " + item.getValue());
-        System.out.println("Piece trouvée : " + piece);
         if (piece != null) {
             ContexteSousPiece ctx = contexteSousPieces.computeIfAbsent(piece, p ->
-                new ContexteSousPiece(p, appView, this, stage, gestionnaire)
+                    new ContexteSousPiece(p, appView, this, stage, gestionnaire)
             );
             basculerContexte(ctx);
+
+            // ✅ Met à jour la barre d'outils devis avec le prix spécifique de cette pièce
+            double totalDevis = piece.calculerDevis();
+            tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
             return;
         }
     }
@@ -215,75 +265,50 @@ public class AppControleur {
     // ÉVÉNEMENTS TOOLBAR GÉRÉS DIRECTEMENT PAR APPCONTROLEUR
     // =========================================================================
 
-    /**
-     * Appelé par ContexteAire après que ImmeubleControleur a validé l'aire.
-     * Crée le modèle Immeuble, active le voile cadenas, et rebascule en
-     * ContexteAire pour mettre à jour la liste de boutons visibles.
-     */
     public void onAireValidee() {
         String label = appView.getNavigateurView().getRootItem().getValue();
         String nom   = extraireNomImmeuble(label);
         immeuble = new Immeuble(nom, immeubleControleur.getAireImmeuble());
 
         appView.activerVoile();
-
-        // Rebascule en ContexteAire : getBoutonsVisibles() pourra retourner
-        // la liste post-validation si on la différencie (ex. ajouterNiveau visible)
         basculerContexte(new ContexteAire(immeubleControleur, appView, this));
     }
 
-    /**
-     * Ajoute un nouveau niveau à l'immeuble, crée les objets associés
-     * et bascule automatiquement vers ce nouveau niveau.
-     */
     public void onBtnAjouterNiveau() {
         if (immeuble == null) return;
 
-        // --- Modèle ---
         Niveau niveau = immeuble.ajouterNiveau(2.5);
 
-        // --- Libellé ---
         String nomNiveau = niveauControleurs.isEmpty()
-                           ? "RDC"
-                           : "Niveau " + niveauControleurs.size();
+                ? "RDC"
+                : "Niveau " + niveauControleurs.size();
 
-        // --- TreeView ---
         TreeItem<String> itemNiveau =
-            appView.getNavigateurView().ajouterItemNiveau(nomNiveau);
+                appView.getNavigateurView().ajouterItemNiveau(nomNiveau);
         itemsNiveau.add(itemNiveau);
 
-        // --- Vue ---
         NiveauView niveauView = new NiveauView();
 
-        // --- Contrôleur ---
         NiveauControleur ctrl = new NiveauControleur(
-            niveauView,
-            immeubleControleur.getAireImmeuble(),
-            itemNiveau,
-            niveau
+                niveauView,
+                immeubleControleur.getAireImmeuble(),
+                itemNiveau,
+                niveau
         );
 
-        // ✅ Callback : quand NiveauControleur crée un appartement, il notifie
-        // AppControleur qui peuple le navigateur (découplage propre).
         ctrl.setOnAppartementCree(appart -> {
             TreeItem<String> itemAppart = appView.getNavigateurView()
-                .ajouterItemAppartement(itemNiveau, appart.toString());
+                    .ajouterItemAppartement(itemNiveau, appart.toString());
             return itemAppart;
         });
 
         niveauControleurs.add(ctrl);
 
-        // --- Bascule automatique vers ce niveau ---
         itemNiveauActif = itemNiveau;
         appView.getNavigateurView().selectionner(itemNiveau);
         basculerContexte(new ContexteNiveau(ctrl, appView, this));
     }
 
-    /**
-     * Bascule la visibilité du panneau EchelleVue et branche le listener
-     * de changement d'échelle la première fois qu'il est ouvert.
-     * Commun à tous les contextes — centralisé ici pour éviter la duplication.
-     */
     public void onBtnEchelle() {
         EchelleVue echelleVue = appView.getEchelleVue();
         boolean visible = !echelleVue.isVisible();
@@ -291,19 +316,14 @@ public class AppControleur {
 
         if (visible) {
             echelleVue.getGroupeEchelle()
-                      .selectedToggleProperty()
-                      .addListener((obs, oldVal, newVal) -> {
-                          if (newVal == null) return;
-                          appliquerEchelle(echelleVue.getEchelleSelectionnee());
-                      });
+                    .selectedToggleProperty()
+                    .addListener((obs, oldVal, newVal) -> {
+                        if (newVal == null) return;
+                        appliquerEchelle(echelleVue.getEchelleSelectionnee());
+                    });
         }
     }
 
-    /**
-     * Applique la taille de grille choisie au canvas du contexte actif.
-     *
-     * @param echelle taille de cellule en mètres
-     */
     private void appliquerEchelle(double echelle) {
         if (contexteActif instanceof ContexteNiveau ctx) {
             ctx.getNiveauControleur().getVue().getCanvas().setGridSize(echelle);
@@ -312,10 +332,6 @@ public class AppControleur {
         }
     }
 
-    /**
-     * Transmet la touche Échap au contrôleur du contexte actif pour
-     * annuler un dessin en cours.
-     */
     private void onEchap() {
         if (contexteActif instanceof ContexteNiveau ctx) {
             ctx.getNiveauControleur().annulerMurEnCours();
@@ -324,14 +340,6 @@ public class AppControleur {
         }
     }
 
-    // =========================================================================
-    // RETOUR DASHBOARD
-    // =========================================================================
-
-    /**
-     * Retourne au tableau de bord.
-     * Seul AppControleur connaît le Stage — les contextes n'y ont pas accès.
-     */
     public void retourDashboard() {
         Appartement.resetCompteur();
         Piece.resetCompteur();
@@ -342,26 +350,17 @@ public class AppControleur {
         new DashBoardControleur(dashBoardView, stage, gestionnaire);
     }
 
-    // =========================================================================
-    // DIALOGUE NOM DE L'IMMEUBLE
-    // =========================================================================
-
-    /**
-     * Affiche la boîte de dialogue de saisie du nom de l'immeuble au démarrage.
-     * Si l'utilisateur annule ou laisse le champ vide, on retourne au dashboard.
-     */
     private void demanderNomImmeuble() {
         javafx.scene.control.TextInputDialog dialog =
-            new javafx.scene.control.TextInputDialog("Nouvel Immeuble");
+                new javafx.scene.control.TextInputDialog("Nouvel Immeuble");
         dialog.setTitle("Nom de l'immeuble");
         dialog.setHeaderText("Initialisation du projet");
         dialog.setContentText("Veuillez entrer le nom de l'immeuble :");
         dialog.setGraphic(null);
 
-        // Empêche la validation si le champ est vide
         javafx.scene.control.Button okButton =
-            (javafx.scene.control.Button)
-            dialog.getDialogPane().lookupButton(javafx.scene.control.ButtonType.OK);
+                (javafx.scene.control.Button)
+                        dialog.getDialogPane().lookupButton(javafx.scene.control.ButtonType.OK);
         okButton.addEventFilter(ActionEvent.ACTION, event -> {
             if (dialog.getEditor().getText().trim().isEmpty()) {
                 event.consume();
@@ -377,17 +376,6 @@ public class AppControleur {
         }
     }
 
-    // =========================================================================
-    // UTILITAIRE
-    // =========================================================================
-
-    /**
-     * Extrait le nom de l'immeuble depuis le libellé de la racine du navigateur.
-     * Format attendu : "Immeuble : ( NomImmeuble )"
-     *
-     * @param label libellé de rootItem
-     * @return nom extrait, ou "Immeuble" si le format n'est pas reconnu
-     */
     private String extraireNomImmeuble(String label) {
         int debut = label.indexOf("( ");
         int fin   = label.indexOf(" )");
@@ -396,13 +384,13 @@ public class AppControleur {
         }
         return "Immeuble";
     }
-    
+
     public AireImmeuble getAireImmeuble() {
         return immeubleControleur.getAireImmeuble();
     }
-    
+
     public void enregistrerPiece(TreeItem<String> itemPiece, Piece piece,
-                                  TreeItem<String> itemAppart) {
+                                 TreeItem<String> itemAppart) {
         mapItemPiece.put(itemPiece, piece);
         mapPieceVersAppart.put(itemPiece, itemAppart);
     }

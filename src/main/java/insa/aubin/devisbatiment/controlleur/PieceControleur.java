@@ -15,6 +15,9 @@ import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
 import javafx.application.Platform;
 import javafx.scene.control.TreeItem;
+import insa.aubin.devisbatiment.modele.SurfaceAvecRevetement;
+import insa.aubin.devisbatiment.modele.Sol;
+import insa.aubin.devisbatiment.modele.Mur;
 
 public class PieceControleur {
 
@@ -26,6 +29,7 @@ public class PieceControleur {
     public static final int ETAT_PORTE   = 40;
     public static final int ETAT_FENETRE = 50;
     public static final int ETAT_PIECE   = 60;
+    public static final int ETAT_SELECTION = 70;
 
     // =========================================================================
     // ATTRIBUTS
@@ -45,6 +49,7 @@ public class PieceControleur {
     private static final double TOL = 1e-6;
     private final Map<TreeItem<String>, Piece> mapItemPiece = new HashMap<>();
     public Map<TreeItem<String>, Piece> getMapItemPiece() { return mapItemPiece; }
+    private final List<SurfaceAvecRevetement> surfacesSelectionnees = new ArrayList<>();
 
     // =========================================================================
     // CONSTRUCTEUR
@@ -109,6 +114,8 @@ public class PieceControleur {
             case ETAT_FENETRE ->
                     this.vue.setInstructions(
                             "Survolez un mur puis cliquez pour insérer une fenêtre — Échap pour annuler");
+            case ETAT_SELECTION ->
+                    this.vue.setInstructions("Mode Matériaux — Cliquez sur un mur ou un sol pour le sélectionner");
         }
     }
 
@@ -149,6 +156,22 @@ public class PieceControleur {
                 double marge = Fenetre.COTE_FENETRE / (2 * cible.calculerLongueur());
                 t = Math.max(marge, Math.min(1.0 - marge, t));
                 cible.ajouterOuverture(new Fenetre(t));
+            }
+        }
+        else if (this.etat == ETAT_SELECTION) {
+            Mur cible = trouverMurProche(pClic);
+
+            // Si on a cliqué proche d'un mur, on le sélectionne
+            if (cible != null && cible.distanceA(pClic) < 0.5) { // 0.5 est la tolérance de clic
+                basculerSelection(cible);
+            } else {
+                // Sinon, on vérifie si on a cliqué au milieu d'une pièce pour sélectionner son Sol
+                for (Piece piece : pieces) {
+                    if (pointDansPolygone(pClic.getX(), pClic.getY(), piece.getPoints())) {
+                        basculerSelection(piece.getSol());
+                        break;
+                    }
+                }
             }
         }
     }
@@ -775,6 +798,17 @@ public class PieceControleur {
         return new Point(centre.getX() + s*perpX, centre.getY() + s*perpY);
     }
 
+    private void basculerSelection(SurfaceAvecRevetement surface) {
+        if (surfacesSelectionnees.contains(surface)) {
+            surfacesSelectionnees.remove(surface);
+        } else {
+            surfacesSelectionnees.add(surface);
+        }
+        // On transmet la liste au canvas pour qu'il la dessine, puis on rafraîchit
+        vue.getCanvas().setSelection(surfacesSelectionnees);
+        vue.redrawAll();
+    }
+
     // =========================================================================
     // ANNULATION
     // =========================================================================
@@ -835,5 +869,15 @@ public class PieceControleur {
     
     public void setOnPieceCree(java.util.function.Function<Piece, TreeItem<String>> callback) {
         this.onPieceCree = callback;
+    }
+
+    public List<SurfaceAvecRevetement> getSurfacesSelectionnees() {
+        return surfacesSelectionnees;
+    }
+
+    public void viderSelection() {
+        surfacesSelectionnees.clear();
+        vue.getCanvas().setSelection(surfacesSelectionnees);
+        vue.redrawAll();
     }
 }

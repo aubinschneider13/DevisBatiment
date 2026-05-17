@@ -29,6 +29,7 @@ public class AppView extends BorderPane {
 
     // --- Sous-vues fixes ---
     private final ToolBarView toolBarView;
+    private final ToolBarDevisView toolBarDevisView;
     private final NavigateurView navigateurView;
     private final EchelleVue echelleVue;
 
@@ -51,16 +52,16 @@ public class AppView extends BorderPane {
         // 1. TOOLBAR (TOP)
         // =====================================================================
         toolBarView = new ToolBarView();
-
-        TabPane tabPane = new TabPane();
         Tab tabConstruction = new Tab("Construction");
         tabConstruction.setClosable(false);
         tabConstruction.setContent(toolBarView);
 
+        toolBarDevisView = new ToolBarDevisView();
         Tab tabDevis = new Tab("Matériaux et Devis");
         tabDevis.setClosable(false);
-        tabDevis.setContent(new HBox()); // contenu à implémenter ultérieurement
+        tabDevis.setContent(toolBarDevisView);
 
+        TabPane tabPane = new TabPane();
         tabPane.getTabs().addAll(tabConstruction, tabDevis);
         tabPane.setStyle("-fx-border-color: #d1d1d1; -fx-border-width: 0 0 1 0;");
         this.setTop(tabPane);
@@ -248,6 +249,7 @@ public class AppView extends BorderPane {
     // =========================================================================
 
     public ToolBarView getToolBarView()         { return toolBarView;     }
+    public ToolBarDevisView getToolBarDevisView() { return toolBarDevisView; }
     public NavigateurView getNavigateurView()   { return navigateurView;  }
     public DessinCanvas getCanvasAire()         { return canvasAire;      }
     public EchelleVue getEchelleVue()           { return echelleVue;      }

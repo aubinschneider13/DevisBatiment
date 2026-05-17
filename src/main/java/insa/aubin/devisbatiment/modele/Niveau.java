@@ -27,6 +27,14 @@ public class Niveau extends ElementDeConstruction {
         this.appartements    = new ArrayList<>();
     }
 
+    public double calculerDevis() {
+        double total = 0;
+        for (Appartement a : appartements) {
+            total += a.calculerDevis();
+        }
+        return total;
+    }
+
     // =========================================================================
     // DÉRIVATION DU POLYGONE DEPUIS LES MURS
     // =========================================================================

@@ -58,6 +58,14 @@ public abstract class Batiment extends ElementDeConstruction {
              aire.getP1(), aire.getP2(), aire.getP3(), aire.getP4());
     }
 
+    public double calculerDevisTotal() {
+        double total = 0;
+        for (Niveau n : niveaux) {
+            total += n.calculerDevis();
+        }
+        return total;
+    }
+
     // =========================================================================
     // GESTION DES NIVEAUX
     // =========================================================================

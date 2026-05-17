@@ -2,10 +2,12 @@ package insa.aubin.devisbatiment.controlleur;
 
 import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
 import insa.aubin.devisbatiment.modele.Piece;
+import insa.aubin.devisbatiment.modele.SurfaceAvecRevetement;
 import insa.aubin.devisbatiment.view.AppView;
 import insa.aubin.devisbatiment.view.PieceView;
 import javafx.stage.Stage;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -28,6 +30,9 @@ public class ContexteSousPiece implements Contexte {
 
     private PieceView pieceView;
     private PieceControleur pieceControleur;
+
+    //private boolean modeSelectionActif = false;
+    //private final List<SurfaceAvecRevetement> surfacesSelectionnees = new ArrayList<>();
 
     public ContexteSousPiece(Piece piece,
                               AppView appView,
@@ -93,5 +98,60 @@ public class ContexteSousPiece implements Contexte {
     @Override
     public List<String> getBoutonsVisibles() {
         return BOUTONS;
+    }
+
+    // =========================================================================
+    // GESTION DU MODE SÉLECTION (POUR LES REVÊTEMENTS)
+    // =========================================================================
+
+    /*public boolean isModeSelectionActif() {
+        return modeSelectionActif;
+    }
+
+    public void setModeSelectionActif(boolean modeSelectionActif) {
+        this.modeSelectionActif = modeSelectionActif;
+    }
+
+    public List<SurfaceAvecRevetement> getSurfacesSelectionnees() {
+        return surfacesSelectionnees;
+    }
+
+    public void ajouterSurface(SurfaceAvecRevetement surface) {
+        if (surface != null && !surfacesSelectionnees.contains(surface)) {
+            surfacesSelectionnees.add(surface);
+        }
+    }
+
+    public void retirerSurface(SurfaceAvecRevetement surface) {
+        surfacesSelectionnees.remove(surface);
+    }
+
+    public void viderSelection() {
+        surfacesSelectionnees.clear();
+    }*/
+
+    public void activerModeSelection() {
+        if (pieceControleur != null) {
+            // On force le moteur de dessin à passer en mode sélection
+            pieceControleur.changerEtat(PieceControleur.ETAT_SELECTION);
+        }
+    }
+
+    public List<SurfaceAvecRevetement> getSurfacesSelectionnees() {
+        if (pieceControleur != null) {
+            return pieceControleur.getSurfacesSelectionnees();
+        }
+        return new ArrayList<>(); // Retourne une liste vide par sécurité
+    }
+
+    public void viderSelection() {
+        if (pieceControleur != null) {
+            pieceControleur.viderSelection();
+            pieceControleur.changerEtat(PieceControleur.ETAT_RIEN); // Repasse en mode normal
+        }
+    }
+
+    public Piece getPiece() {
+        return piece;
     }
 }
