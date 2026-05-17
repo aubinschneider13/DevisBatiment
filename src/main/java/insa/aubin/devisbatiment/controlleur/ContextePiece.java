@@ -30,7 +30,7 @@ public class ContextePiece implements Contexte {
 
     /** Identifiants des boutons affichés dans ce contexte (ordre = ordre toolbar). */
     private static final List<String> BOUTONS = List.of(
-            "navigation", "echelle", "mur", "piece", "porte", "fenetre"
+            "navigation", "echelle", "mur", "piece"
     );
 
     // --- Dépendances ---
@@ -147,27 +147,6 @@ public class ContextePiece implements Contexte {
         }
     }
 
-    /**
-     * Active le mode insertion de porte.
-     * L'utilisateur survole ensuite un mur et clique pour poser la porte.
-     */
-    @Override
-    public void onBtnPorte() {
-        if (pieceControleur != null) {
-            pieceControleur.changerEtat(PieceControleur.ETAT_PORTE);
-        }
-    }
-
-    /**
-     * Active le mode insertion de fenêtre.
-     * L'utilisateur survole ensuite un mur et clique pour poser la fenêtre.
-     */
-    @Override
-    public void onBtnFenetre() {
-        if (pieceControleur != null) {
-            pieceControleur.changerEtat(PieceControleur.ETAT_FENETRE);
-        }
-    }
 
     /**
      * Bascule le panneau de sélection d'échelle.
