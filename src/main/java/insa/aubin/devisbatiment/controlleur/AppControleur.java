@@ -59,6 +59,8 @@ public class AppControleur {
     // Dans AppControleur, ajouter :
     private final Map<TreeItem<String>, Piece> mapItemPiece = new HashMap<>();
     private final Map<TreeItem<String>, TreeItem<String>> mapPieceVersAppart = new HashMap<>();
+    private final Map<Appartement, ContextePiece> contextePieces = new HashMap<>();
+    private final Map<Piece, ContexteSousPiece> contexteSousPieces = new HashMap<>();
 
     public AppControleur(AppView appView, Stage stage,
                          GestionnaireSauvegarde gestionnaire) {
@@ -186,21 +188,25 @@ public class AppControleur {
         for (int i = 0; i < niveauControleurs.size(); i++) {
             NiveauControleur ctrl = niveauControleurs.get(i);
             Appartement appart = ctrl.getMapItemAppartement().get(item);
-            if (appart != null) {
-                itemNiveauActif = itemsNiveau.get(i);
-                basculerContexte(new ContextePiece(
-                    appart, appView, this, stage, gestionnaire, item // ✅ item = TreeItem appartement
-                ));
-                return;
-            }
+                if (appart != null) {
+                    itemNiveauActif = itemsNiveau.get(i);
+                    ContextePiece ctx = contextePieces.computeIfAbsent(appart, a ->
+                        new ContextePiece(a, appView, this, stage, gestionnaire, item)
+                    );
+                    basculerContexte(ctx);
+                    return;
+}
         }
         
         // --- Clic sur une pièce ---
         Piece piece = mapItemPiece.get(item);
+        System.out.println("Item cliqué : " + item.getValue());
+        System.out.println("Piece trouvée : " + piece);
         if (piece != null) {
-            basculerContexte(new ContexteSousPiece(
-                piece, appView, this, stage, gestionnaire
-            ));
+            ContexteSousPiece ctx = contexteSousPieces.computeIfAbsent(piece, p ->
+                new ContexteSousPiece(p, appView, this, stage, gestionnaire)
+            );
+            basculerContexte(ctx);
             return;
         }
     }

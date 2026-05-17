@@ -44,6 +44,7 @@ public class ContextePiece implements Contexte {
     private final Stage stage;
     private final GestionnaireSauvegarde gestionnaire;
     private final TreeItem<String> itemAppartement;
+    private boolean callbackBranche = false;
 
     /**
      * @param appartement  appartement dont on va aménager l'intérieur
@@ -81,19 +82,25 @@ public class ContextePiece implements Contexte {
      */
     @Override
     public void installer() {
-        pieceView = new PieceView(stage, gestionnaire, appartement,
-                                  appControleur.getAireImmeuble()); // ✅
-        pieceControleur = pieceView.getControleur();
+        if (pieceView == null) {
+            pieceView = new PieceView(stage, gestionnaire, appartement,
+                                      appControleur.getAireImmeuble());
+            pieceControleur = pieceView.getControleur();
+        }
+        // ✅ Ne brancher le callback qu'une seule fois
+        if (!callbackBranche) {
+            pieceControleur.setOnPieceCree(piece -> {
+                TreeItem<String> itemPiece = appView.getNavigateurView()
+                    .ajouterItemPiece(itemAppartement, piece.toString());
+                appControleur.enregistrerPiece(itemPiece, piece, itemAppartement);
+                return itemPiece;
+            });
+            callbackBranche = true;
+        }
         appView.afficherPiece(pieceView);
         appView.setInstructions(
             "Vue pièce de « " + appartement + " » — dessinez les cloisons intérieures"
         );
-        pieceControleur.setOnPieceCree(piece -> {
-            TreeItem<String> itemPiece = appView.getNavigateurView()
-                .ajouterItemPiece(itemAppartement, piece.toString());
-            appControleur.enregistrerPiece(itemPiece, piece, itemAppartement);
-            return itemPiece;
-        });
     }
 
     /**

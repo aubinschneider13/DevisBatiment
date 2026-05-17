@@ -43,9 +43,11 @@ public class ContexteSousPiece implements Contexte {
 
     @Override
     public void installer() {
-        pieceView = new PieceView(stage, gestionnaire, piece,
-                                  appControleur.getAireImmeuble());
-        pieceControleur = pieceView.getControleur();
+        if (pieceView == null) {
+            pieceView = new PieceView(stage, gestionnaire, piece,
+                                      appControleur.getAireImmeuble());
+            pieceControleur = pieceView.getControleur();
+        }
         appView.afficherPiece(pieceView);
         appView.setInstructions(
             "Vue de « " + piece + " » — dessinez l'aménagement intérieur"
