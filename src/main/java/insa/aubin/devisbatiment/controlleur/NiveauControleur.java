@@ -135,18 +135,7 @@ public class NiveauControleur {
     private void mouvementCanvas(javafx.scene.input.MouseEvent e) {
         if (!mode.equals("MUR")) return;
 
-        // ✅ Snap en premier (coordonnées brutes → grille modèle),
-        //    puis contrainte à l'aire — même ordre que dans clicCanvas.
-        //    L'inversion de cet ordre causait un trait parasite vers (0,0)
-        //    au premier mouvement après avoir posé le point de départ.
         Point2D snap = vue.getCanvas().snapToGrid(e.getX(), e.getY());
-
-        Point[] coins = coinsAire();
-        if (coins.length > 0) {
-            double[] c = GeometrieUtils.contraindreAZone(
-                    snap.getX(), snap.getY(), coins, coins.length);
-            snap = new Point2D(c[0], c[1]);
-        }
 
         if (vue.getOptionsMurVue().estRectangulaire()) {
             if (etapeRectangle == 1 && mur1Rect != null) {
@@ -332,18 +321,6 @@ public class NiveauControleur {
     // =========================================================================
     // UTILITAIRES GÉOMÉTRIQUES LOCAUX
     // =========================================================================
-
-    /**
-     * Retourne les coins de l'aire sous forme de tableau Point[].
-     * Retourne un tableau vide si l'aire n'est pas définie ou incomplète.
-     */
-    private Point[] coinsAire() {
-        if (aireImmeuble == null || !aireImmeuble.isComplete()) return new Point[0];
-        return new Point[]{
-            aireImmeuble.getP1(), aireImmeuble.getP2(),
-            aireImmeuble.getP3(), aireImmeuble.getP4()
-        };
-    }
 
     /** Vérifie si un point est dans le polygone de l'aire (ou sur son contour). */
     private boolean estDansAire(double px, double py) {
