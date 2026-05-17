@@ -10,7 +10,9 @@ import javafx.scene.control.TreeItem;
 import javafx.stage.Stage;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -53,6 +55,10 @@ public class AppControleur {
 
     // --- Item TreeView actuellement sélectionné comme "niveau actif" ---
     private TreeItem<String> itemNiveauActif = null;
+    
+    // Dans AppControleur, ajouter :
+    private final Map<TreeItem<String>, Piece> mapItemPiece = new HashMap<>();
+    private final Map<TreeItem<String>, TreeItem<String>> mapPieceVersAppart = new HashMap<>();
 
     public AppControleur(AppView appView, Stage stage,
                          GestionnaireSauvegarde gestionnaire) {
@@ -99,6 +105,7 @@ public class AppControleur {
         tb.getBtnEchelle()      .setOnAction(e -> contexteActif.onBtnEchelle());
         tb.getBtnMur()          .setOnAction(e -> contexteActif.onBtnMur());
         tb.getBtnAppartement()  .setOnAction(e -> contexteActif.onBtnAppartement());
+        tb.getBtnPiece().setOnAction(e -> contexteActif.onBtnPiece());
         tb.getBtnPorte()        .setOnAction(e -> contexteActif.onBtnPorte());
         tb.getBtnFenetre()      .setOnAction(e -> contexteActif.onBtnFenetre());
         tb.getBtnValiderAire()  .setOnAction(e -> contexteActif.onBtnValiderAire());
@@ -182,10 +189,19 @@ public class AppControleur {
             if (appart != null) {
                 itemNiveauActif = itemsNiveau.get(i);
                 basculerContexte(new ContextePiece(
-                    appart, appView, this, stage, gestionnaire
+                    appart, appView, this, stage, gestionnaire, item // ✅ item = TreeItem appartement
                 ));
                 return;
             }
+        }
+        
+        // --- Clic sur une pièce ---
+        Piece piece = mapItemPiece.get(item);
+        if (piece != null) {
+            basculerContexte(new ContexteSousPiece(
+                piece, appView, this, stage, gestionnaire
+            ));
+            return;
         }
     }
 
@@ -312,6 +328,7 @@ public class AppControleur {
      */
     public void retourDashboard() {
         Appartement.resetCompteur();
+        Piece.resetCompteur();
         DashBoardView dashBoardView = new DashBoardView();
         Scene dashScene = new Scene(dashBoardView);
         stage.setScene(dashScene);
@@ -376,5 +393,11 @@ public class AppControleur {
     
     public AireImmeuble getAireImmeuble() {
         return immeubleControleur.getAireImmeuble();
+    }
+    
+    public void enregistrerPiece(TreeItem<String> itemPiece, Piece piece,
+                                  TreeItem<String> itemAppart) {
+        mapItemPiece.put(itemPiece, piece);
+        mapPieceVersAppart.put(itemPiece, itemAppart);
     }
 }

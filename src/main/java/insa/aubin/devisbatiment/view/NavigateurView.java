@@ -101,6 +101,14 @@ public class NavigateurView extends VBox {
         itemNiveau.setExpanded(true);
         return item;
     }
+    
+    public TreeItem<String> ajouterItemPiece(TreeItem<String> itemAppartement,
+                                          String nomPiece) {
+        TreeItem<String> item = new TreeItem<>(nomPiece);
+        itemAppartement.getChildren().add(item);
+        itemAppartement.setExpanded(true);
+        return item;
+    }
 
     /**
      * Sélectionne programmatiquement un item dans le TreeView.

@@ -21,23 +21,7 @@ public class Appartement extends ElementDeConstruction implements Dessin {
     // Numérotation automatique partagée entre tous les niveaux
     private static int compteur = 0;
     private final int numero;
-
-    // Palette tournante pour distinguer visuellement les appartements
-    private static final Color[] PALETTE_FOND = {
-            Color.web("#e74c3c", 0.18), // rouge
-            Color.web("#2ecc71", 0.18), // vert
-            Color.web("#f39c12", 0.18), // orange
-            Color.web("#9b59b6", 0.18), // violet
-            Color.web("#1abc9c", 0.18), // turquoise
-    };
-    private static final Color[] PALETTE_CONTOUR = {
-            Color.web("#c0392b"),
-            Color.web("#27ae60"),
-            Color.web("#e67e22"),
-            Color.web("#8e44ad"),
-            Color.web("#16a085"),
-    };
-
+    
     /**
      * Crée un appartement à partir de ses murs délimiteurs et d'une hauteur sous plafond.
      * Le polygone visuel est dérivé directement des murs — pas besoin de le passer séparément.
@@ -53,9 +37,8 @@ public class Appartement extends ElementDeConstruction implements Dessin {
 
         compteur++;
         this.numero = compteur;
-        int idx = (numero - 1) % PALETTE_FOND.length;
-        this.couleurFond    = PALETTE_FOND[idx];
-        this.couleurContour = PALETTE_CONTOUR[idx];
+        this.couleurFond    = PaletteVisuelle.fondAppartement(numero);
+        this.couleurContour = PaletteVisuelle.contourAppartement(numero);
     }
 
     /** Réinitialise le compteur (utile au chargement d'un projet). */

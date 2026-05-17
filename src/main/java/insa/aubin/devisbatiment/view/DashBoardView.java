@@ -97,20 +97,7 @@ public class DashBoardView extends BorderPane {
         immeubleButton.setStyle("-fx-cursor: hand;" + "-fx-font-family: 'Arial';" + "fx-font-size: 13px;" + "-fx-font-weight: bold;" + "-fx-text-fill: #34495e;");
         immeubleButton.setPrefSize(120, 100);
 
-        //Configuration du bouton Appartement
-        Image iconeAppartement = new Image(getClass().getResource(cheminAppartement).toExternalForm());
-        ImageView imgAppartement = new ImageView(iconeAppartement);
-        imgAppartement.setFitWidth(50);
-        imgAppartement.setFitHeight(50);
-        imgAppartement.setPreserveRatio(true);
-
-        appartementButton = new Button("Appartement");
-        appartementButton.setGraphic(imgAppartement);
-        appartementButton.setContentDisplay(ContentDisplay.TOP);
-        appartementButton.setStyle("-fx-cursor: hand;" + "-fx-font-family: 'Arial';" + "fx-font-size: 13px;" + "-fx-font-weight: bold;" + "-fx-text-fill: #34495e;");
-        appartementButton.setPrefSize(120, 100);
-
-                //Configuration du bouton Maison
+        //Configuration du bouton Maison
         Image iconeMaison = new Image(getClass().getResource(cheminMaison).toExternalForm());
         ImageView imgMaison = new ImageView(iconeMaison);
         imgMaison.setFitWidth(50);
@@ -122,21 +109,9 @@ public class DashBoardView extends BorderPane {
         maisonButton.setContentDisplay(ContentDisplay.TOP);
         maisonButton.setStyle("-fx-cursor: hand;" + "-fx-font-family: 'Arial';" + "fx-font-size: 13px;" + "-fx-font-weight: bold;" + "-fx-text-fill: #34495e;");
         maisonButton.setPrefSize(120, 100);
-
-                //Configuration du bouton Pièce
-        Image iconePiece = new Image(getClass().getResource(cheminPiece).toExternalForm());
-        ImageView imgPiece = new ImageView(iconePiece);
-        imgPiece.setFitWidth(50);
-        imgPiece.setFitHeight(50);
-        imgPiece.setPreserveRatio(true);
-
-        pieceButton = new Button("Piece");
-        pieceButton.setGraphic(imgPiece);
-        pieceButton.setContentDisplay(ContentDisplay.TOP);
-        pieceButton.setStyle("-fx-cursor: hand;" + "-fx-font-family: 'Arial';" + "fx-font-size: 13px;" + "-fx-font-weight: bold;" + "-fx-text-fill: #34495e;");
-        pieceButton.setPrefSize(120, 100);
-
-        firstHBox.getChildren().addAll(nouveauLabel,immeubleButton, appartementButton, maisonButton,pieceButton);
+        
+        //fin Hbox
+        firstHBox.getChildren().addAll(nouveauLabel,immeubleButton, maisonButton);
 
             //2ème HBox
         HBox secondHBox = new HBox();

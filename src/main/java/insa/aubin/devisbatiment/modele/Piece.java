@@ -11,6 +11,8 @@ public class Piece extends ElementDeConstruction {
     private List<Usage> usages;
     private Sol sol;
     private Plafond plafond;
+    private static int compteur = 0;
+    private final int numero;
 
     // =========================================================================
     // CONSTRUCTEURS
@@ -22,6 +24,8 @@ public class Piece extends ElementDeConstruction {
      */
     public Piece(List<Mur> murs, double hauteurPlafond) {
         super("Piece");
+        compteur++;
+        this.numero = compteur;
         this.hauteurPlafond = hauteurPlafond;
         this.murs           = new ArrayList<>(murs);
         this.usages         = new ArrayList<>();
@@ -90,6 +94,8 @@ public class Piece extends ElementDeConstruction {
     public List<Usage> getUsages()                 { return usages; }
     public Sol getSol()                            { return sol; }
     public Plafond getPlafond()                    { return plafond; }
+    public static void resetCompteur()             { compteur = 0; }
+    public int getNumero()                         { return numero; }
 
     // =========================================================================
     // SÉRIALISATION
@@ -110,9 +116,6 @@ public class Piece extends ElementDeConstruction {
 
     @Override
     public String toString() {
-        return "Piece [id=" + getId()
-                + ", hauteurPlafond=" + hauteurPlafond
-                + ", nbMurs=" + murs.size()
-                + ", surface=" + String.format("%.2f", calculerSurfaceTotale()) + " m²]";
+        return "Pièce " + numero;
     }
 }

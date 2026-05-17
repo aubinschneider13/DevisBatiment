@@ -60,7 +60,9 @@ public interface Contexte {
      * Pertinent uniquement en ContexteNiveau.
      */
     default void onBtnAppartement() { }
-
+    
+    default void onBtnPiece() { }
+    
     /**
      * Bouton "Porte" — active le mode insertion de porte.
      * Pertinent uniquement en ContextePiece.

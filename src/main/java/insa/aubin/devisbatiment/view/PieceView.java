@@ -4,6 +4,7 @@ import insa.aubin.devisbatiment.controlleur.PieceControleur;
 import insa.aubin.devisbatiment.modele.AireImmeuble;
 import insa.aubin.devisbatiment.modele.Appartement;
 import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
+import insa.aubin.devisbatiment.modele.Piece;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -40,15 +41,23 @@ public class PieceView extends StackPane {
 
     // Constructeur de base
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire) {
-        this(stage, gestionnaire, null, null); // ✅ délègue au principal
+        this(stage, gestionnaire, (Appartement) null, (AireImmeuble) null);
     }
 
     // Constructeur avec appartement sans aire
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
-                     Appartement appartement) {
-        this(stage, gestionnaire, appartement, null); // ✅ délègue au principal
-    }
+                 Piece piece, AireImmeuble aire) {
+        this(stage, gestionnaire, (Appartement) null, (AireImmeuble) null);
 
+        if (piece != null && piece.getPoints() != null) {
+            this.controleur.initialiserAvecContourAppartement(
+                piece.getPoints(),
+                piece.getMurs(),
+                aire,
+                null
+            );
+        }
+    }
     // Constructeur principal
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
                      Appartement appartement, AireImmeuble aire) {
@@ -105,9 +114,7 @@ public class PieceView extends StackPane {
             this.controleur.initialiserAvecContourAppartement(
                 appartement.getPolygone(),
                 appartement.getMursDelimiteurs(),
-                aire,
-                    appartement
-            );
+                aire,appartement );
         }
     }
 

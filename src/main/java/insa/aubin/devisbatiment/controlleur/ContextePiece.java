@@ -9,6 +9,7 @@ import insa.aubin.devisbatiment.view.PieceView;
 import javafx.stage.Stage;
 
 import java.util.List;
+import javafx.scene.control.TreeItem;
 
 /**
  * Contexte actif quand l'utilisateur aménage l'intérieur d'un appartement :
@@ -42,6 +43,7 @@ public class ContextePiece implements Contexte {
     // --- Stage et gestionnaire nécessaires pour instancier PieceView ---
     private final Stage stage;
     private final GestionnaireSauvegarde gestionnaire;
+    private final TreeItem<String> itemAppartement;
 
     /**
      * @param appartement  appartement dont on va aménager l'intérieur
@@ -50,16 +52,17 @@ public class ContextePiece implements Contexte {
      * @param stage        fenêtre principale (transmis à PieceControleur)
      * @param gestionnaire service de sauvegarde (transmis à PieceControleur)
      */
-    public ContextePiece(Appartement appartement,
-                         AppView appView,
-                         AppControleur appControleur,
-                         Stage stage,
-                         GestionnaireSauvegarde gestionnaire) {
+    public ContextePiece(Appartement appartement, AppView appView,
+                     AppControleur appControleur, Stage stage,
+                     GestionnaireSauvegarde gestionnaire,
+                     TreeItem<String> itemAppartement) {
+        
         this.appartement    = appartement;
         this.appView        = appView;
         this.appControleur  = appControleur;
         this.stage          = stage;
         this.gestionnaire   = gestionnaire;
+        this.itemAppartement = itemAppartement;
     }
 
     // =========================================================================
@@ -85,6 +88,12 @@ public class ContextePiece implements Contexte {
         appView.setInstructions(
             "Vue pièce de « " + appartement + " » — dessinez les cloisons intérieures"
         );
+        pieceControleur.setOnPieceCree(piece -> {
+            TreeItem<String> itemPiece = appView.getNavigateurView()
+                .ajouterItemPiece(itemAppartement, piece.toString());
+            appControleur.enregistrerPiece(itemPiece, piece, itemAppartement);
+            return itemPiece;
+        });
     }
 
     /**
@@ -117,6 +126,13 @@ public class ContextePiece implements Contexte {
             pieceControleur.changerEtat(PieceControleur.ETAT_MUR);
         }
     }
+    
+    @Override
+    public void onBtnPiece() {
+        if (pieceControleur != null) {
+            pieceControleur.activerModePiece();
+        }
+    }
 
     /**
      * Active le mode insertion de porte.
@@ -144,6 +160,7 @@ public class ContextePiece implements Contexte {
      * Bascule le panneau de sélection d'échelle.
      * Délégué à AppControleur car l'échelle est partagée entre tous les contextes.
      */
+    
     @Override
     public void onBtnEchelle() {
         appControleur.onBtnEchelle();

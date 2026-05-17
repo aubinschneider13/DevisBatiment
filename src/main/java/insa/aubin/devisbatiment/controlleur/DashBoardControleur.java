@@ -23,7 +23,6 @@ public class DashBoardControleur {
         this.dashBoardView = dashBoardView;
         this.stage = stage;
         this.gestionnaire = gestionnaire;
-        creerPiece();
         creerImmeuble();
         configurerSettings();
     }
@@ -54,22 +53,7 @@ public class DashBoardControleur {
             stage.setHeight(bounds.getHeight());
         });
     }
-    public void creerPiece(){
-        this.dashBoardView.getPieceButton().setOnAction(e -> {
-            ouvrirPiece();
-        });
-    }
-
-    public void ouvrirPiece(){
-        PieceView pieceView = new PieceView(stage,gestionnaire);
-        Scene pieceScene = new Scene(pieceView);
-
-        stage.setScene(pieceScene);
-        stage.setTitle("InsaBuilder - Nouveau devis pour une pièce");
-        mettreFenetrePleinEcran();
-    }
-
-
+    
     private void configurerSettings() {
         dashBoardView.getSettingsButton().setOnAction(e -> ouvrirSettings());
     }

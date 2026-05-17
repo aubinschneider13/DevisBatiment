@@ -66,8 +66,8 @@ public class ToolBarView extends HBox {
         // --- Construction des boutons ---
         btnNavigation    = creerBouton("Naviguer",       CHEMIN_MAIN,        80);
         btnEchelle       = creerBouton("Échelle",        CHEMIN_ECHELLE,     70);
-        btnMur           = creerBouton("Mur",            CHEMIN_PIECE,       60);
-        btnPiece         = creerBouton("Piece",          CHEMIN_MUR,         60);
+        btnMur           = creerBouton("Mur",            CHEMIN_MUR,       60);
+        btnPiece         = creerBouton("Piece",          CHEMIN_PIECE,         60);
         btnAppartement   = creerBouton("Appartement",    CHEMIN_APPARTEMENT, 100);
         btnPorte         = creerBouton("Porte",          CHEMIN_PORTE,       60);
         btnFenetre       = creerBouton("Fenêtre",        CHEMIN_FENETRE,     70);
@@ -200,6 +200,7 @@ public class ToolBarView extends HBox {
     public Button getBtnEchelle()       { return btnEchelle;       }
     public Button getBtnMur()           { return btnMur;           }
     public Button getBtnAppartement()   { return btnAppartement;   }
+    public Button getBtnPiece()         { return btnPiece;   }
     public Button getBtnPorte()         { return btnPorte;         }
     public Button getBtnFenetre()       { return btnFenetre;       }
     public Button getBtnValiderAire()   { return btnValiderAire;   }
