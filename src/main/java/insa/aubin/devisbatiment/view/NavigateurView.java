@@ -40,7 +40,7 @@ public class NavigateurView extends VBox {
         rootItem.setExpanded(true);
 
         // --- Items fixes créés une seule fois ---
-        itemAire    = new TreeItem<>("Aire de l'immeuble");
+        itemAire    = new TreeItem<>("Aire du terrain l'immeuble");
         itemNiveaux = new TreeItem<>("Niveaux");
         itemNiveaux.setExpanded(true);
 
