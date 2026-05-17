@@ -105,7 +105,8 @@ public class PieceView extends StackPane {
             this.controleur.initialiserAvecContourAppartement(
                 appartement.getPolygone(),
                 appartement.getMursDelimiteurs(),
-                aire
+                aire,
+                    appartement
             );
         }
     }

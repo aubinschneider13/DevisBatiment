@@ -34,6 +34,7 @@ public class ToolBarView extends HBox {
     private static final String CHEMIN_MAIN       = "/images/main_icone.png";
     private static final String CHEMIN_ECHELLE    = "/images/echelle_icone.png";
     private static final String CHEMIN_MUR        = "/images/mur_icone.png";
+    private static final String CHEMIN_PIECE      = "/images/piece_icone.png";
     private static final String CHEMIN_APPARTEMENT= "/images/appartement_icone.png";
     private static final String CHEMIN_PORTE      = "/images/porte_icone.png";
     private static final String CHEMIN_FENETRE    = "/images/fenetre_icone.png";
@@ -43,6 +44,7 @@ public class ToolBarView extends HBox {
     private final Button btnNavigation;
     private final Button btnEchelle;
     private final Button btnMur;
+    private final Button btnPiece;
     private final Button btnAppartement;
     private final Button btnPorte;
     private final Button btnFenetre;
@@ -64,7 +66,8 @@ public class ToolBarView extends HBox {
         // --- Construction des boutons ---
         btnNavigation    = creerBouton("Naviguer",       CHEMIN_MAIN,        80);
         btnEchelle       = creerBouton("Échelle",        CHEMIN_ECHELLE,     70);
-        btnMur           = creerBouton("Mur",            CHEMIN_MUR,         60);
+        btnMur           = creerBouton("Mur",            CHEMIN_PIECE,       60);
+        btnPiece         = creerBouton("Piece",          CHEMIN_MUR,         60);
         btnAppartement   = creerBouton("Appartement",    CHEMIN_APPARTEMENT, 100);
         btnPorte         = creerBouton("Porte",          CHEMIN_PORTE,       60);
         btnFenetre       = creerBouton("Fenêtre",        CHEMIN_FENETRE,     70);
@@ -94,6 +97,7 @@ public class ToolBarView extends HBox {
         boutonsParId.put("navigation",    btnNavigation);
         boutonsParId.put("echelle",       btnEchelle);
         boutonsParId.put("mur",           btnMur);
+        boutonsParId.put("piece",         btnPiece);
         boutonsParId.put("appartement",   btnAppartement);
         boutonsParId.put("porte",         btnPorte);
         boutonsParId.put("fenetre",       btnFenetre);
@@ -114,7 +118,7 @@ public class ToolBarView extends HBox {
             btnNavigation, btnEchelle,
             sep1,
             btnValiderAire, btnAjouterNiveau,
-            btnMur, btnAppartement,
+            btnMur, btnPiece, btnAppartement,
             sep2,
             btnPorte, btnFenetre,
             spacer,

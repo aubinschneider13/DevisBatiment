@@ -27,7 +27,7 @@ public class ContextePiece implements Contexte {
 
     /** Identifiants des boutons affichés dans ce contexte (ordre = ordre toolbar). */
     private static final List<String> BOUTONS = List.of(
-            "navigation", "echelle", "mur", "porte", "fenetre"
+            "navigation", "echelle", "mur", "piece", "porte", "fenetre"
     );
 
     // --- Dépendances ---

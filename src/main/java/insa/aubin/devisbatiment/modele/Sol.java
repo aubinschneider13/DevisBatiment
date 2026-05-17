@@ -9,6 +9,10 @@ public class Sol extends SurfaceAvecRevetement {
         this.surface = surface;
     }
 
+    public void setSurface(double surface) {
+        this.surface = surface;
+    }
+
     @Override
     public double calculerSurface() {
         return surface;
