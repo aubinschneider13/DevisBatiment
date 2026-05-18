@@ -23,10 +23,23 @@ public class Revetement extends ElementDeConstruction {
 
     @Override
     public String toCSV() {
-        int pMur = pourMur ? 1 : 0;
-        int pSol = pourSol ? 1 : 0;
-        int pPlaf = pourPlafond ? 1 : 0;
-        return "REVETEMENT;" + getId() + ";" + designation + ";" + pMur + ";" + pSol + ";" + pPlaf + ";" + prixUnitaire;
+        int pMur = isPourMur() ? 1 : 0;
+        int pSol = isPourSol() ? 1 : 0;
+        int pPlaf = isPourPlafond() ? 1 : 0;
+
+        // On génère la base : Classe;id;designation;pourMur;pourSol;pourPlafond;prix
+        // Note : par défaut, la classe est "Revetement"
+        String base = this.getClass().getSimpleName() + ";"
+                + getId() + ";"
+                + getDesignation() + ";"
+                + pMur + ";" + pSol + ";" + pPlaf + ";"
+                + getPrixUnitaire();
+
+        // Si c'est juste un Revetement générique, on ajoute 5 points-virgules pour les colonnes vides
+        if (this.getClass() == Revetement.class) {
+            return base + ";;;;;";
+        }
+        return base;
     }
 
     @Override

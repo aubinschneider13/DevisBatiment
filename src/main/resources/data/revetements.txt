@@ -1,8 +1,9 @@
-idRevetement;designation;pourMur;pourSol;pourPlafond;prixUnitaire
-REV001;Peinture blanche;1;0;1;15.00
-REV002;Peinture grise;1;0;1;12.00
-REV003;Carrelage grès 60x60;1;1;0;35.00
-REV004;Carrelage marbre;0;1;0;55.00
-REV005;Parquet chêne;0;1;0;45.00
-REV006;Parquet pin;0;1;0;30.00
-REV007;Enduit plâtre;1;0;1;8.00
+Classe;idRevetement;designation;pourMur;pourSol;pourPlafond;prixUnitaire;couleur;finition;dimension;essenceBois;matiere
+Peinture;REV001;Peinture blanche;1;0;1;15.0;Blanc;Mat;;;
+Peinture;REV002;Peinture grise;1;0;1;12.0;Gris;Satiné;;;
+Carrelage;REV003;Carrelage grès 60x60;1;1;0;35.0;;;60x60;;Grès
+Carrelage;REV004;Carrelage marbre;0;1;0;55.0;;;30x30;;Marbre
+Parquet;REV005;Parquet chêne;0;1;0;45.0;;;;;
+Parquet;REV006;Parquet pin;0;1;0;30.0;;;;;
+Revetement;REV007;Enduit plâtre;1;0;1;8.0;;;;;
+Peinture;REV008;Peinture rouge premium;0;1;0;30.0;Rouge;Mate;;;
