@@ -16,4 +16,4 @@ idRevetement;designation;pourMur(0/1);pourSol(0/1);pourPlafond(0/1);prixUnitaire
 15;Moquette;0;1;0;48.10
 16;Stratifie;0;1;0;31.99
 17;Gazon;0;1;0;17.95
-18;Liege;0;1;0;33.90
+18;Liege;0;1;0;33.90REVETEMENT;Revetement_e8d45af6-19bc-4fde-9ef8-a71db7814a4f;Peinture;1;0;0;15.5

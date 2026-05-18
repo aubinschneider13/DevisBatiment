@@ -38,6 +38,7 @@ public class Piece extends ElementDeConstruction {
 
         double surface   = calculerSurfaceTotale();
         this.sol         = new Sol(surface);
+        this.sol.setPolygonePiece(this.points);
         this.plafond     = new Plafond(surface);
     }
 

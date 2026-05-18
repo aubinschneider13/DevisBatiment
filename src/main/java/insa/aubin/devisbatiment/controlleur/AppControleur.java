@@ -210,6 +210,15 @@ public class AppControleur {
         NavigateurView nav = appView.getNavigateurView();
         ToolBarDevisView tbDevis = appView.getToolBarDevisView();
 
+        if (item == nav.getRootItem()) {
+            if (immeuble != null) {
+                double total = immeuble.calculerDevisTotal();
+                tbDevis.getLabelTotalDevis().setText(
+                        String.format("TOTAL IMMEUBLE : %.2f €", total));
+            }
+            return;
+        }
+
         // --- Clic sur "Aire de l'immeuble" ---
         if (item == nav.getItemAire()) {
             basculerContexte(new ContexteAire(immeubleControleur, appView, this));

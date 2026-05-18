@@ -23,8 +23,8 @@ public abstract class SurfaceAvecRevetement extends ElementDeConstruction {
         }
     }
 
-    public float calculerPrixRevetement() {
-        float total = 0;
+    public double calculerPrixRevetement() {
+        double total = 0;
         for (Revetement r : revetements) {
             total += r.calculerPrixTotal(calculerSurface());
         }

@@ -79,6 +79,16 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         return surfaceBrute - surfaceOuverture;
     }
 
+    // Dans Mur.java — surcharger calculerPrixRevetement()
+    @Override
+    public double calculerPrixRevetement() {
+        double total = 0;
+        for (Revetement r : getRevetements()) {
+            total += (float) r.calculerPrixTotal(calculerSurfaceNette());
+        }
+        return total;
+    }
+
     /** Calcule la distance la plus courte entre un point et ce segment de mur */
     public double distanceA(Point p) {
         double x1 = point1.getX(), y1 = point1.getY();

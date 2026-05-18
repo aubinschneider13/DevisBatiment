@@ -1,7 +1,6 @@
 package insa.aubin.devisbatiment.view;
 
-import insa.aubin.devisbatiment.modele.Dessin;
-import insa.aubin.devisbatiment.modele.Fantome;
+import insa.aubin.devisbatiment.modele.*;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -13,9 +12,6 @@ import javafx.scene.text.Font;
 import javafx.scene.transform.Affine;
 import java.util.ArrayList;
 import java.util.List;
-import insa.aubin.devisbatiment.modele.SurfaceAvecRevetement;
-import insa.aubin.devisbatiment.modele.Mur;
-import insa.aubin.devisbatiment.modele.Sol;
 
 public class DessinCanvas extends Canvas {
 
@@ -175,16 +171,20 @@ public class DessinCanvas extends Canvas {
 
         if (selection != null) {
             for (SurfaceAvecRevetement surface : selection) {
-                if (surface instanceof Mur) {
-                    Mur m = (Mur) surface;
-                    gc.setStroke(Color.web("#00E5FF", 0.6)); // Cyan semi-transparent très visible
-                    gc.setLineWidth(0.4); // Plus épais qu'un mur normal pour bien l'entourer
+                if (surface instanceof Mur m) {
+                    gc.setStroke(Color.web("#00E5FF", 0.6));
+                    gc.setLineWidth(0.4);
                     gc.strokeLine(m.getPoint1().getX(), m.getPoint1().getY(),
                             m.getPoint2().getX(), m.getPoint2().getY());
+                } else if (surface instanceof Sol sol) {
+                    List<Point> poly = sol.getPolygonePiece();
+                    if (poly != null && poly.size() >= 3) {
+                        double[] xs = poly.stream().mapToDouble(Point::getX).toArray();
+                        double[] ys = poly.stream().mapToDouble(Point::getY).toArray();
+                        gc.setFill(Color.web("#00E5FF", 0.25));
+                        gc.fillPolygon(xs, ys, poly.size());
+                    }
                 }
-                // Note : Pour le 'Sol', le retour visuel est plus complexe car il faut
-                // redessiner le polygone de la pièce. Vous pouvez le laisser invisible
-                // pour l'instant ou afficher une alerte textuelle.
             }
         }
 
