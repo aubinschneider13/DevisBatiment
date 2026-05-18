@@ -57,7 +57,7 @@ public class CatalogueRevetements {
                         double prix = Double.parseDouble(tokens[5].trim());
 
                         // Création et ajout à la liste
-                        Revetement r = new Revetement(designation, pourMur, pourSol, pourPlafond, prix);
+                        Revetement r = new Revetement(id, designation, pourMur, pourSol, pourPlafond, prix);
                         listeRevetements.add(r);
 
                     } catch (NumberFormatException e) {

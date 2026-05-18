@@ -16,6 +16,9 @@ public abstract class ElementDeConstruction {
     public String genererId(String prefixe) {
         return prefixe + "_" + java.util.UUID.randomUUID().toString();
     }
+    protected void setId(String id) {
+        this.id = id;
+    }
 
     public abstract String toCSV();
 

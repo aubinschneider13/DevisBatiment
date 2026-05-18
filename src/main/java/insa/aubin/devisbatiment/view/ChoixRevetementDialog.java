@@ -100,8 +100,9 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
                 double prix = Double.parseDouble(prixStr);
                 // Génération d'un ID unique temporaire ou séquentiel
                 //String nouvelId = String.valueOf((int)(Math.random() * 10000) + 100);
+                String nouvelId = UUID.randomUUID().toString();
 
-                Revetement nouveau = new Revetement(designation,
+                Revetement nouveau = new Revetement(nouvelId, designation,
                         chkMur.isSelected(), chkSol.isSelected(), chkPlafond.isSelected(), prix);
 
                 // Ajout et sauvegarde

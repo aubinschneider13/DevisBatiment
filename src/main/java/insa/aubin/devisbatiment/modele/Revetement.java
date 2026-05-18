@@ -7,8 +7,9 @@ public class Revetement extends ElementDeConstruction {
     private boolean pourPlafond;
     private double prixUnitaire;
 
-    public Revetement(String designation, boolean pourMur, boolean pourSol, boolean pourPlafond, double prixUnitaire){
+    public Revetement(String idFixe, String designation, boolean pourMur, boolean pourSol, boolean pourPlafond, double prixUnitaire){
         super("Revetement");
+        super.setId(idFixe);
         this.designation = designation;
         this.pourMur = pourMur;
         this.pourSol = pourSol;
