@@ -30,7 +30,7 @@ public class ContextePiece implements Contexte {
 
     /** Identifiants des boutons affichés dans ce contexte (ordre = ordre toolbar). */
     private static final List<String> BOUTONS = List.of(
-            "navigation", "echelle", "mur", "piece"
+            "navigation", "echelle", "mur", "piece","porte","fenetre"
     );
 
     // --- Dépendances ---
@@ -146,12 +146,18 @@ public class ContextePiece implements Contexte {
             pieceControleur.activerModePiece();
         }
     }
+    
+    @Override
+    public void onBtnPorte() {
+        if (pieceControleur != null)
+            pieceControleur.changerEtat(PieceControleur.ETAT_PORTE);
+    }
 
-
-    /**
-     * Bascule le panneau de sélection d'échelle.
-     * Délégué à AppControleur car l'échelle est partagée entre tous les contextes.
-     */
+    @Override
+    public void onBtnFenetre() {
+        if (pieceControleur != null)
+            pieceControleur.changerEtat(PieceControleur.ETAT_FENETRE);
+    }
     
     @Override
     public void onBtnEchelle() {
