@@ -49,14 +49,13 @@ public class DessinCanvas extends Canvas {
         this.elements = new ArrayList<>();
 
         this.heightProperty().addListener(o -> {
-        if (offsetY == 0) offsetY = getHeight() / 2;  // init une seule fois
+        if (offsetY == 0) offsetY = getHeight() / 2;
             redrawAll();
         });
         this.widthProperty().addListener(o -> {
-        if (offsetX == 0) offsetX = getWidth() / 2;   // init une seule fois
+        if (offsetX == 0) offsetX = getWidth() / 2;
             redrawAll();
         });
-
         // Zoom centré sur la souris (molette)
         this.addEventHandler(ScrollEvent.SCROLL, event -> {
             double mouseX = event.getX();
