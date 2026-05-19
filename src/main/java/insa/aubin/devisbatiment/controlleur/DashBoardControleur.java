@@ -85,11 +85,9 @@ public class DashBoardControleur {
         if (!gestionnaire.isSauvegardeActive()) return;
 
         List<Immeuble> immeubles = gestionnaire.chargerTousBatiments();
-        HBox boite = dashBoardView.getDevisRecentsBox();
 
         for (Immeuble immeuble : immeubles) {
-            Button btn = creerBoutonDevis(immeuble);
-            boite.getChildren().add(btn);
+            creerBoutonDevis(immeuble); // gère lui-même l'ajout à la HBox
         }
     }
 
@@ -110,9 +108,27 @@ public class DashBoardControleur {
             "-fx-font-weight: bold; -fx-text-fill: #34495e;"
         );
         btn.setPrefSize(120, 100);
-
         btn.setOnAction(e -> ouvrirImmeuble(immeuble));
-        return btn;
+
+        // Bouton de suppression
+        Button btnSuppr = new Button("✕");
+        btnSuppr.setStyle(
+            "-fx-cursor: hand; -fx-background-color: transparent; " +
+            "-fx-text-fill: #e74c3c; -fx-font-weight: bold; -fx-font-size: 18px;"
+        );
+        
+        btnSuppr.setOnAction(e -> {
+            gestionnaire.supprimerBatiment(immeuble);
+            javafx.scene.layout.VBox conteneur =
+                (javafx.scene.layout.VBox) btn.getParent();
+            dashBoardView.getDevisRecentsBox().getChildren().remove(conteneur);
+        });
+
+        javafx.scene.layout.VBox boite = new javafx.scene.layout.VBox(2, btn, btnSuppr);
+        boite.setAlignment(javafx.geometry.Pos.CENTER);
+        dashBoardView.getDevisRecentsBox().getChildren().add(boite);
+
+        return btn; 
     }
 
     private void ouvrirImmeuble(Immeuble immeuble) {
