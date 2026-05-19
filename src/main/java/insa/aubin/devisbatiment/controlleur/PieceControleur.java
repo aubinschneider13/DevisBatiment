@@ -60,6 +60,8 @@ public class PieceControleur {
     // Pièces créées dans cet appartement
     private final List<Piece>                  pieces        = new ArrayList<>();
     private final Map<TreeItem<String>, Piece> mapItemPiece  = new HashMap<>();
+    // ✅ Ajouté : Pour relier les clones graphiques translatés aux vrais murs du modèle
+    private final Map<Mur, Mur> mapCopieVersOriginal = new HashMap<>();
 
     // Callback notifiant AppControleur lors de la création d'une pièce
     private Function<Piece, TreeItem<String>> onPieceCree = null;
@@ -247,7 +249,12 @@ public class PieceControleur {
      * pour retourner la bonne référence (celle qui impacte le devis).
      */
     private Mur retrouverVraiMurModele(Mur murCanvas) {
-        // Recherche dans les pièces actuellement gérées par le contrôleur
+        // 1. NOUVEAU : Si on est dans la vue d'une pièce (murs translatés), on utilise la map magique !
+        if (mapCopieVersOriginal.containsKey(murCanvas)) {
+            return mapCopieVersOriginal.get(murCanvas);
+        }
+
+        // 2. Recherche dans les pièces actuellement gérées par le contrôleur
         for (Piece p : pieces) {
             for (Mur m : p.getMurs()) {
                 if (sontMursIdentiques(murCanvas, m)) {
@@ -256,7 +263,7 @@ public class PieceControleur {
             }
         }
 
-        // Si on est dans le contexte global de l'appartement (qui contient toutes les pièces)
+        // 3. Si on est dans le contexte global de l'appartement
         if (appartement != null) {
             for (Piece p : appartement.getPieces()) {
                 for (Mur m : p.getMurs()) {
@@ -449,6 +456,31 @@ public class PieceControleur {
             if (itemPiece != null) mapItemPiece.put(itemPiece, piece);
         }
 
+        // --- NOUVEAU : Absorber les ouvertures existantes sur le canevas ---
+        for (Dessin d : vue.getCanvas().getElements()) {
+            if (d instanceof Mur murCanvas && !murCanvas.getListeOuvertures().isEmpty()) {
+                for (Mur murPiece : piece.getMurs()) {
+                    if (sontMursSuperposes(murCanvas, murPiece)) {
+
+                        murPiece.setTypeMur(murCanvas.getTypeMur()); // On copie le type
+
+                        for (Ouverture ouv : murCanvas.getListeOuvertures()) {
+                            // On retrouve les vraies coordonnées XY de la porte/fenêtre
+                            Point posAbsolue = murCanvas.getPointSurMur(ouv.getPositionSurMur());
+                            double tPiece = murPiece.calculerPositionSurMur(posAbsolue);
+
+                            if (tPiece >= -0.05 && tPiece <= 1.05) {
+                                double margePiece = ouv.getLargeur() / (2 * murPiece.calculerLongueur());
+                                tPiece = Math.max(margePiece, Math.min(1.0 - margePiece, tPiece));
+                                murPiece.ajouterOuverture(ouv instanceof Porte ? new Porte(tPiece) : new Fenetre(tPiece));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // -------------------------------------------------------------------
+
         vue.getCanvas().ajouterElement(creerDessinPiece(piece));
         vue.setInstructions("Pièce créée — cliquez dans une autre zone pour en ajouter une.");
         vue.redrawAll();
@@ -493,10 +525,27 @@ public class PieceControleur {
 
         double largeur = estPorte ? Porte.LARGEUR_PORTE : Fenetre.COTE_FENETRE;
         double marge   = largeur / (2 * cible.calculerLongueur());
-        double t       = Math.max(marge, Math.min(1.0 - marge,
-                cible.calculerPositionSurMur(pClic)));
+        double t       = Math.max(marge, Math.min(1.0 - marge, cible.calculerPositionSurMur(pClic)));
 
+        // 1. Ajout visuel sur le grand mur de l'appartement
         cible.ajouterOuverture(estPorte ? new Porte(t) : new Fenetre(t));
+
+        // 2. Propagation aux petits murs des pièces concernées
+        for (Piece piece : pieces) {
+            for (Mur murPiece : piece.getMurs()) {
+                if (sontMursSuperposes(cible, murPiece)) {
+                    // CRUCIAL : On force le type du mur pour éviter le blocage de sécurité de Mur.java
+                    murPiece.setTypeMur(cible.getTypeMur());
+
+                    double tPiece = murPiece.calculerPositionSurMur(pClic);
+                    if (tPiece >= -0.05 && tPiece <= 1.05) {
+                        double margePiece = largeur / (2 * murPiece.calculerLongueur());
+                        tPiece = Math.max(margePiece, Math.min(1.0 - margePiece, tPiece));
+                        murPiece.ajouterOuverture(estPorte ? new Porte(tPiece) : new Fenetre(tPiece));
+                    }
+                }
+            }
+        }
     }
 
     private void gererMouvementOuverture(Point pSouris) {
@@ -525,44 +574,67 @@ public class PieceControleur {
     // =========================================================================
 
     public void initialiserAvecContourAppartement(List<Point> polygone,
-                                                List<Mur> mursDelimiteurs,
-                                                AireImmeuble aire,
-                                                Appartement appartement) {
-      this.appartement = appartement;
-      if (polygone == null || polygone.size() < 3) return;
+                                                  List<Mur> mursDelimiteurs,
+                                                  AireImmeuble aire,
+                                                  Appartement appartement) {
+        this.appartement = appartement;
+        if (polygone == null || polygone.size() < 3) return;
 
-      // 1. Calculer la translation depuis le point le plus proche de (0,0)
-      double[] delta = calculerDeltaTranslation(polygone);
-      double dx = delta[0], dy = delta[1];
+        // 1. Calculer la translation depuis le point le plus proche de (0,0)
+        double[] delta = calculerDeltaTranslation(polygone);
+        double dx = delta[0], dy = delta[1];
 
-      // 2. Translater le polygone (copie locale pour l'affichage)
-      List<Point> polygoneAffichage = new ArrayList<>();
-      for (Point p : polygone) {
-          polygoneAffichage.add(new Point(p.getX() - dx, p.getY() - dy));
-      }
-      this.polygoneAppartement = polygoneAffichage;
+        // 2. Translater le polygone (copie locale pour l'affichage)
+        List<Point> polygoneAffichage = new ArrayList<>();
+        for (Point p : polygone) {
+            polygoneAffichage.add(new Point(p.getX() - dx, p.getY() - dy));
+        }
+        this.polygoneAppartement = polygoneAffichage;
 
-      // 3. Créer des copies des murs translatées (affichage uniquement)
-      List<Mur> mursAffichage = new ArrayList<>();
-      List<double[]> cotesBatiment = extraireCotesBatiment(aire);
-      for (Mur mur : mursDelimiteurs) {
-          Mur copie = new Mur(
-              new Point(mur.getPoint1().getX() - dx, mur.getPoint1().getY() - dy),
-              new Point(mur.getPoint2().getX() - dx, mur.getPoint2().getY() - dy)
-          );
-          boolean exterieur = cotesBatiment.stream().anyMatch(c -> murInclsDansCote(mur, c));
-          copie.setTypeMur(exterieur ? Mur.TypeMur.EXTERIEUR : Mur.TypeMur.NORMAL);
-          mursAffichage.add(copie);
-      }
+        // 3. Créer des copies des murs translatées avec OUVERTURES et REVÊTEMENTS
+        List<Mur> mursAffichage = new ArrayList<>();
+        List<double[]> cotesBatiment = extraireCotesBatiment(aire);
 
-      // 4. Ajouter au canvas
-      vue.getCanvas().getElements().add(0, creerFondAppartement(polygoneAffichage));
-      for (Mur copie : mursAffichage) {
-          vue.getCanvas().getElements().add(copie);
-      }
+        for (Mur murOriginal : mursDelimiteurs) {
+            Mur copie = new Mur(
+                    new Point(murOriginal.getPoint1().getX() - dx, murOriginal.getPoint1().getY() - dy),
+                    new Point(murOriginal.getPoint2().getX() - dx, murOriginal.getPoint2().getY() - dy)
+            );
 
-      vue.getCanvas().redrawAll();
-  }
+            // Définir le type AVANT d'ajouter les ouvertures (pour passer la sécurité de Mur.java)
+            boolean exterieur = cotesBatiment.stream().anyMatch(c -> murInclsDansCote(murOriginal, c));
+            copie.setTypeMur(exterieur ? Mur.TypeMur.EXTERIEUR : Mur.TypeMur.NORMAL);
+
+            // --- FIX 1 : COPIER LES OUVERTURES SUR LE CLONE ---
+            for (Ouverture ouv : murOriginal.getListeOuvertures()) {
+                if (ouv instanceof Porte) {
+                    copie.ajouterOuverture(new Porte(ouv.getPositionSurMur()));
+                } else if (ouv instanceof Fenetre) {
+                    copie.ajouterOuverture(new Fenetre(ouv.getPositionSurMur()));
+                }
+            }
+
+            // --- FIX 2 : COPIER LES REVÊTEMENTS SUR LE CLONE (pour l'affichage en vert) ---
+            if (murOriginal.getRevetements() != null) {
+                for (Revetement r : murOriginal.getRevetements()) {
+                    copie.ajouterRevetement(r);
+                }
+            }
+
+            // --- FIX 3 : GARDER LE LIEN VERS L'ORIGINAL ---
+            mapCopieVersOriginal.put(copie, murOriginal);
+
+            mursAffichage.add(copie);
+        }
+
+        // 4. Ajouter au canvas
+        vue.getCanvas().getElements().add(0, creerFondAppartement(polygoneAffichage));
+        for (Mur copie : mursAffichage) {
+            vue.getCanvas().getElements().add(copie);
+        }
+
+        vue.getCanvas().redrawAll();
+    }
 
     private Dessin creerFondAppartement(List<Point> polygone) {
         return new Dessin() {
@@ -724,4 +796,36 @@ public class PieceControleur {
     public Map<TreeItem<String>, Piece> getMapItemPiece() { return mapItemPiece; }
 
     public void rafraichirNavigateur() { }
+
+    // =========================================================================
+    // SYNCHRONISATION DES OUVERTURES (Murs Graphiques <-> Murs Métier)
+    // =========================================================================
+
+    private boolean sontMursSuperposes(Mur murParent, Mur sousMur) {
+        return estPointSurSegment(sousMur.getPoint1(), murParent) &&
+                estPointSurSegment(sousMur.getPoint2(), murParent);
+    }
+
+    private boolean estPointSurSegment(Point p, Mur m) {
+        double x1 = m.getPoint1().getX(), y1 = m.getPoint1().getY();
+        double x2 = m.getPoint2().getX(), y2 = m.getPoint2().getY();
+        double px = p.getX(), py = p.getY();
+
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double len2 = dx * dx + dy * dy;
+        if (len2 < 1e-6) return false;
+
+        // VRAIE DISTANCE : on divise par la longueur du mur pour la tolérance (5 cm)
+        double cross = (px - x1) * dy - (py - y1) * dx;
+        double dist = Math.abs(cross) / Math.sqrt(len2);
+        if (dist > 0.05) return false;
+
+        // On vérifie que le point est bien coincé entre les extrémités
+        double dot = (px - x1) * dx + (py - y1) * dy;
+        if (dot < -0.05 || dot > len2 + 0.05) return false;
+
+        return true;
+    }
+
 }
