@@ -11,6 +11,7 @@ import javafx.stage.Stage;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,38 +61,66 @@ public class AppControleur {
     private final Map<Piece, ContexteSousPiece> contexteSousPieces = new HashMap<>();
 
     public AppControleur(AppView appView, Stage stage,
-                         GestionnaireSauvegarde gestionnaire) {
+                        GestionnaireSauvegarde gestionnaire) {
+       this.appView      = appView;
+       this.stage        = stage;
+       this.gestionnaire = gestionnaire;
+       this.catalogue    = new CatalogueRevetements("src/main/resources/data/revetements.txt");
+
+       brancherToolBar();
+       brancherToolBarDevis();
+       brancherNavigateur();
+
+       appView.setOnKeyPressed(e -> {
+           if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) onEchap();
+       });
+
+       immeubleControleur = new ImmeubleControleur(
+               appView.getCanvasAire(), appView, gestionnaire);
+
+       basculerContexte(new ContexteAire(immeubleControleur, appView, this));
+
+       // Le dialog n'est lancé que pour un nouveau projet
+       Platform.runLater(this::demanderNomImmeuble);
+   }
+    
+    // Constructeur rechargement — NE PAS appeler this(), tout redéfinir
+    public AppControleur(AppView appView, Stage stage,
+                         GestionnaireSauvegarde gestionnaire, Immeuble immeubleExistant) {
         this.appView      = appView;
         this.stage        = stage;
         this.gestionnaire = gestionnaire;
+        this.catalogue    = new CatalogueRevetements("src/main/resources/data/revetements.txt");
 
-        // Initialisation du catalogue
-        this.catalogue = new CatalogueRevetements("src/main/resources/data/revetements.txt");
-
-        // Branchement de la toolbar Construction
         brancherToolBar();
-
-        // Branchement de la toolbar Devis
         brancherToolBarDevis();
-
-        // Branchement du TreeView
         brancherNavigateur();
 
-        // Raccourci Échap : annule un dessin en cours dans n'importe quel contexte
         appView.setOnKeyPressed(e -> {
-            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
-                onEchap();
-            }
+            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) onEchap();
         });
 
-        // Instanciation d'ImmeubleControleur (gestion du canvas de l'aire uniquement)
         immeubleControleur = new ImmeubleControleur(
-                appView.getCanvasAire(), appView, gestionnaire
-        );
+                appView.getCanvasAire(), appView, gestionnaire);
 
-        // Démarrage : contexte Aire + saisie du nom de l'immeuble
+        // Restaurer l'aire depuis l'immeuble chargé
+        AireImmeuble aire = new AireImmeuble(immeubleExistant.getPoint1());
+        aire.setP2(immeubleExistant.getPoint2());
+        aire.setP3(immeubleExistant.getPoint3());
+        aire.valider();
+        immeubleControleur.setAireImmeuble(aire);
+
+        this.immeuble = immeubleExistant;
+
+        // Mettre à jour le navigateur
+        appView.getNavigateurView().setNomImmeuble(immeubleExistant.getNomBatiment());
+        appView.activerVoile();
+
+        // Reconstruire niveaux + appartements + pièces dans l'UI
+        rechargerNiveaux(immeubleExistant);
+
+        // Démarrer sur le contexte Aire (voile actif, lecture seule)
         basculerContexte(new ContexteAire(immeubleControleur, appView, this));
-        Platform.runLater(this::demanderNomImmeuble);
     }
 
     // =========================================================================
@@ -243,14 +272,21 @@ public class AppControleur {
             Appartement appart = ctrl.getMapItemAppartement().get(item);
             if (appart != null) {
                 itemNiveauActif = itemsNiveau.get(i);
+
+                boolean estNouveau = !contextePieces.containsKey(appart); // ← avant computeIfAbsent
+
                 ContextePiece ctx = contextePieces.computeIfAbsent(appart, a ->
                         new ContextePiece(a, appView, this, stage, gestionnaire, item)
                 );
                 basculerContexte(ctx);
 
-                // ✅ Met à jour la barre d'outils devis avec le prix cumulé de l'appartement
+                if (estNouveau && !appart.getPieces().isEmpty()) {
+                    ctx.getPieceControleur().rechargerPieces(appart.getPieces());
+                }
+
                 double totalDevis = appart.calculerDevis();
-                tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
+                tbDevis.getLabelTotalDevis().setText(
+                        String.format("Total estimé : %.2f €", totalDevis));
                 return;
             }
         }
@@ -279,6 +315,9 @@ public class AppControleur {
         String nom   = extraireNomImmeuble(label);
         immeuble = new Immeuble(nom, immeubleControleur.getAireImmeuble());
 
+        // Sauvegarde immédiate du bâtiment
+        gestionnaire.sauvegarderBatiment(immeuble);
+
         appView.activerVoile();
         basculerContexte(new ContexteAire(immeubleControleur, appView, this));
     }
@@ -287,6 +326,9 @@ public class AppControleur {
         if (immeuble == null) return;
 
         Niveau niveau = immeuble.ajouterNiveau(2.5);
+
+        // Sauvegarde du niveau
+        gestionnaire.sauvegarderNiveau(niveau, immeuble);
 
         String nomNiveau = niveauControleurs.isEmpty()
                 ? "RDC"
@@ -308,6 +350,10 @@ public class AppControleur {
         ctrl.setOnAppartementCree(appart -> {
             TreeItem<String> itemAppart = appView.getNavigateurView()
                     .ajouterItemAppartement(itemNiveau, appart.toString());
+
+            // Sauvegarde de l'appartement dès sa création
+            gestionnaire.sauvegarderAppartement(appart, niveau, immeuble);
+
             return itemAppart;
         });
 
@@ -399,8 +445,69 @@ public class AppControleur {
     }
 
     public void enregistrerPiece(TreeItem<String> itemPiece, Piece piece,
-                                 TreeItem<String> itemAppart) {
-        mapItemPiece.put(itemPiece, piece);
-        mapPieceVersAppart.put(itemPiece, itemAppart);
+                                TreeItem<String> itemAppart) {
+       mapItemPiece.put(itemPiece, piece);
+       mapPieceVersAppart.put(itemPiece, itemAppart);
+
+       // Retrouver l'appartement et le niveau correspondants pour la sauvegarde
+       for (int i = 0; i < niveauControleurs.size(); i++) {
+           NiveauControleur ctrl = niveauControleurs.get(i);
+           Appartement appart = ctrl.getMapItemAppartement().get(itemAppart);
+           if (appart != null) {
+               Niveau niveau = immeuble.getNiveaux().get(i);
+               gestionnaire.sauvegarderPiece(piece, appart, niveau, immeuble);
+               return;
+           }
+       }
+   }
+    
+    private void rechargerNiveaux(Immeuble immeuble) {
+        for (Niveau niveau : immeuble.getNiveaux()) {
+            String nomNiveau = niveauControleurs.isEmpty()
+                    ? "RDC" : "Niveau " + niveauControleurs.size();
+
+            TreeItem<String> itemNiveau =
+                    appView.getNavigateurView().ajouterItemNiveau(nomNiveau);
+            itemsNiveau.add(itemNiveau);
+
+            NiveauView niveauView = new NiveauView();
+            NiveauControleur ctrl = new NiveauControleur(
+                    niveauView,
+                    immeubleControleur.getAireImmeuble(),
+                    itemNiveau,
+                    niveau
+            );
+
+            // Construire la map itemAppart → Appartement pour ce niveau
+            Map<TreeItem<String>, Appartement> mapApparts = new LinkedHashMap<>();
+
+            for (Appartement appart : niveau.getAppartements()) {
+                TreeItem<String> itemAppart = appView.getNavigateurView()
+                        .ajouterItemAppartement(itemNiveau, appart.toString());
+                mapApparts.put(itemAppart, appart);
+
+                // Pièces
+                for (Piece piece : appart.getPieces()) {
+                    TreeItem<String> itemPiece = appView.getNavigateurView()
+                            .ajouterItemPiece(itemAppart, piece.toString());
+                    mapItemPiece.put(itemPiece, piece);
+                    mapPieceVersAppart.put(itemPiece, itemAppart);
+                }
+            }
+
+            // ← Réinjecter appartements + dessins dans le canvas du niveau
+            ctrl.rechargerAppartements(niveau.getAppartements(), mapApparts);
+
+            // Callback pour les nouveaux appartements ajoutés après rechargement
+            final Niveau niveauFinal = niveau;
+            ctrl.setOnAppartementCree(appart -> {
+                TreeItem<String> itemAppart = appView.getNavigateurView()
+                        .ajouterItemAppartement(itemNiveau, appart.toString());
+                gestionnaire.sauvegarderAppartement(appart, niveauFinal, immeuble);
+                return itemAppart;
+            });
+
+            niveauControleurs.add(ctrl);
+        }
     }
 }

@@ -12,6 +12,12 @@ import javafx.stage.Stage;
 import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
 import insa.aubin.devisbatiment.view.SettingsView;
 import insa.aubin.devisbatiment.controlleur.SettingsControleur;
+import insa.aubin.devisbatiment.modele.Immeuble;
+import java.util.List;
+import javafx.scene.control.Button;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 
 public class DashBoardControleur {
@@ -25,6 +31,7 @@ public class DashBoardControleur {
         this.gestionnaire = gestionnaire;
         creerImmeuble();
         configurerSettings();
+        chargerDevisRecents();
     }
 
     public void creerImmeuble(){
@@ -72,5 +79,48 @@ public class DashBoardControleur {
         settingsStage.setScene(settingsScene);
         settingsStage.show();
         settingsStage.sizeToScene();
+    }
+    
+    private void chargerDevisRecents() {
+        if (!gestionnaire.isSauvegardeActive()) return;
+
+        List<Immeuble> immeubles = gestionnaire.chargerTousBatiments();
+        HBox boite = dashBoardView.getDevisRecentsBox();
+
+        for (Immeuble immeuble : immeubles) {
+            Button btn = creerBoutonDevis(immeuble);
+            boite.getChildren().add(btn);
+        }
+    }
+
+    private Button creerBoutonDevis(Immeuble immeuble) {
+        Image icone = new Image(
+            getClass().getResource("/images/immeuble_icone.png").toExternalForm()
+        );
+        ImageView img = new ImageView(icone);
+        img.setFitWidth(50);
+        img.setFitHeight(50);
+        img.setPreserveRatio(true);
+
+        Button btn = new Button(immeuble.getNomBatiment());
+        btn.setGraphic(img);
+        btn.setContentDisplay(javafx.scene.control.ContentDisplay.TOP);
+        btn.setStyle(
+            "-fx-cursor: hand; -fx-font-family: 'Arial'; " +
+            "-fx-font-weight: bold; -fx-text-fill: #34495e;"
+        );
+        btn.setPrefSize(120, 100);
+
+        btn.setOnAction(e -> ouvrirImmeuble(immeuble));
+        return btn;
+    }
+
+    private void ouvrirImmeuble(Immeuble immeuble) {
+        AppView appView = new AppView();
+        Scene scene = new Scene(appView);
+        stage.setScene(scene);
+        stage.setTitle("InsaBuilder - " + immeuble.getNomBatiment());
+        new AppControleur(appView, stage, gestionnaire, immeuble); // ← surcharge avec immeuble existant
+        mettreFenetrePleinEcran();
     }
 }

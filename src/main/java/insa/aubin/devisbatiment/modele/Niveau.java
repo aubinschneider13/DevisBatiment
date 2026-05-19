@@ -76,7 +76,9 @@ public class Niveau extends ElementDeConstruction {
 
     @Override
     public String toCSV() {
-        return "NIVEAU;" + getId() + ";" + getNbAppartements() + ";" + hauteurPlafond;
+        return String.format(java.util.Locale.US,
+            "NIVEAU;%s;%d;%.2f",
+            getId(), getNbAppartements(), hauteurPlafond);
     }
 
     @Override

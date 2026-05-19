@@ -105,18 +105,18 @@ public class Piece extends ElementDeConstruction {
     @Override
     public String toCSV() {
         StringBuilder sb = new StringBuilder();
-        sb.append("PIECE;")
-                .append(getId()).append(";")
-                .append(hauteurPlafond);
+        sb.append(String.format(java.util.Locale.US,
+            "PIECE;%s;%d;%.2f;%.2f",
+            getId(), numero, calculerSurfaceTotale(), hauteurPlafond));
         for (Point p : points) {
-            sb.append(";").append(p.getX())
-                    .append(";").append(p.getY());
+            sb.append(String.format(java.util.Locale.US, ";%.2f;%.2f", p.getX(), p.getY()));
         }
         return sb.toString();
     }
 
     @Override
     public String toString() {
-        return "Pièce " + numero;
+        return "Pièce " + numero
+             + String.format(" (%.1f m²)", calculerSurfaceTotale());
     }
 }

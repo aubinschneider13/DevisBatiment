@@ -249,19 +249,16 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
 
     @Override
     public String toCSV() {
-        // --- NOUVEAU : Sauvegarde du revêtement (ID) ---
-        String baseCSV = "MUR;" + super.toCSV() // L'appel à super.toCSV() gère probablement déjà l'ID de la classe parente
-                + ";" + point1.getX() + ";" + point1.getY()
-                + ";" + point2.getX() + ";" + point2.getY()
-                + ";" + hauteur;
-
-        // Si le mur a un revêtement, on ajoute son identifiant à la fin de la ligne
+        String base = String.format(java.util.Locale.US,
+            "MUR;%s;%.2f;%.2f;%.2f;%.2f;%.2f",
+            super.getId(),
+            point1.getX(), point1.getY(),
+            point2.getX(), point2.getY(),
+            hauteur);
         if (getRevetements() != null && !getRevetements().isEmpty()) {
-            String idRevetement = getRevetements().get(0).getId();
-            return baseCSV + ";" + idRevetement;
-        } else {
-            return baseCSV + ";VIDE"; // Sinon, on indique "VIDE" pour faciliter la relecture
+            return base + ";" + getRevetements().get(0).getId();
         }
+        return base + ";VIDE";
     }
 
     @Override

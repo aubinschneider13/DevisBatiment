@@ -420,6 +420,26 @@ public class NiveauControleur {
             vue.setInstructions("Mode libre — cliquez pour le début du mur");
         }
     }
+   
+   public void rechargerAppartements(List<Appartement> appartementsCharges,
+                                      Map<TreeItem<String>, Appartement> mapItems) {
+       for (Map.Entry<TreeItem<String>, Appartement> entry : mapItems.entrySet()) {
+           Appartement appart = entry.getValue();
+           appartements.add(appart);
+           mapItemAppartement.put(entry.getKey(), appart);
+
+           // Ajouter les murs de l'appartement au canvas (pour que le dessin soit complet)
+           for (Mur mur : appart.getMursDelimiteurs()) {
+               if (!vue.getCanvas().getElements().contains(mur)) {
+                   vue.getCanvas().getElements().add(mur);
+               }
+           }
+
+           // Ajouter le polygone coloré de l'appartement
+           vue.getCanvas().getElements().add(appart);
+       }
+       vue.getCanvas().redrawAll();
+   }
 
     // =========================================================================
     // GETTERS

@@ -320,4 +320,23 @@ public class ImmeubleControleur {
      */
     public DessinCanvas getCanvas() { return canvas; }
     
+    // À ajouter dans ImmeubleControleur
+    public void setAireImmeuble(AireImmeuble aire) {
+        this.aireImmeuble = aire;
+        this.etapeAire    = 3;
+        this.aireValidee  = true;
+
+        // Débrancher les listeners souris — l'aire chargée n'est pas modifiable
+        canvas.setOnMouseClicked(null);
+        canvas.setOnMouseMoved(null);
+        canvas.setOnMousePressed(null);
+        canvas.setOnMouseDragged(null);
+        canvas.setOnMouseReleased(null);
+
+        // Afficher l'aire sur le canvas
+        canvas.getElements().clear();
+        canvas.ajouterElement(aire);
+        canvas.redrawAll();
+    }
+    
 }
