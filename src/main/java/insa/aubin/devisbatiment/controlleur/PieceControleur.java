@@ -527,16 +527,20 @@ public class PieceControleur {
         double marge   = largeur / (2 * cible.calculerLongueur());
         double t       = Math.max(marge, Math.min(1.0 - marge, cible.calculerPositionSurMur(pClic)));
 
-        // 1. Ajout visuel sur le grand mur de l'appartement
+        // 1. Ajout visuel sur le canvas
         cible.ajouterOuverture(estPorte ? new Porte(t) : new Fenetre(t));
 
-        // 2. Propagation aux petits murs des pièces concernées
+        // 2. Si on est dans la vue d'une pièce, on sécurise l'ajout dans le vrai mur en mémoire
+        Mur vraiMur = retrouverVraiMurModele(cible);
+        if (vraiMur != null && vraiMur != cible) {
+            vraiMur.ajouterOuverture(estPorte ? new Porte(t) : new Fenetre(t));
+        }
+
+        // 3. Si on est dans la vue Appartement, on propage la découpe aux sous-murs des pièces
         for (Piece piece : pieces) {
             for (Mur murPiece : piece.getMurs()) {
                 if (sontMursSuperposes(cible, murPiece)) {
-                    // CRUCIAL : On force le type du mur pour éviter le blocage de sécurité de Mur.java
                     murPiece.setTypeMur(cible.getTypeMur());
-
                     double tPiece = murPiece.calculerPositionSurMur(pClic);
                     if (tPiece >= -0.05 && tPiece <= 1.05) {
                         double margePiece = largeur / (2 * murPiece.calculerLongueur());
@@ -826,6 +830,62 @@ public class PieceControleur {
         if (dot < -0.05 || dot > len2 + 0.05) return false;
 
         return true;
+    }
+
+    /** Remonte les portes/fenêtres des pièces vers la grande vue Appartement */
+    public void synchroniserOuverturesVersAppartement() {
+        if (appartement == null) return;
+
+        for (Dessin d : vue.getCanvas().getElements()) {
+            if (d instanceof Mur murCanvas) {
+                murCanvas.getListeOuvertures().clear(); // Nettoyage pour éviter les doublons
+
+                for (Piece piece : appartement.getPieces()) {
+                    for (Mur murPiece : piece.getMurs()) {
+                        if (sontMursSuperposes(murCanvas, murPiece)) {
+                            for (Ouverture ouv : murPiece.getListeOuvertures()) {
+                                Point posAbsolue = murPiece.getPointSurMur(ouv.getPositionSurMur());
+                                double tCanvas = murCanvas.calculerPositionSurMur(posAbsolue);
+
+                                if (tCanvas >= -0.05 && tCanvas <= 1.05) {
+                                    double marge = ouv.getLargeur() / (2 * murCanvas.calculerLongueur());
+                                    tCanvas = Math.max(marge, Math.min(1.0 - marge, tCanvas));
+
+                                    // Anti-doublons (si le mur est partagé par deux pièces)
+                                    boolean existe = false;
+                                    for(Ouverture oExist : murCanvas.getListeOuvertures()) {
+                                        if (Math.abs(oExist.getPositionSurMur() - tCanvas) < 0.01) {
+                                            existe = true; break;
+                                        }
+                                    }
+
+                                    if (!existe) {
+                                        murCanvas.ajouterOuverture(ouv instanceof Porte ? new Porte(tCanvas) : new Fenetre(tCanvas));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        vue.redrawAll();
+    }
+
+    /** Descend les portes/fenêtres de l'Appartement vers les clones de la vue Pièce */
+    public void synchroniserOuverturesVersPiece() {
+        if (mapCopieVersOriginal.isEmpty()) return;
+
+        for (Map.Entry<Mur, Mur> entry : mapCopieVersOriginal.entrySet()) {
+            Mur clone = entry.getKey();
+            Mur original = entry.getValue();
+
+            clone.getListeOuvertures().clear();
+            for (Ouverture ouv : original.getListeOuvertures()) {
+                clone.ajouterOuverture(ouv instanceof Porte ? new Porte(ouv.getPositionSurMur()) : new Fenetre(ouv.getPositionSurMur()));
+            }
+        }
+        vue.redrawAll();
     }
 
 }

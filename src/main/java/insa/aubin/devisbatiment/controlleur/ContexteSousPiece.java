@@ -161,4 +161,8 @@ public class ContexteSousPiece implements Contexte {
     public Piece getPiece() {
         return piece;
     }
+
+    public PieceControleur getPieceControleur() {
+        return pieceControleur;
+    }
 }

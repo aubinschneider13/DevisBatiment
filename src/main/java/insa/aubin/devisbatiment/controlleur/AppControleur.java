@@ -304,6 +304,8 @@ public class AppControleur {
                 );
                 basculerContexte(ctx);
 
+                ctx.getPieceControleur().synchroniserOuverturesVersAppartement();
+
                 if (estNouveau && !appart.getPieces().isEmpty()) {
                     ctx.getPieceControleur().rechargerPieces(appart.getPieces());
                 }
@@ -321,7 +323,11 @@ public class AppControleur {
             ContexteSousPiece ctx = contexteSousPieces.computeIfAbsent(piece, p ->
                     new ContexteSousPiece(p, appView, this, stage, gestionnaire)
             );
+
             basculerContexte(ctx);
+
+            ctx.getPieceControleur().synchroniserOuverturesVersPiece();
+
             double totalDevis = piece.calculerDevis();
             tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
             nav.afficherProprietesPiece(piece);
