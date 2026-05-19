@@ -150,6 +150,13 @@ public class ContexteSousPiece implements Contexte {
             pieceControleur.changerEtat(PieceControleur.ETAT_RIEN); // Repasse en mode normal
         }
     }
+    
+    public void onEchap() {
+        if (pieceControleur != null) {
+            pieceControleur.annulerConstruction();
+            pieceControleur.changerEtat(PieceControleur.ETAT_RIEN);
+        }
+    }
 
     public Piece getPiece() {
         return piece;

@@ -423,6 +423,11 @@ public class AppControleur {
             ctx.getNiveauControleur().annulerMurEnCours();
         } else if (contexteActif instanceof ContexteAire) {
             immeubleControleur.annulerAire();
+        } else if (contexteActif instanceof ContexteSousPiece ctx) {
+            ctx.onEchap();
+        } else if (contexteActif instanceof ContextePiece ctx) {
+            ctx.getPieceControleur().annulerConstruction();
+            ctx.getPieceControleur().changerEtat(PieceControleur.ETAT_RIEN);
         }
     }
 
