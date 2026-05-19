@@ -20,6 +20,9 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
         VBox root = new VBox(15);
         root.setPadding(new Insets(15));
 
+        // CORRECTION : On agrandit la fenêtre par défaut pour éviter la barre de défilement horizontale
+        root.setPrefWidth(600);
+
         // --- SECTION 1 : LISTE DES REVÊTEMENTS EXISTANTS ---
         Label lblListe = new Label("Catalogue disponible :");
         ListView<Revetement> listView = new ListView<>();
@@ -32,6 +35,7 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
                     setText(null);
+                    setGraphic(null); // Nettoyage propre
                 } else {
                     StringBuilder sb = new StringBuilder();
                     sb.append(String.format("%s - %.2f €/m²", item.getDesignation(), item.getPrixUnitaire()));
@@ -42,7 +46,11 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
                     } else if (item instanceof Parquet pq) {
                         sb.append(String.format("  [ Bois : %s | Finition : %s ]", pq.getEssenceBois(), pq.getFinition()));
                     }
+
                     setText(sb.toString());
+
+                    // CORRECTION : Force le texte très long à passer à la ligne suivante
+                    setWrapText(true);
                 }
             }
         });
@@ -111,13 +119,21 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
         btnAjouter.setOnAction(e -> {
             String designation = txtDesignation.getText().trim();
             String prixStr = txtPrix.getText().trim().replace(",", ".");
+
             if (designation.isEmpty() || prixStr.isEmpty()) {
-                showAlert("Erreur", "Veuillez remplir le nom et le prix."); return;
+                showAlert("Erreur", "Veuillez remplir le nom et le prix.");
+                return;
+            }
+
+            // CORRECTION : On vérifie qu'au moins une surface est cochée
+            if (!chkMur.isSelected() && !chkSol.isSelected() && !chkPlafond.isSelected()) {
+                showAlert("Erreur", "Le matériau doit être applicable sur au moins une surface (Mur, Sol ou Plafond).");
+                return;
             }
 
             try {
                 double prix = Double.parseDouble(prixStr);
-                String nouvelId = catalogue.genererNouvelId(); // <-- L'ID est maintenant généré proprement !
+                String nouvelId = catalogue.genererNouvelId();
                 String attr1 = txtAttr1.getText().trim();
                 String attr2 = txtAttr2.getText().trim();
 
@@ -137,7 +153,7 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
                 chkMur.setSelected(false); chkSol.setSelected(false); chkPlafond.setSelected(false);
 
             } catch (NumberFormatException ex) {
-                showAlert("Erreur", "Prix invalide.");
+                showAlert("Erreur", "Le format du prix est invalide.");
             }
         });
 

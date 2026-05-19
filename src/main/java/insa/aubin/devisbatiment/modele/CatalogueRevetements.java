@@ -4,6 +4,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,7 +21,7 @@ public class CatalogueRevetements {
     }
 
     // =========================================================================
-    // LECTURE DU FICHIER (Format des profs)
+    // LECTURE DU FICHIER
     // =========================================================================
 
     /**
@@ -35,7 +36,7 @@ public class CatalogueRevetements {
         }
 
         listeRevetements.clear();
-        try (BufferedReader br = new BufferedReader(new FileReader(fichier))) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(fichier), StandardCharsets.UTF_8))) {
             String ligne;
             while ((ligne = br.readLine()) != null) {
                 if (ligne.trim().isEmpty()) continue;
@@ -107,7 +108,7 @@ public class CatalogueRevetements {
         if (r == null) return;
         listeRevetements.add(r);
 
-        try (PrintWriter pw = new PrintWriter(new FileWriter(cheminFichier, false))) {
+        try (PrintWriter pw = new PrintWriter(new OutputStreamWriter(new FileOutputStream(cheminFichier, false), StandardCharsets.UTF_8))) {
             // On écrit l'en-tête en premier
             pw.println("Classe;idRevetement;designation;pourMur;pourSol;pourPlafond;prixUnitaire;couleur;finition;dimension;essenceBois;matiere");
             // On réécrit tous les matériaux

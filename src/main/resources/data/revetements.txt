@@ -7,3 +7,4 @@ Parquet;REV005;Parquet chêne;0;1;0;45.0;;;;;
 Parquet;REV006;Parquet pin;0;1;0;30.0;;;;;
 Revetement;REV007;Enduit plâtre;1;0;1;8.0;;;;;
 Peinture;REV008;Peinture rouge premium;0;1;0;30.0;Rouge;Mate;;;
+Carrelage;REV009;Carrelage en Grès;1;0;0;20.0;;;45x45;;Grès
