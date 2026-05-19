@@ -304,6 +304,51 @@ public class GestionnaireSauvegarde {
             System.err.println("Erreur chargement pièces : " + e.getMessage());
         }
     }
+    
+    // ────────────────────────────────────────────
+    // Supprimer un bâtiment
+    // ────────────────────────────────────────────
+
+    public void supprimerBatiment(Immeuble immeuble) {
+        if (!sauvegardeActive) return;
+
+        // 1. Supprimer le dossier du bâtiment récursivement
+        File dossier = new File(cheminRacine + "/" + immeuble.getNomBatiment());
+        supprimerDossierRecursivement(dossier);
+
+        // 2. Retirer la ligne correspondante dans batiments.txt
+        File fichier = new File(cheminRacine + "/batiments.txt");
+        if (!fichier.exists()) return;
+
+        List<String> lignes = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(fichier))) {
+            String ligne;
+            while ((ligne = br.readLine()) != null) {
+                String[] parts = ligne.split(";");
+                // On garde toutes les lignes sauf celle dont l'id correspond
+                if (parts.length >= 2 && parts[1].equals(immeuble.getId())) continue;
+                lignes.add(ligne);
+            }
+        } catch (IOException e) {
+            System.err.println("Erreur lecture batiments.txt : " + e.getMessage());
+            return;
+        }
+
+        // Réécrire le fichier sans la ligne supprimée
+        try (PrintWriter pw = new PrintWriter(new FileWriter(fichier, false))) {
+            for (String l : lignes) pw.println(l);
+        } catch (IOException e) {
+            System.err.println("Erreur réécriture batiments.txt : " + e.getMessage());
+        }
+    }
+
+    private void supprimerDossierRecursivement(File f) {
+        if (f.isDirectory()) {
+            for (File enfant : f.listFiles()) supprimerDossierRecursivement(enfant);
+        }
+        f.delete();
+    }
+    
     // ────────────────────────────────────────────
     // Utilitaire
     // ────────────────────────────────────────────
