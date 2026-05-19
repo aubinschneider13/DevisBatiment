@@ -268,7 +268,7 @@ public class NiveauControleur {
 
         // Créer l'appartement et l'ajouter au canvas
         compteurAppartements++;
-        Appartement appart = new Appartement(mursDelimiteurs, 2.5);
+        Appartement appart = niveau.ajouterAppartement(mursDelimiteurs);
         appartements.add(appart);
         vue.getCanvas().ajouterElement(appart);
 
