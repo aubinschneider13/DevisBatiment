@@ -469,24 +469,44 @@ public class PieceControleur {
     // =========================================================================
 
     public void initialiserAvecContourAppartement(List<Point> polygone,
-                                                  List<Mur> mursDelimiteurs,
-                                                  AireImmeuble aire,
-                                                  Appartement appartement) {
-        this.appartement        = appartement;
-        this.polygoneAppartement = polygone;
-        if (polygone == null || polygone.size() < 3) return;
+                                                List<Mur> mursDelimiteurs,
+                                                AireImmeuble aire,
+                                                Appartement appartement) {
+      this.appartement = appartement;
+      if (polygone == null || polygone.size() < 3) return;
 
-        vue.getCanvas().getElements().add(0, creerFondAppartement(polygone));
-        List<double[]> cotesBatiment = extraireCotesBatiment(aire);
+      // 1. Calculer la translation depuis le point le plus proche de (0,0)
+      double[] delta = calculerDeltaTranslation(polygone);
+      double dx = delta[0], dy = delta[1];
 
-        for (Mur mur : mursDelimiteurs) {
-            boolean exterieur = cotesBatiment.stream().anyMatch(c -> murInclsDansCote(mur, c));
-            mur.setTypeMur(exterieur ? Mur.TypeMur.EXTERIEUR : Mur.TypeMur.NORMAL);
-            vue.getCanvas().getElements().add(mur);
-        }
+      // 2. Translater le polygone (copie locale pour l'affichage)
+      List<Point> polygoneAffichage = new ArrayList<>();
+      for (Point p : polygone) {
+          polygoneAffichage.add(new Point(p.getX() - dx, p.getY() - dy));
+      }
+      this.polygoneAppartement = polygoneAffichage;
 
-        vue.getCanvas().redrawAll();
-    }
+      // 3. Créer des copies des murs translatées (affichage uniquement)
+      List<Mur> mursAffichage = new ArrayList<>();
+      List<double[]> cotesBatiment = extraireCotesBatiment(aire);
+      for (Mur mur : mursDelimiteurs) {
+          Mur copie = new Mur(
+              new Point(mur.getPoint1().getX() - dx, mur.getPoint1().getY() - dy),
+              new Point(mur.getPoint2().getX() - dx, mur.getPoint2().getY() - dy)
+          );
+          boolean exterieur = cotesBatiment.stream().anyMatch(c -> murInclsDansCote(mur, c));
+          copie.setTypeMur(exterieur ? Mur.TypeMur.EXTERIEUR : Mur.TypeMur.NORMAL);
+          mursAffichage.add(copie);
+      }
+
+      // 4. Ajouter au canvas
+      vue.getCanvas().getElements().add(0, creerFondAppartement(polygoneAffichage));
+      for (Mur copie : mursAffichage) {
+          vue.getCanvas().getElements().add(copie);
+      }
+
+      vue.getCanvas().redrawAll();
+  }
 
     private Dessin creerFondAppartement(List<Point> polygone) {
         return new Dessin() {
@@ -608,6 +628,20 @@ public class PieceControleur {
             if (t < -GeometrieUtils.TOL || t > 1 + GeometrieUtils.TOL) return false;
         }
         return true;
+    }
+    
+    private double[] calculerDeltaTranslation(List<Point> polygone) {
+        Point pointRef = null;
+        double distMin = Double.MAX_VALUE;
+        for (Point p : polygone) {
+            double dist = p.getX() * p.getX() + p.getY() * p.getY();
+            if (dist < distMin) {
+                distMin = dist;
+                pointRef = p;
+            }
+        }
+        if (pointRef == null) return new double[]{0, 0};
+        return new double[]{pointRef.getX(), pointRef.getY()};
     }
 
     // =========================================================================
