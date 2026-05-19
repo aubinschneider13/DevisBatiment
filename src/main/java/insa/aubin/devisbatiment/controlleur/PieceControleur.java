@@ -223,19 +223,75 @@ public class PieceControleur {
 
     // ✅ Vos méthodes de sélection intégrées ici
     private void gererClicSelection(Point pClic) {
-        Mur cible = trouverMurProche(pClic);
+        Mur cibleCanvas = trouverMurProche(pClic);
 
-        if (cible != null && cible.distanceA(pClic) < 0.5) {
-            basculerSelection(cible);
+        if (cibleCanvas != null && cibleCanvas.distanceA(pClic) < 0.5) {
+            // FIX MURS : On cherche l'instance correspondante dans le VRAI modèle
+            Mur vraiMurModele = retrouverVraiMurModele(cibleCanvas);
+            basculerSelection(vraiMurModele != null ? vraiMurModele : cibleCanvas);
         } else {
-            // Utilisation du pointDansPolygone de GeometrieUtils
+            // Clic au centre de la pièce
             for (Piece piece : pieces) {
                 if (GeometrieUtils.pointDansPolygone(pClic.getX(), pClic.getY(), piece.getPoints())) {
+                    // FIX PLAFOND : On sélectionne le Sol ET le Plafond simultanément
                     basculerSelection(piece.getSol());
+                    basculerSelection(piece.getPlafond());
                     break;
                 }
             }
         }
+    }
+
+    /**
+     * Compare les coordonnées du mur graphique avec les murs métier en mémoire
+     * pour retourner la bonne référence (celle qui impacte le devis).
+     */
+    private Mur retrouverVraiMurModele(Mur murCanvas) {
+        // Recherche dans les pièces actuellement gérées par le contrôleur
+        for (Piece p : pieces) {
+            for (Mur m : p.getMurs()) {
+                if (sontMursIdentiques(murCanvas, m)) {
+                    return m;
+                }
+            }
+        }
+
+        // Si on est dans le contexte global de l'appartement (qui contient toutes les pièces)
+        if (appartement != null) {
+            for (Piece p : appartement.getPieces()) {
+                for (Mur m : p.getMurs()) {
+                    if (sontMursIdentiques(murCanvas, m)) {
+                        return m;
+                    }
+                }
+            }
+        }
+
+        return murCanvas; // Secours : on retourne le mur cliqué si on n'a rien trouvé
+    }
+
+    /**
+     * Vérifie si deux segments de mur partagent les mêmes extrémités géométriques,
+     * peu importe le sens (A->B ou B->A).
+     */
+    private boolean sontMursIdentiques(Mur m1, Mur m2) {
+        double tol = 1e-4; // Tolérance pour les calculs de flottants
+
+        // Sens normal : P1==P1 et P2==P2
+        boolean sensNormal =
+                Math.abs(m1.getPoint1().getX() - m2.getPoint1().getX()) < tol &&
+                        Math.abs(m1.getPoint1().getY() - m2.getPoint1().getY()) < tol &&
+                        Math.abs(m1.getPoint2().getX() - m2.getPoint2().getX()) < tol &&
+                        Math.abs(m1.getPoint2().getY() - m2.getPoint2().getY()) < tol;
+
+        // Sens inverse : P1==P2 et P2==P1
+        boolean sensInverse =
+                Math.abs(m1.getPoint1().getX() - m2.getPoint2().getX()) < tol &&
+                        Math.abs(m1.getPoint1().getY() - m2.getPoint2().getY()) < tol &&
+                        Math.abs(m1.getPoint2().getX() - m2.getPoint1().getX()) < tol &&
+                        Math.abs(m1.getPoint2().getY() - m2.getPoint1().getY()) < tol;
+
+        return sensNormal || sensInverse;
     }
 
     private void basculerSelection(SurfaceAvecRevetement surface) {
