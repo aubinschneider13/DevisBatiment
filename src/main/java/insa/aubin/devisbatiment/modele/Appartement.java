@@ -173,15 +173,15 @@ public class Appartement extends ElementDeConstruction implements Dessin {
 
     @Override
     public String toCSV() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format(java.util.Locale.US,
-            "APPARTEMENT;%s;%d;%d;%.2f;%.2f",
-            getId(), numero, getNbPieces(), hauteurPlafond, calculerSurface()));
-        for (Point p : getPolygone()) {
-            sb.append(String.format(java.util.Locale.US, ";%.2f;%.2f", p.getX(), p.getY()));
-        }
-        return sb.toString();
+    StringBuilder sb = new StringBuilder();
+    sb.append(String.format(java.util.Locale.US,
+        "APPARTEMENT;%s;%d;%d;%.2f;%.2f",
+        getId(), numero, getNbPieces(), hauteurPlafond, calculerSurface()));
+    for (Point p : getPolygone()) {
+        sb.append(String.format(java.util.Locale.US, ";%.2f;%.2f", p.getX(), p.getY()));
     }
+    return sb.toString();
+}
 
     @Override
     public String toString() {
