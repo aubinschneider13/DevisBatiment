@@ -227,4 +227,8 @@ public class ContextePiece implements Contexte {
     public Appartement getAppartement() {
         return appartement;
     }
+    
+    public PieceControleur getPieceControleur() {
+        return pieceControleur;
+    }
 }

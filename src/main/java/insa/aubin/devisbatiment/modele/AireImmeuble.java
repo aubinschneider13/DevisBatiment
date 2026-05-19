@@ -180,4 +180,6 @@ public class AireImmeuble implements Dessin {
         gc.fillOval(p.getX() - r, p.getY() - r, r * 2, r * 2);
         gc.strokeOval(p.getX() - r, p.getY() - r, r * 2, r * 2);
     }
+    
+    
 }

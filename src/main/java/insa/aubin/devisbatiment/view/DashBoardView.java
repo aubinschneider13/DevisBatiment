@@ -27,6 +27,7 @@ public class DashBoardView extends BorderPane {
     private Button maisonButton;
     private Button pieceButton;
     private Button settingsButton;
+    private HBox secondHBox;
 
 
 
@@ -114,7 +115,7 @@ public class DashBoardView extends BorderPane {
         firstHBox.getChildren().addAll(nouveauLabel,immeubleButton, maisonButton);
 
             //2ème HBox
-        HBox secondHBox = new HBox();
+        secondHBox = new HBox();
         secondHBox.setAlignment(Pos.TOP_LEFT);
         secondHBox.setSpacing(10);
         secondHBox.setPadding(new Insets(5,5,5,5));
@@ -146,5 +147,9 @@ public class DashBoardView extends BorderPane {
     
      public Button getSettingsButton() {
         return settingsButton;
+    }
+     
+    public HBox getDevisRecentsBox() {
+        return secondHBox;
     }
 }
