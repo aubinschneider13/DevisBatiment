@@ -130,6 +130,10 @@ public class PieceControleur {
     // =========================================================================
 
     public void changerEtat(int nouvelEtat) {
+         if (this.etat == ETAT_PORTE || this.etat == ETAT_FENETRE) {
+            murSurvole = null;
+            vue.getCanvas().setFantome(null, 0, 0, 0, false);
+        }
         this.etat = nouvelEtat;
         vue.getCanvas().setPanActif(nouvelEtat == ETAT_RIEN);
         vue.getOptionsMurVue().setVisible(nouvelEtat == ETAT_MUR);

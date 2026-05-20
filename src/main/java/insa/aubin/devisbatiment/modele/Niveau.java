@@ -15,6 +15,7 @@ public class Niveau extends ElementDeConstruction {
 
     private double hauteurPlafond;
     private final ArrayList<Appartement> appartements;
+    private final ArrayList<Couloir> couloirs;
 
     /**
      * @param mursDelimiteurs les 4 murs du périmètre (construits par Batiment)
@@ -24,7 +25,8 @@ public class Niveau extends ElementDeConstruction {
         super("Niveau");
         this.mursDelimiteurs = new ArrayList<>(mursDelimiteurs);
         this.hauteurPlafond  = hauteurPlafond;
-        this.appartements    = new ArrayList<>();
+        this.appartements = new ArrayList<>();
+        this.couloirs = new ArrayList<>();
     }
 
     public double calculerDevis() {
@@ -54,25 +56,28 @@ public class Niveau extends ElementDeConstruction {
     // =========================================================================
     // GESTION DES APPARTEMENTS
     // =========================================================================
-
-    /**
-     * Crée un appartement à partir d'une liste de murs délimiteurs détectés
-     * dans le canvas du niveau, et l'ajoute à ce niveau.
-     *
-     * @param mursAppartement murs formant le périmètre fermé de l'appartement
-     * @return l'appartement créé
-     */
     public Appartement ajouterAppartement(List<Mur> mursAppartement) {
         Appartement a = new Appartement(mursAppartement, this.hauteurPlafond);
         this.appartements.add(a);
         return a;
     }
+    
+    public Couloir ajouterCouloir(List<Mur> mursCouloir) {
+        Couloir c = new Couloir(mursCouloir, this.hauteurPlafond);
+        this.couloirs.add(c);
+        return c;
+    }
+        
+    // =========================================================================
+    // GETTERS ET SETTERS
+    // =========================================================================
 
     public int getNbAppartements()              { return appartements.size(); }
     public ArrayList<Appartement> getAppartements() { return appartements; }
     public List<Mur> getMursDelimiteurs()       { return mursDelimiteurs; }
     public double getHauteurPlafond()           { return hauteurPlafond; }
     public void setHauteurPlafond(double h)     { this.hauteurPlafond = h; }
+    public ArrayList<Couloir> getCouloirs() { return couloirs; }
 
     @Override
     public String toCSV() {

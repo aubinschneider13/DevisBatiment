@@ -144,6 +144,7 @@ public class AppControleur {
         tb.getBtnEchelle()      .setOnAction(e -> contexteActif.onBtnEchelle());
         tb.getBtnMur()          .setOnAction(e -> contexteActif.onBtnMur());
         tb.getBtnAppartement()  .setOnAction(e -> contexteActif.onBtnAppartement());
+        tb.getBtnCouloir().setOnAction(e -> contexteActif.onBtnCouloir());
         tb.getBtnPiece()        .setOnAction(e -> contexteActif.onBtnPiece());
         tb.getBtnPorte()        .setOnAction(e -> contexteActif.onBtnPorte());
         tb.getBtnFenetre()      .setOnAction(e -> contexteActif.onBtnFenetre());
@@ -419,6 +420,12 @@ public class AppControleur {
             }
 
             return itemAppart;
+        });
+        
+        ctrl.setOnCouloirCree(couloir -> {
+            TreeItem<String> itemCouloir = appView.getNavigateurView()
+                .ajouterItemCouloir(itemNiveau, couloir.toString());
+            return itemCouloir;
         });
 
         niveauControleurs.add(ctrl);

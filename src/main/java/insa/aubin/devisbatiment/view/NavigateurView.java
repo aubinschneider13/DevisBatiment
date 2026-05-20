@@ -98,6 +98,14 @@ public class NavigateurView extends VBox {
         itemNiveau.setExpanded(true);
         return item;
     }
+    
+    public TreeItem<String> ajouterItemCouloir(TreeItem<String> itemNiveau,
+                                            String nomCouloir) {
+     TreeItem<String> item = new TreeItem<>(nomCouloir);
+     itemNiveau.getChildren().add(item);
+     itemNiveau.setExpanded(true);
+     return item;
+ }
 
     /**
      * Ajoute un item de pièce sous le nœud de l'appartement indiqué.
