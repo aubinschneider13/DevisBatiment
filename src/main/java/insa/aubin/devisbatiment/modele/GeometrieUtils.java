@@ -136,6 +136,7 @@ public class GeometrieUtils {
                 }
                 if (correspondA(candidat.getPoint2(), dernierPoint)) {
                     Mur inverse = new Mur(candidat.getPoint2(), candidat.getPoint1());
+                    inverse.setOriginal(candidat); // Link to original wall
                     courant = inverse;
                     ordonne.add(courant);
                     restants.remove(i);
@@ -146,6 +147,35 @@ public class GeometrieUtils {
             if (!trouve) break;
         }
         return ordonne;
+    }
+
+    /**
+     * Détermine si le côté gauche d'un mur fait face à l'intérieur d'une pièce.
+     */
+    public static boolean estCoteGaucheDansPiece(Mur mur, List<Point> pointsPiece) {
+        if (pointsPiece == null || pointsPiece.size() < 3) return true;
+        
+        // Calculer le milieu du segment du mur
+        double mx = (mur.getPoint1().getX() + mur.getPoint2().getX()) / 2.0;
+        double my = (mur.getPoint1().getY() + mur.getPoint2().getY()) / 2.0;
+        
+        // Vecteur directeur du segment
+        double dx = mur.getPoint2().getX() - mur.getPoint1().getX();
+        double dy = mur.getPoint2().getY() - mur.getPoint1().getY();
+        double len = Math.hypot(dx, dy);
+        
+        if (len < 1e-6) return true;
+        
+        // Vecteur normal gauche unitaire
+        double nx = -dy / len;
+        double ny = dx / len;
+        
+        // Point test légèrement décalé à gauche
+        double epsilon = 0.01;
+        double tx = mx + epsilon * nx;
+        double ty = my + epsilon * ny;
+        
+        return pointDansPolygone(tx, ty, pointsPiece);
     }
 
     // =========================================================================

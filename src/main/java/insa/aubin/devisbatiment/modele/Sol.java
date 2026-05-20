@@ -30,6 +30,11 @@ public class Sol extends SurfaceAvecRevetement {
     }
 
     @Override
+    public boolean estCompatibleAvec(Revetement r) {
+        return r != null && r.isPourSol();
+    }
+
+    @Override
     public String toCSV() {
         return "SOL;" + super.toCSV() + ";" + surface;
     }

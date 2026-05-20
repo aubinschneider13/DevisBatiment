@@ -232,7 +232,22 @@ public class PieceControleur {
         if (cibleCanvas != null && cibleCanvas.distanceA(pClic) < 0.5) {
             // FIX MURS : On cherche l'instance correspondante dans le VRAI modèle
             Mur vraiMurModele = retrouverVraiMurModele(cibleCanvas);
-            basculerSelection(vraiMurModele != null ? vraiMurModele : cibleCanvas);
+            Mur ref = vraiMurModele != null ? vraiMurModele : cibleCanvas;
+
+            // Déterminer géométriquement si le clic est à gauche ou à droite du segment
+            double x1 = ref.getPoint1().getX();
+            double y1 = ref.getPoint1().getY();
+            double x2 = ref.getPoint2().getX();
+            double y2 = ref.getPoint2().getY();
+            double px = pClic.getX();
+            double py = pClic.getY();
+
+            double cross = (x2 - x1) * (py - y1) - (y2 - y1) * (px - x1);
+            if (cross > 0) {
+                basculerSelection(ref.getCoteGauche());
+            } else {
+                basculerSelection(ref.getCoteDroit());
+            }
         } else {
             // Clic au centre de la pièce
             for (Piece piece : pieces) {
@@ -620,10 +635,15 @@ public class PieceControleur {
                 }
             }
 
-            // --- FIX 2 : COPIER LES REVÊTEMENTS SUR LE CLONE (pour l'affichage en vert) ---
-            if (murOriginal.getRevetements() != null) {
-                for (Revetement r : murOriginal.getRevetements()) {
-                    copie.ajouterRevetement(r);
+            // --- FIX 2 : COPIER LES REVÊTEMENTS SUR LE CLONE (pour l'affichage bi-face) ---
+            if (murOriginal.getCoteGauche().getRevetements() != null) {
+                for (Revetement r : murOriginal.getCoteGauche().getRevetements()) {
+                    copie.getCoteGauche().ajouterRevetement(r);
+                }
+            }
+            if (murOriginal.getCoteDroit().getRevetements() != null) {
+                for (Revetement r : murOriginal.getCoteDroit().getRevetements()) {
+                    copie.getCoteDroit().ajouterRevetement(r);
                 }
             }
 

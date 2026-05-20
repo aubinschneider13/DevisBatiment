@@ -189,11 +189,20 @@ public class AppControleur {
 
             if (resultat.isPresent()) {
                 Revetement revChoisi = resultat.get();
+                boolean targetMurs = dialog.isAppliquerAuxMurs();
+                boolean targetSol = dialog.isAppliquerAuSol();
+                boolean targetPlafond = dialog.isAppliquerAuPlafond();
 
-                for (SurfaceAvecRevetement surface : selection) {
-                    surface.getRevetements().clear();
-                    surface.ajouterRevetement(revChoisi);
-                }
+                 for (SurfaceAvecRevetement surface : selection) {
+                     if (surface instanceof CoteMur && !targetMurs) continue;
+                     if (surface instanceof Sol && !targetSol) continue;
+                     if (surface instanceof Plafond && !targetPlafond) continue;
+
+                     if (surface.estCompatibleAvec(revChoisi)) {
+                         surface.getRevetements().clear();
+                         surface.ajouterRevetement(revChoisi);
+                     }
+                 }
 
                 if (contexteActif instanceof ContexteSousPiece ctx) {
                     ctx.viderSelection();

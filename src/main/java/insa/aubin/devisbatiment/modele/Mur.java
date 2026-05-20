@@ -6,7 +6,7 @@ import javafx.scene.paint.Color;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Mur extends SurfaceAvecRevetement implements Dessin {
+public class Mur extends ElementDeConstruction implements Dessin {
 
     private Point point1;
     private Point point2;
@@ -18,6 +18,19 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     private static int compteurMurs = 0;
     private int numeroUnique;
 
+    // Gestion des deux faces du mur
+    private final CoteMur coteGauche;
+    private final CoteMur coteDroit;
+    private Mur original;
+
+    public Mur getOriginal() {
+        return original != null ? original : this;
+    }
+
+    public void setOriginal(Mur original) {
+        this.original = original;
+    }
+
     public Mur(Point point1, Point point2, double hauteur) {
         super("Mur");
         this.point1 = point1;
@@ -27,13 +40,25 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         this.color = couleurPourType(TypeMur.NORMAL);
         compteurMurs++;
         this.numeroUnique = compteurMurs;
+
+        // Initialisation des deux côtés du mur
+        this.coteGauche = new CoteMur(this);
+        this.coteDroit = new CoteMur(this);
     }
 
     public Mur(Point point1, Point point2){
         this(point1, point2, 2.5);
     }
 
-    //Méthode pour ajouter une ouverture dans la liste
+    public CoteMur getCoteGauche() {
+        return coteGauche;
+    }
+
+    public CoteMur getCoteDroit() {
+        return coteDroit;
+    }
+
+    // Méthode pour ajouter une ouverture dans la liste
     public void ajouterOuverture(Ouverture o) {
         if (o == null) return;
         if (o instanceof Fenetre && typeMur != TypeMur.EXTERIEUR) {
@@ -64,8 +89,7 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         return Math.sqrt(dX*dX + dY*dY);
     }
 
-    //Méthode pour calculer la surface brute du mur (cad sans les ouvertures)
-    @Override
+    // Surface brute du mur (pour compatibilité / calculs d'échelle)
     public double calculerSurface(){
         return calculerLongueur() * this.hauteur;
     }
@@ -81,20 +105,6 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
             }
         }
         return Math.max(0.0, surfaceBrute - surfaceOuverture);
-    }
-
-    // Dans Mur.java — surcharger calculerPrixRevetement()
-    @Override
-    public double calculerPrixRevetement() {
-        double total = 0;
-        if (getRevetements() != null) {
-            for (Revetement r : getRevetements()) {
-                if (r != null) {
-                    total += (float) r.calculerPrixTotal(calculerSurfaceNette());
-                }
-            }
-        }
-        return total;
     }
 
     /** Calcule la distance la plus courte entre un point et ce segment de mur */
@@ -115,7 +125,6 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     /**
      * Calcule la valeur t ∈ [0,1] correspondant à la projection
      * d'un point P sur ce segment de mur.
-     * Retourne la position relative : 0 = point1, 1 = point2.
      */
     public double calculerPositionSurMur(Point p) {
         double x1 = point1.getX(), y1 = point1.getY();
@@ -141,7 +150,7 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         return new Point(x, y);
     }
 
-    //Getters et Setters
+    // Getters et Setters
     public Point getPoint1() { return point1; }
     public void setPoint1(Point point1) { this.point1 = point1; }
     public Point getPoint2() { return point2; }
@@ -152,7 +161,6 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     public void setListeOuvertures(List<Ouverture> listeOuvertures){ this.listeOuvertures = listeOuvertures; }
     public TypeMur getTypeMur() { return typeMur; }
 
-    //Méthodes pour éléments graphiques
     @Override
     public Color getColor() { return color; }
 
@@ -161,34 +169,60 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
 
     @Override
     public void dessiner(GraphicsContext gc) {
-        // --- Retour visuel selon la présence d'un revêtement ---
-        boolean aUnRevetement = (this.getRevetements() != null && !this.getRevetements().isEmpty());
+        double x1 = point1.getX(), y1 = point1.getY();
+        double x2 = point2.getX(), y2 = point2.getY();
 
-        if (aUnRevetement) {
-            gc.setStroke(Color.web("#2ecc71")); // Vert pour indiquer qu'un revêtement est posé
-            gc.setLineWidth(0.15); // Un peu plus épais
-        } else {
-            gc.setStroke(this.color); // Couleur normale selon le type (noir/violet)
-            gc.setLineWidth(0.1);
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double len = Math.sqrt(dx * dx + dy * dy);
+
+        // Vecteur normal unitaire (gauche)
+        double nx = 0, ny = 0;
+        if (len > 0) {
+            nx = -dy / len;
+            ny = dx / len;
         }
-        // -----------------------------------------------------------------
 
-        // Dessin du mur
-        gc.strokeLine(
-                point1.getX(), point1.getY(),
-                point2.getX(), point2.getY()
-        );
+        double offset = 0.08; // 8 cm d'écart
 
-        double angle = Math.toDegrees(Math.atan2(
-                point2.getY() - point1.getY(),
-                point2.getX() - point1.getX()
-        ));
+        // Dessiner le côté gauche
+        gc.save();
+        boolean aRevG = coteGauche.getRevetements() != null && !coteGauche.getRevetements().isEmpty();
+        if (aRevG) {
+            gc.setStroke(Color.web("#2ecc71")); // Vert pour revêtement posé à gauche
+            gc.setLineWidth(0.08);
+        } else {
+            gc.setStroke(this.color);
+            gc.setLineWidth(0.03);
+        }
+        gc.strokeLine(x1 + offset * nx, y1 + offset * ny, x2 + offset * nx, y2 + offset * ny);
+        gc.restore();
 
-        // Chaque ouverture à SA position réelle
+        // Dessiner le côté droit (offset inversé)
+        gc.save();
+        boolean aRevD = coteDroit.getRevetements() != null && !coteDroit.getRevetements().isEmpty();
+        if (aRevD) {
+            gc.setStroke(Color.web("#3498db")); // Bleu pour revêtement posé à droite
+            gc.setLineWidth(0.08);
+        } else {
+            gc.setStroke(this.color);
+            gc.setLineWidth(0.03);
+        }
+        gc.strokeLine(x1 - offset * nx, y1 - offset * ny, x2 - offset * nx, y2 - offset * ny);
+        gc.restore();
+
+        // Dessiner l'axe central en pointillés discrets
+        gc.save();
+        gc.setStroke(Color.GRAY);
+        gc.setLineWidth(0.02);
+        gc.setLineDashes(0.05, 0.05);
+        gc.strokeLine(x1, y1, x2, y2);
+        gc.restore();
+
+        // Dessiner les ouvertures sur l'axe central
+        double angle = Math.toDegrees(Math.atan2(dy, dx));
         for (Ouverture o : listeOuvertures) {
             gc.save();
-
-            // Position exacte selon positionSurMur
             Point pos = getPointSurMur(o.getPositionSurMur());
             gc.translate(pos.getX(), pos.getY());
             gc.rotate(angle);
@@ -207,10 +241,10 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
         gc.setFill(Color.WHITE);
         gc.setStroke(Color.BLUE);
         gc.setLineWidth(0.02);
-        gc.fillOval(point1.getX()-rayon, point1.getY()-rayon, rayon*2, rayon*2);
-        gc.strokeOval(point1.getX()-rayon, point1.getY()-rayon, rayon*2, rayon*2);
-        gc.fillOval(point2.getX()-rayon, point2.getY()-rayon, rayon*2, rayon*2);
-        gc.strokeOval(point2.getX()-rayon, point2.getY()-rayon, rayon*2, rayon*2);
+        gc.fillOval(x1 - rayon, y1 - rayon, rayon * 2, rayon * 2);
+        gc.strokeOval(x1 - rayon, y1 - rayon, rayon * 2, rayon * 2);
+        gc.fillOval(x2 - rayon, y2 - rayon, rayon * 2, rayon * 2);
+        gc.strokeOval(x2 - rayon, y2 - rayon, rayon * 2, rayon * 2);
     }
 
     private void dessinerSymbolePorte(GraphicsContext gc, double largeur) {
@@ -263,10 +297,13 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
             point1.getX(), point1.getY(),
             point2.getX(), point2.getY(),
             hauteur);
-        if (getRevetements() != null && !getRevetements().isEmpty()) {
-            return base + ";" + getRevetements().get(0).getId();
-        }
-        return base + ";VIDE";
+        
+        String idGauche = (coteGauche.getRevetements() != null && !coteGauche.getRevetements().isEmpty()) 
+                ? coteGauche.getRevetements().get(0).getId() : "VIDE";
+        String idDroit = (coteDroit.getRevetements() != null && !coteDroit.getRevetements().isEmpty()) 
+                ? coteDroit.getRevetements().get(0).getId() : "VIDE";
+
+        return base + ";" + idGauche + ";" + idDroit;
     }
 
     @Override

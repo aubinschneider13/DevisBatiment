@@ -18,6 +18,11 @@ public class Plafond extends SurfaceAvecRevetement {
     }
 
     @Override
+    public boolean estCompatibleAvec(Revetement r) {
+        return r != null && r.isPourPlafond();
+    }
+
+    @Override
     public String toCSV() {
         return "PLAFOND;" + super.toCSV() + ";" + surface;
     }

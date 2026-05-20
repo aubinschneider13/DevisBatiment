@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Locale;
 
 public class ChoixRevetementDialog extends Dialog<Revetement> {
+    private CheckBox chkTargetMur;
+    private CheckBox chkTargetSol;
+    private CheckBox chkTargetPlafond;
 
     public ChoixRevetementDialog(CatalogueRevetements catalogue, List<SurfaceAvecRevetement> surfacesSelectionnees) {
         setTitle("Matériaux et Revêtements");
@@ -35,11 +38,45 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
         int nbPlafonds = 0;
         if (surfacesSelectionnees != null) {
             for (SurfaceAvecRevetement s : surfacesSelectionnees) {
-                if (s instanceof Mur) nbMurs++;
+                if (s instanceof CoteMur) nbMurs++;
                 else if (s instanceof Sol) nbSols++;
                 else if (s instanceof Plafond) nbPlafonds++;
             }
         }
+
+        final int finalNbMurs = nbMurs;
+        final int finalNbSols = nbSols;
+        final int finalNbPlafonds = nbPlafonds;
+
+        // --- BLOC DE CIBLAGE DES SURFACES ---
+        VBox targetCard = new VBox(8);
+        targetCard.setPadding(new Insets(12, 16, 12, 16));
+        targetCard.setStyle("-fx-background-color: #f8fafc; -fx-border-color: #cbd5e1; -fx-border-width: 1px; -fx-border-radius: 8px; -fx-background-radius: 8px;");
+
+        Label lblTargetTitle = new Label("Surfaces de destination à cibler :");
+        lblTargetTitle.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #1e293b;");
+
+        chkTargetMur = new CheckBox("🧱 Murs");
+        chkTargetSol = new CheckBox("🪵 Sol");
+        chkTargetPlafond = new CheckBox("🏠 Plafond");
+
+        String chkStyle = "-fx-font-size: 12px; -fx-text-fill: #334155; -fx-font-weight: bold; -fx-cursor: hand;";
+        chkTargetMur.setStyle(chkStyle);
+        chkTargetSol.setStyle(chkStyle);
+        chkTargetPlafond.setStyle(chkStyle);
+
+        // Auto-cochage selon la sélection
+        chkTargetMur.setSelected(nbMurs > 0);
+        chkTargetSol.setSelected(nbSols > 0);
+        chkTargetPlafond.setSelected(nbPlafonds > 0);
+
+        // UX Premium : Désactiver si non présent dans la sélection initiale
+        chkTargetMur.setDisable(nbMurs == 0);
+        chkTargetSol.setDisable(nbSols == 0);
+        chkTargetPlafond.setDisable(nbPlafonds == 0);
+
+        HBox targetChks = new HBox(20, chkTargetMur, chkTargetSol, chkTargetPlafond);
+        targetCard.getChildren().addAll(lblTargetTitle, targetChks);
 
         VBox headerCard = new VBox(6);
         headerCard.setPadding(new Insets(12, 16, 12, 16));
@@ -85,22 +122,34 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
         listView.setPrefHeight(200);
         listView.setStyle("-fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #cbd5e1; -fx-background-color: white;");
 
-        // Filtrage dynamique
-        final int finalNbMurs = nbMurs;
-        final int finalNbSols = nbSols;
-        final int finalNbPlafonds = nbPlafonds;
+        // Filtrage dynamique lié aux checkboxes de ciblage
         FilteredList<Revetement> filteredList = new FilteredList<>(catalogue.getListeRevetements());
         
-        if (finalNbMurs > 0 || finalNbSols > 0 || finalNbPlafonds > 0) {
+        Runnable updateFilter = () -> {
             filteredList.setPredicate(r -> {
                 if (r == null) return false;
+                
+                boolean targetMurs = chkTargetMur.isSelected();
+                boolean targetSol = chkTargetSol.isSelected();
+                boolean targetPlafond = chkTargetPlafond.isSelected();
+                
+                if (!targetMurs && !targetSol && !targetPlafond) {
+                    return false;
+                }
+                
                 boolean compatible = false;
-                if (finalNbMurs > 0 && r.isPourMur()) compatible = true;
-                if (finalNbSols > 0 && r.isPourSol()) compatible = true;
-                if (finalNbPlafonds > 0 && r.isPourPlafond()) compatible = true;
+                if (targetMurs && r.isPourMur()) compatible = true;
+                if (targetSol && r.isPourSol()) compatible = true;
+                if (targetPlafond && r.isPourPlafond()) compatible = true;
                 return compatible;
             });
-        }
+        };
+        
+        chkTargetMur.selectedProperty().addListener((obs, oldVal, newVal) -> updateFilter.run());
+        chkTargetSol.selectedProperty().addListener((obs, oldVal, newVal) -> updateFilter.run());
+        chkTargetPlafond.selectedProperty().addListener((obs, oldVal, newVal) -> updateFilter.run());
+        
+        updateFilter.run();
         listView.setItems(filteredList);
 
         // Rendu des cellules haut de gamme
@@ -328,7 +377,7 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
             }
         });
 
-        root.getChildren().addAll(headerCard, lblListe, listView, formulairePane);
+        root.getChildren().addAll(headerCard, targetCard, lblListe, listView, formulairePane);
 
         // Envelopper le contenu dans un ScrollPane pour gérer les débordements visuels
         ScrollPane scrollPane = new ScrollPane(root);
@@ -364,6 +413,18 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
             }
             return null;
         });
+    }
+
+    public boolean isAppliquerAuxMurs() {
+        return chkTargetMur.isSelected();
+    }
+
+    public boolean isAppliquerAuSol() {
+        return chkTargetSol.isSelected();
+    }
+
+    public boolean isAppliquerAuPlafond() {
+        return chkTargetPlafond.isSelected();
     }
 
     private void showAlert(String titre, String message) {

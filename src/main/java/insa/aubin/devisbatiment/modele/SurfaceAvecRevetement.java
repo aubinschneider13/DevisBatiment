@@ -17,8 +17,10 @@ public abstract class SurfaceAvecRevetement extends ElementDeConstruction {
 
     public abstract double calculerSurface();
 
+    public abstract boolean estCompatibleAvec(Revetement r);
+
     public void ajouterRevetement(Revetement r) {
-        if (r != null) {
+        if (r != null && estCompatibleAvec(r)) {
             this.revetements.add(r);
         }
     }

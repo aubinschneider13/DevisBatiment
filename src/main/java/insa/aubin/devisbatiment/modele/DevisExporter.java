@@ -89,10 +89,12 @@ public class DevisExporter {
                     if (piece.getMurs() != null && !piece.getMurs().isEmpty()) {
                         sb.append("      > Murs de la pièce :\n");
                         int countMur = 1;
-                        for (Mur mur : piece.getMurs()) {
-                            double netArea = mur.calculerSurfaceNette();
-                            sb.append(String.format(Locale.US, "        Mur %d (%s) - Longueur : %.2f m, Hauteur : %.2f m, Surf. Nette : %.2f m²\n",
-                                countMur, mur.getTypeMur().toString(), mur.calculerLongueur(), mur.getHauteur(), netArea));
+                        for (CoteMur cm : piece.getCotesMurs()) {
+                            Mur mur = cm.getMurParent();
+                            double netArea = cm.calculerSurface();
+                            String sideLabel = (cm == mur.getCoteGauche()) ? "Gauche" : "Droit";
+                            sb.append(String.format(Locale.US, "        Mur %d (%s, Côté %s) - Longueur : %.2f m, Hauteur : %.2f m, Surf. Nette : %.2f m²\n",
+                                countMur, mur.getTypeMur().toString(), sideLabel, mur.calculerLongueur(), mur.getHauteur(), netArea));
                             
                             if (mur.getListeOuvertures() != null && !mur.getListeOuvertures().isEmpty()) {
                                 sb.append("          Ouvertures : ");
@@ -106,10 +108,10 @@ public class DevisExporter {
                                 sb.append("\n");
                             }
 
-                            if (mur.getRevetements() != null && !mur.getRevetements().isEmpty()) {
-                                for (Revetement r : mur.getRevetements()) {
+                            if (cm.getRevetements() != null && !cm.getRevetements().isEmpty()) {
+                                for (Revetement r : cm.getRevetements()) {
                                     sb.append(String.format(Locale.US, "          Revêtement : %s (%.2f €/m²) - %.2f €\n",
-                                        r.getDesignation(), r.getPrixUnitaire(), mur.calculerPrixRevetement()));
+                                        r.getDesignation(), r.getPrixUnitaire(), cm.calculerPrixRevetement()));
                                 }
                             } else {
                                 sb.append("          Revêtement : Sans revêtement (0,00 €)\n");

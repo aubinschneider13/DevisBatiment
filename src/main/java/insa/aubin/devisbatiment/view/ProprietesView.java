@@ -317,20 +317,20 @@ public class ProprietesView extends VBox {
 
         // --- Murs ---
         // Un mur est "revêtu" s'il a au moins un revêtement dans sa liste
-        long nbMursAvecRev = piece.getMurs().stream()
-                .filter(m -> !m.getRevetements().isEmpty())
+        long nbMursAvecRev = piece.getCotesMurs().stream()
+                .filter(cm -> !cm.getRevetements().isEmpty())
                 .count();
         String infoMurs = "Aucun";
 
         if (nbMursAvecRev > 0) {
             // Collecte tous les noms distincts de revêtements posés sur les murs
-            long nbDistincts = piece.getMurs().stream()
-                    .flatMap(m -> m.getRevetements().stream())
+            long nbDistincts = piece.getCotesMurs().stream()
+                    .flatMap(cm -> cm.getRevetements().stream())
                     .map(Revetement::getDesignation)
                     .distinct()
                     .count();
-            String premierNom = piece.getMurs().stream()
-                    .flatMap(m -> m.getRevetements().stream())
+            String premierNom = piece.getCotesMurs().stream()
+                    .flatMap(cm -> cm.getRevetements().stream())
                     .map(Revetement::getDesignation)
                     .findFirst().orElse("?");
             infoMurs = nbMursAvecRev + " mur(s) — "

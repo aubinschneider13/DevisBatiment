@@ -170,11 +170,24 @@ public class DessinCanvas extends Canvas {
 
         if (selection != null) {
             for (SurfaceAvecRevetement surface : selection) {
-                if (surface instanceof Mur m) {
-                    gc.setStroke(Color.web("#00E5FF", 0.6));
-                    gc.setLineWidth(0.4);
-                    gc.strokeLine(m.getPoint1().getX(), m.getPoint1().getY(),
-                            m.getPoint2().getX(), m.getPoint2().getY());
+                if (surface instanceof CoteMur cm) {
+                    Mur m = cm.getMurParent();
+                    double x1 = m.getPoint1().getX(), y1 = m.getPoint1().getY();
+                    double x2 = m.getPoint2().getX(), y2 = m.getPoint2().getY();
+                    double dx = x2 - x1;
+                    double dy = y2 - y1;
+                    double len = Math.hypot(dx, dy);
+                    if (len > 0) {
+                        double nx = -dy / len;
+                        double ny = dx / len;
+                        double offset = 0.08;
+                        if (cm == m.getCoteDroit()) {
+                            offset = -offset;
+                        }
+                        gc.setStroke(Color.web("#00E5FF", 0.7));
+                        gc.setLineWidth(0.08);
+                        gc.strokeLine(x1 + offset * nx, y1 + offset * ny, x2 + offset * nx, y2 + offset * ny);
+                    }
                 } else if (surface instanceof Sol sol) {
                     List<Point> poly = sol.getPolygonePiece();
                     if (poly != null && poly.size() >= 3) {
