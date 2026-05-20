@@ -1,0 +1,9 @@
+
+Batiment14042026211511;ImmeubleTest;Immeuble
+IMMEUBLE;Immeuble_492456c2-b223-420d-aa9e-377887206c97;g;0;-9.00;6.00;7.00;6.00;7.00;-6.00;-9.00;-6.00
+IMMEUBLE;Immeuble_d0a94387-08ba-40f9-9671-3677a3320c53;Nouvel Immeuble;0;-7.00;6.00;6.00;6.00;6.00;-4.00;-7.00;-4.00
+IMMEUBLE;Immeuble_13bfe0e2-6c53-480c-8d3a-f5605b555471;Nouvel Immeuble;0;-7.00;6.00;6.00;6.00;6.00;-5.00;-7.00;-5.00
+IMMEUBLE;Immeuble_6e85b487-5a47-4b56-a7ae-d0748a9a27b1;Nouvel Immeuble;0;-8.00;6.00;7.00;6.00;7.00;-5.00;-8.00;-5.00
+IMMEUBLE;Immeuble_2d52e05e-2816-4ee8-9b63-271e34893017;Nouvel Immeuble;0;-9.00;6.00;7.00;6.00;7.00;-5.00;-9.00;-5.00
+IMMEUBLE;Immeuble_da8c7186-b162-43d3-9f33-fb0e477c8254;Nouvel Immeuble;0;-8.00;6.00;8.00;6.00;8.00;-5.00;-8.00;-5.00
+IMMEUBLE;Immeuble_9956bfe4-a0d6-4ecf-a19b-408a769377de;Nouvel Immeuble;0;-8.00;6.00;7.00;6.00;7.00;-5.00;-8.00;-5.00
