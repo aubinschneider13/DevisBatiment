@@ -33,41 +33,39 @@ public class Porte extends Ouverture implements Fantome {
         gc.translate(x, y);
         gc.rotate(angle);
 
-        // Transparence selon l'état
         double opacite = actif ? 0.85 : 0.4;
         gc.setGlobalAlpha(opacite);
 
-        // Couleur selon l'état
         Color couleurPrincipale = actif
-                ? Color.web("#27AE60")   // vert = accrochage actif
-                : Color.web("#888888");  // gris = survol libre
+                ? Color.web("#27AE60")
+                : Color.web("#888888");
 
         double l = getLargeur();
 
-        // 1. Ouverture dans le mur
+        // 1. Ouverture dans le mur (efface le trait du mur)
         gc.setStroke(Color.WHITE);
         gc.setLineWidth(0.15);
-        gc.strokeLine(-l/2, 0, l/2, 0);
+        gc.strokeLine(-l / 2, 0, l / 2, 0);
 
-        // 2. Encadrements
+        // 2. Jambages (les deux montants verticaux)
         gc.setStroke(couleurPrincipale);
         gc.setLineWidth(0.05);
-        gc.strokeLine(-l/2, -0.08, -l/2, 0.08);
-        gc.strokeLine( l/2, -0.08,  l/2, 0.08);
+        gc.strokeLine(-l / 2, -0.08, -l / 2, 0.08);
+        gc.strokeLine( l / 2, -0.08,  l / 2, 0.08);
 
-        // 3. Arc de débattement en pointillés
-        gc.setStroke(couleurPrincipale);
+        // 3. Vantail : part du jambage gauche, descend perpendiculairement
+        gc.setLineWidth(0.06);
+        gc.strokeLine(-l / 2, 0, -l / 2, -l);
+
+        // 4. Arc de débattement : du bout du vantail jusqu'au jambage droit
+        //    Centre = jambage gauche (-l/2, 0), rayon = l
+        //    L'arc va de 90° (bout du vantail, vers le haut) à 0° (jambage droit)
         gc.setLineWidth(0.04);
-        gc.setLineDashes(0.05, 0.05);
-        gc.strokeArc(-l/2, -l, l, l, 270, 90, javafx.scene.shape.ArcType.OPEN);
+        gc.setLineDashes(0.06, 0.04);
+        gc.strokeArc(-l / 2 - l, -l, l * 2, l * 2, 0, 90, javafx.scene.shape.ArcType.OPEN);
         gc.setLineDashes(0);
 
-        // 4. Vantail
-        gc.setStroke(couleurPrincipale);
-        gc.setLineWidth(0.05);
-        gc.strokeLine(-l/2, 0, -l/2, -l);
-
-        gc.setGlobalAlpha(1.0); // reset opacité
+        gc.setGlobalAlpha(1.0);
         gc.restore();
     }
 }

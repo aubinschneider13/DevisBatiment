@@ -61,7 +61,6 @@ public class PieceControleur {
     // Pièces créées dans cet appartement
     private final List<Piece>                  pieces        = new ArrayList<>();
     private final Map<TreeItem<String>, Piece> mapItemPiece  = new HashMap<>();
-    // ✅ Ajouté : Pour relier les clones graphiques translatés aux vrais murs du modèle
     private final Map<Mur, Mur> mapCopieVersOriginal = new HashMap<>();
 
     // Callback notifiant AppControleur lors de la création d'une pièce
@@ -580,67 +579,51 @@ public class PieceControleur {
     // =========================================================================
 
     public void initialiserAvecContourAppartement(List<Point> polygone,
-                                                  List<Mur> mursDelimiteurs,
-                                                  AireImmeuble aire,
-                                                  Appartement appartement) {
-        this.appartement = appartement;
-        if (polygone == null || polygone.size() < 3) return;
+                                                List<Mur> mursDelimiteurs,
+                                                AireImmeuble aire,
+                                                Appartement appartement) {
+      this.appartement = appartement;
+      if (polygone == null || polygone.size() < 3) return;
 
-        // 1. Calculer la translation depuis le point le plus proche de (0,0)
-        double[] delta = calculerDeltaTranslation(polygone);
-        double dx = delta[0], dy = delta[1];
+      this.polygoneAppartement = new ArrayList<>(polygone);
 
-        // 2. Translater le polygone (copie locale pour l'affichage)
-        List<Point> polygoneAffichage = new ArrayList<>();
-        for (Point p : polygone) {
-            polygoneAffichage.add(new Point(p.getX() - dx, p.getY() - dy));
-        }
-        this.polygoneAppartement = polygoneAffichage;
+      List<Mur> mursAffichage = new ArrayList<>();
+      List<double[]> cotesBatiment = extraireCotesBatiment(aire);
 
-        // 3. Créer des copies des murs translatées avec OUVERTURES et REVÊTEMENTS
-        List<Mur> mursAffichage = new ArrayList<>();
-        List<double[]> cotesBatiment = extraireCotesBatiment(aire);
+      for (Mur murOriginal : mursDelimiteurs) {
+          Mur copie = new Mur(
+                  new Point(murOriginal.getPoint1().getX(), murOriginal.getPoint1().getY()),
+                  new Point(murOriginal.getPoint2().getX(), murOriginal.getPoint2().getY())
+          );
 
-        for (Mur murOriginal : mursDelimiteurs) {
-            Mur copie = new Mur(
-                    new Point(murOriginal.getPoint1().getX() - dx, murOriginal.getPoint1().getY() - dy),
-                    new Point(murOriginal.getPoint2().getX() - dx, murOriginal.getPoint2().getY() - dy)
-            );
+          boolean exterieur = cotesBatiment.stream().anyMatch(c -> murInclsDansCote(murOriginal, c));
+          copie.setTypeMur(exterieur ? Mur.TypeMur.EXTERIEUR : Mur.TypeMur.NORMAL);
 
-            // Définir le type AVANT d'ajouter les ouvertures (pour passer la sécurité de Mur.java)
-            boolean exterieur = cotesBatiment.stream().anyMatch(c -> murInclsDansCote(murOriginal, c));
-            copie.setTypeMur(exterieur ? Mur.TypeMur.EXTERIEUR : Mur.TypeMur.NORMAL);
+          for (Ouverture ouv : murOriginal.getListeOuvertures()) {
+              if (ouv instanceof Porte) {
+                  copie.ajouterOuverture(new Porte(ouv.getPositionSurMur()));
+              } else if (ouv instanceof Fenetre) {
+                  copie.ajouterOuverture(new Fenetre(ouv.getPositionSurMur()));
+              }
+          }
 
-            // --- FIX 1 : COPIER LES OUVERTURES SUR LE CLONE ---
-            for (Ouverture ouv : murOriginal.getListeOuvertures()) {
-                if (ouv instanceof Porte) {
-                    copie.ajouterOuverture(new Porte(ouv.getPositionSurMur()));
-                } else if (ouv instanceof Fenetre) {
-                    copie.ajouterOuverture(new Fenetre(ouv.getPositionSurMur()));
-                }
-            }
+          if (murOriginal.getRevetements() != null) {
+              for (Revetement r : murOriginal.getRevetements()) {
+                  copie.ajouterRevetement(r);
+              }
+          }
 
-            // --- FIX 2 : COPIER LES REVÊTEMENTS SUR LE CLONE (pour l'affichage en vert) ---
-            if (murOriginal.getRevetements() != null) {
-                for (Revetement r : murOriginal.getRevetements()) {
-                    copie.ajouterRevetement(r);
-                }
-            }
+          mapCopieVersOriginal.put(copie, murOriginal);
+          mursAffichage.add(copie);
+      }
 
-            // --- FIX 3 : GARDER LE LIEN VERS L'ORIGINAL ---
-            mapCopieVersOriginal.put(copie, murOriginal);
+      vue.getCanvas().getElements().add(0, creerFondAppartement(this.polygoneAppartement));
+      for (Mur copie : mursAffichage) {
+          vue.getCanvas().getElements().add(copie);
+      }
 
-            mursAffichage.add(copie);
-        }
-
-        // 4. Ajouter au canvas
-        vue.getCanvas().getElements().add(0, creerFondAppartement(polygoneAffichage));
-        for (Mur copie : mursAffichage) {
-            vue.getCanvas().getElements().add(copie);
-        }
-
-        vue.getCanvas().redrawAll();
-    }
+      vue.getCanvas().redrawAll();
+  }
 
     private Dessin creerFondAppartement(List<Point> polygone) {
         return new Dessin() {
@@ -779,20 +762,6 @@ public class PieceControleur {
             if (t < -GeometrieUtils.TOL || t > 1 + GeometrieUtils.TOL) return false;
         }
         return true;
-    }
-    
-    private double[] calculerDeltaTranslation(List<Point> polygone) {
-        Point pointRef = null;
-        double distMin = Double.MAX_VALUE;
-        for (Point p : polygone) {
-            double dist = p.getX() * p.getX() + p.getY() * p.getY();
-            if (dist < distMin) {
-                distMin = dist;
-                pointRef = p;
-            }
-        }
-        if (pointRef == null) return new double[]{0, 0};
-        return new double[]{pointRef.getX(), pointRef.getY()};
     }
 
     // =========================================================================

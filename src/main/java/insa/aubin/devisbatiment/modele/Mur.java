@@ -216,25 +216,28 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     private void dessinerSymbolePorte(GraphicsContext gc, double largeur) {
         double l = largeur;
 
+        // 1. Ouverture dans le mur
         gc.setStroke(Color.WHITE);
         gc.setLineWidth(0.15);
-        gc.strokeLine(-l/2, 0, l/2, 0);
+        gc.strokeLine(-l / 2, 0, l / 2, 0);
 
+        // 2. Jambages
         gc.setStroke(Color.BLACK);
         gc.setLineWidth(0.05);
-        gc.strokeLine(-l/2, -0.08, -l/2, 0.08);
-        gc.strokeLine( l/2, -0.08,  l/2, 0.08);
+        gc.strokeLine(-l / 2, -0.08, -l / 2, 0.08);
+        gc.strokeLine( l / 2, -0.08,  l / 2, 0.08);
 
-        gc.setStroke(Color.web("#8B4513")); // marron
-        gc.setLineWidth(0.04);
-        gc.setLineDashes(0.05, 0.05);
-        gc.strokeArc(-l/2, -l, l, l, 270, 90, javafx.scene.shape.ArcType.OPEN);
-        gc.setLineDashes(0); // reset
-
+        // 3. Vantail
         gc.setStroke(Color.web("#8B4513"));
-        gc.setLineWidth(0.05);
-        gc.strokeLine(-l/2, 0, -l/2, -l);
-    }
+        gc.setLineWidth(0.06);
+        gc.strokeLine(-l / 2, 0, -l / 2, -l);
+
+        // 4. Arc de débattement
+        gc.setLineWidth(0.04);
+        gc.setLineDashes(0.06, 0.04);
+        gc.strokeArc(-l / 2 - l, -l, l * 2, l * 2, 0, 90, javafx.scene.shape.ArcType.OPEN);
+        gc.setLineDashes(0);
+    }  
 
     private void dessinerSymboleFenetre(GraphicsContext gc, double largeur) {
         double l = largeur;
