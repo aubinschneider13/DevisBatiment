@@ -131,6 +131,11 @@ public class PieceControleur {
     // =========================================================================
 
     public void changerEtat(int nouvelEtat) {
+        // ✅ Provenant de origin/master : Nettoyer le fantôme d'ouverture en quittant le mode
+        if (this.state == ETAT_PORTE || this.state == ETAT_FENETRE) {
+            murSurvole = null;
+            vue.getCanvas().setFantome(null, 0, 0, 0, false);
+        }
         this.etat = nouvelEtat;
         vue.getCanvas().setPanActif(nouvelEtat == ETAT_RIEN);
         vue.getOptionsMurVue().setVisible(nouvelEtat == ETAT_MUR);
@@ -225,7 +230,7 @@ public class PieceControleur {
     // GESTION DU MODE SÉLECTION (Revêtements)
     // =========================================================================
 
-    // ✅ Vos méthodes de sélection intégrées ici
+    // ✅ Provenant de master : Sélection biface géométrique précise
     private void gererClicSelection(Point pClic) {
         Mur cibleCanvas = trouverMurProche(pClic);
 
@@ -601,25 +606,16 @@ public class PieceControleur {
         this.appartement = appartement;
         if (polygone == null || polygone.size() < 3) return;
 
-        // 1. Calculer la translation depuis le point le plus proche de (0,0)
-        double[] delta = calculerDeltaTranslation(polygone);
-        double dx = delta[0], dy = delta[1];
+        // On conserve la logique de non-translation directe ou de polygone de origin/master
+        this.polygoneAppartement = new ArrayList<>(polygone);
 
-        // 2. Translater le polygone (copie locale pour l'affichage)
-        List<Point> polygoneAffichage = new ArrayList<>();
-        for (Point p : polygone) {
-            polygoneAffichage.add(new Point(p.getX() - dx, p.getY() - dy));
-        }
-        this.polygoneAppartement = polygoneAffichage;
-
-        // 3. Créer des copies des murs translatées avec OUVERTURES et REVÊTEMENTS
         List<Mur> mursAffichage = new ArrayList<>();
         List<double[]> cotesBatiment = extraireCotesBatiment(aire);
 
         for (Mur murOriginal : mursDelimiteurs) {
             Mur copie = new Mur(
-                    new Point(murOriginal.getPoint1().getX() - dx, murOriginal.getPoint1().getY() - dy),
-                    new Point(murOriginal.getPoint2().getX() - dx, murOriginal.getPoint2().getY() - dy)
+                    new Point(murOriginal.getPoint1().getX(), murOriginal.getPoint1().getY()),
+                    new Point(murOriginal.getPoint2().getX(), murOriginal.getPoint2().getY())
             );
 
             // Définir le type AVANT d'ajouter les ouvertures (pour passer la sécurité de Mur.java)
@@ -635,7 +631,7 @@ public class PieceControleur {
                 }
             }
 
-            // --- FIX 2 : COPIER LES REVÊTEMENTS SUR LE CLONE (pour l'affichage bi-face) ---
+            // --- FIX 2 : COPIER LES REVÊTEMENTS SUR LE CLONE (biface de master) ---
             if (murOriginal.getCoteGauche().getRevetements() != null) {
                 for (Revetement r : murOriginal.getCoteGauche().getRevetements()) {
                     copie.getCoteGauche().ajouterRevetement(r);
@@ -649,12 +645,10 @@ public class PieceControleur {
 
             // --- FIX 3 : GARDER LE LIEN VERS L'ORIGINAL ---
             mapCopieVersOriginal.put(copie, murOriginal);
-
             mursAffichage.add(copie);
         }
 
-        // 4. Ajouter au canvas
-        vue.getCanvas().getElements().add(0, creerFondAppartement(polygoneAffichage));
+        vue.getCanvas().getElements().add(0, creerFondAppartement(this.polygoneAppartement));
         for (Mur copie : mursAffichage) {
             vue.getCanvas().getElements().add(copie);
         }
@@ -688,7 +682,7 @@ public class PieceControleur {
         cotes.add(new double[]{q4.getX(), q4.getY(), q1.getX(), q1.getY()});
         return cotes;
     }
-    
+
     public void rechargerPieces(List<Piece> piecesChargees) {
         for (Piece piece : piecesChargees) {
             pieces.add(piece);
@@ -800,20 +794,6 @@ public class PieceControleur {
         }
         return true;
     }
-    
-    private double[] calculerDeltaTranslation(List<Point> polygone) {
-        Point pointRef = null;
-        double distMin = Double.MAX_VALUE;
-        for (Point p : polygone) {
-            double dist = p.getX() * p.getX() + p.getY() * p.getY();
-            if (dist < distMin) {
-                distMin = dist;
-                pointRef = p;
-            }
-        }
-        if (pointRef == null) return new double[]{0, 0};
-        return new double[]{pointRef.getX(), pointRef.getY()};
-    }
 
     // =========================================================================
     // GETTERS
@@ -909,5 +889,4 @@ public class PieceControleur {
         }
         vue.redrawAll();
     }
-
 }

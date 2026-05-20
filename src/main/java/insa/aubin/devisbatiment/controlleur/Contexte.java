@@ -61,6 +61,8 @@ public interface Contexte {
      */
     default void onBtnAppartement() { }
     
+    default void onBtnCouloir() { }
+    
     default void onBtnPiece() { }
     
     /**

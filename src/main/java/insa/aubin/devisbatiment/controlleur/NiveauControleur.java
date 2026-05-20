@@ -54,6 +54,9 @@ public class NiveauControleur {
 
     // Callback notifiant AppControleur lors de la création d'un appartement
     private Function<Appartement, TreeItem<String>> onAppartementCree = null;
+    private Function<Couloir, TreeItem<String>> onCouloirCree = null;
+    private final List<Couloir> couloirs = new ArrayList<>();
+    private final Map<TreeItem<String>, Couloir> mapItemCouloir = new HashMap<>();
 
     // =========================================================================
     // CONSTRUCTEUR
@@ -90,6 +93,10 @@ public class NiveauControleur {
      */
     public void setOnAppartementCree(Function<Appartement, TreeItem<String>> callback) {
         this.onAppartementCree = callback;
+    }
+    
+    public void setOnCouloirCree(Function<Couloir, TreeItem<String>> callback) {
+        this.onCouloirCree = callback;
     }
 
     // =========================================================================
@@ -129,6 +136,7 @@ public class NiveauControleur {
         switch (mode) {
             case "MUR"         -> gererClicMur(snap);
             case "APPARTEMENT" -> gererClicAppartement(snap);
+            case "COULOIR" -> gererClicCouloir(snap);
         }
     }
 
@@ -284,6 +292,47 @@ public class NiveauControleur {
                 "« " + appart + " » créé — cliquez dans une autre zone pour en ajouter un.");
         vue.getCanvas().redrawAll();
     }
+    
+    private void gererClicCouloir(Point2D snap) {
+        double px = snap.getX(), py = snap.getY();
+
+        for (Appartement a : appartements) {
+            if (GeometrieUtils.pointDansPolygone(px, py, a.getPolygone())) {
+                vue.setInstructions("Un appartement occupe déjà cette zone.");
+                return;
+            }
+        }
+        for (Couloir c : couloirs) {
+            if (GeometrieUtils.pointDansPolygone(px, py, c.getPolygone())) {
+                vue.setInstructions("Un couloir existe déjà dans cette zone.");
+                return;
+            }
+        }
+
+        List<SegmentSource> sources = collecterSegmentsSources();
+        List<SegmentSource> cycle   = GeometrieUtils.trouverCycleMinimal(px, py, sources);
+
+        if (cycle == null || cycle.size() < 3) {
+            vue.setInstructions("Aucune zone fermée ici.");
+            return;
+        }
+
+        List<Mur> mursDelimiteurs = new ArrayList<>();
+        for (SegmentSource ss : cycle) mursDelimiteurs.add(ss.mur);
+        mursDelimiteurs = GeometrieUtils.ordonnerMurs(mursDelimiteurs);
+
+        Couloir couloir = niveau.ajouterCouloir(mursDelimiteurs);
+        couloirs.add(couloir);
+        vue.getCanvas().ajouterElement(couloir);
+
+        if (onCouloirCree != null) {
+            TreeItem<String> itemCouloir = onCouloirCree.apply(couloir);
+            if (itemCouloir != null) mapItemCouloir.put(itemCouloir, couloir);
+        }
+
+        vue.setInstructions("« " + couloir + " » créé.");
+        vue.getCanvas().redrawAll();
+    }
 
     // =========================================================================
     // COLLECTE DES SEGMENTS (délègue la subdivision à GeometrieUtils)
@@ -403,6 +452,14 @@ public class NiveauControleur {
         vue.setInstructions(
                 "Cliquez à l'intérieur d'une zone fermée pour créer un appartement");
     }
+    
+    public void activerModeCouloir() {
+        annulerMurEnCours();
+        mode = "COULOIR";
+        vue.getCanvas().setPanActif(false);
+        vue.getOptionsMurVue().setVisible(false);
+        vue.setInstructions("Cliquez dans une zone fermée pour créer un couloir");
+    }
 
     public void activerModeNavigation() {
         annulerMurEnCours();
@@ -448,7 +505,6 @@ public class NiveauControleur {
     public NiveauView   getVue()    { return vue;    }
     public Niveau       getNiveau() { return niveau; }
 
-    public Map<TreeItem<String>, Appartement> getMapItemAppartement() {
-        return mapItemAppartement;
-    }
+    public Map<TreeItem<String>, Appartement> getMapItemAppartement() { return mapItemAppartement; }
+    public Map<TreeItem<String>, Couloir> getMapItemCouloir() { return mapItemCouloir; }
 }
