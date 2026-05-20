@@ -15,6 +15,7 @@ public class ToolBarDevisView extends HBox {
 
     private final Button btnAppliquerRevetement;
     private final Button btnValiderRevetement;
+    private final Button btnExporterDevis;
     private final Label labelTotalDevis;
 
     public ToolBarDevisView() {
@@ -30,6 +31,10 @@ public class ToolBarDevisView extends HBox {
         btnValiderRevetement.setStyle("-fx-cursor: hand; -fx-font-weight: bold; -fx-base: #2ecc71;");
         btnValiderRevetement.setPrefHeight(40);
 
+        btnExporterDevis = new Button("Exporter le devis");
+        btnExporterDevis.setStyle("-fx-cursor: hand; -fx-font-weight: bold; -fx-base: #e67e22; -fx-text-fill: white;");
+        btnExporterDevis.setPrefHeight(40);
+
         labelTotalDevis = new Label("Total estimé : 0.00 €");
         labelTotalDevis.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
 
@@ -37,11 +42,12 @@ public class ToolBarDevisView extends HBox {
         Region devisSpacer = new Region();
         HBox.setHgrow(devisSpacer, Priority.ALWAYS);
 
-        getChildren().addAll(btnAppliquerRevetement, btnValiderRevetement, devisSpacer, labelTotalDevis);
+        getChildren().addAll(btnAppliquerRevetement, btnValiderRevetement, btnExporterDevis, devisSpacer, labelTotalDevis);
     }
 
     // --- GETTERS pour le contrôleur ---
     public Button getBtnAppliquerRevetement() { return btnAppliquerRevetement; }
     public Button getBtnValiderRevetement() { return btnValiderRevetement; }
+    public Button getBtnExporterDevis() { return btnExporterDevis; }
     public Label getLabelTotalDevis() { return labelTotalDevis; }
 }

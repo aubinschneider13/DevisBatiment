@@ -56,6 +56,7 @@ public class PieceControleur {
     // Appartement courant et son contour
     private Appartement   appartement          = null;
     private List<Point>   polygoneAppartement  = null;
+    private javafx.beans.value.ChangeListener<javafx.scene.control.Toggle> listenerEchelle = null;
 
     // Pièces créées dans cet appartement
     private final List<Piece>                  pieces        = new ArrayList<>();
@@ -176,14 +177,15 @@ public class PieceControleur {
     public void btnEchelle(ActionEvent t) {
         boolean visible = !vue.getEchelleVue().isVisible();
         vue.getEchelleVue().setVisible(visible);
-        if (visible) {
+        if (visible && listenerEchelle == null) {
+            listenerEchelle = (obs, oldVal, newVal) -> {
+                if (newVal != null) {
+                    vue.getCanvas().setGridSize(
+                            vue.getEchelleVue().getEchelleSelectionnee());
+                }
+            };
             vue.getEchelleVue().getGroupeEchelle()
-                    .selectedToggleProperty().addListener((obs, oldVal, newVal) -> {
-                        if (newVal != null) {
-                            vue.getCanvas().setGridSize(
-                                    vue.getEchelleVue().getEchelleSelectionnee());
-                        }
-                    });
+                    .selectedToggleProperty().addListener(listenerEchelle);
         }
     }
 

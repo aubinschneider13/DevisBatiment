@@ -61,6 +61,7 @@ public class AppControleur {
     private final Map<Piece, ContexteSousPiece> contexteSousPieces = new HashMap<>();
     private final Map<TreeItem<String>, Niveau> mapItemNiveau = new HashMap<>();
     private final Map<TreeItem<String>, Appartement> mapItemAppartement = new HashMap<>();
+    private javafx.beans.value.ChangeListener<javafx.scene.control.Toggle> listenerEchelle = null;
 
     // =========================================================================
     // CONSTRUCTEUR 1 : NOUVEAU PROJET
@@ -183,7 +184,7 @@ public class AppControleur {
                 return;
             }
 
-            ChoixRevetementDialog dialog = new ChoixRevetementDialog(catalogue);
+            ChoixRevetementDialog dialog = new ChoixRevetementDialog(catalogue, selection);
             Optional<Revetement> resultat = dialog.showAndWait();
 
             if (resultat.isPresent()) {
@@ -220,6 +221,32 @@ public class AppControleur {
                             nav.afficherProprietesAppartement(appart);
                         }
                     }
+                }
+            }
+        });
+
+        tbDevis.getBtnExporterDevis().setOnAction(e -> {
+            if (immeuble == null) {
+                Alert alert = new Alert(Alert.AlertType.WARNING, "Aucun immeuble à exporter !");
+                alert.showAndWait();
+                return;
+            }
+            javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
+            fileChooser.setTitle("Exporter le devis");
+            fileChooser.setInitialFileName("devis_" + immeuble.getNomBatiment() + ".txt");
+            fileChooser.getExtensionFilters().add(
+                new javafx.stage.FileChooser.ExtensionFilter("Fichiers Texte (*.txt)", "*.txt")
+            );
+            java.io.File file = fileChooser.showSaveDialog(stage);
+            if (file != null) {
+                try {
+                    DevisExporter.exporterDevisVersFichier(immeuble, file);
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION, "Le devis a été exporté avec succès !");
+                    alert.setHeaderText("Export réussi");
+                    alert.showAndWait();
+                } catch (java.io.IOException ex) {
+                    Alert alert = new Alert(Alert.AlertType.ERROR, "Erreur lors de l'exportation : " + ex.getMessage());
+                    alert.showAndWait();
                 }
             }
         });
@@ -406,13 +433,14 @@ public class AppControleur {
         boolean visible = !echelleVue.isVisible();
         echelleVue.setVisible(visible);
 
-        if (visible) {
+        if (visible && listenerEchelle == null) {
+            listenerEchelle = (obs, oldVal, newVal) -> {
+                if (newVal == null) return;
+                appliquerEchelle(echelleVue.getEchelleSelectionnee());
+            };
             echelleVue.getGroupeEchelle()
                     .selectedToggleProperty()
-                    .addListener((obs, oldVal, newVal) -> {
-                        if (newVal == null) return;
-                        appliquerEchelle(echelleVue.getEchelleSelectionnee());
-                    });
+                    .addListener(listenerEchelle);
         }
     }
 

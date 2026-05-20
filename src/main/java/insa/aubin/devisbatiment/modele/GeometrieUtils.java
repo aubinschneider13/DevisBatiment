@@ -103,6 +103,7 @@ public class GeometrieUtils {
     // =========================================================================
 
     public static double calculerAire(List<Point> poly) {
+        if (poly == null || poly.isEmpty()) return 0.0;
         double aire = 0;
         int n = poly.size();
         for (int i = 0; i < n; i++) {
@@ -114,6 +115,7 @@ public class GeometrieUtils {
     }
 
     public static List<Mur> ordonnerMurs(List<Mur> murs) {
+        if (murs == null || murs.isEmpty()) return new ArrayList<>();
         if (murs.size() <= 1) return murs;
         List<Mur> ordonne  = new ArrayList<>();
         List<Mur> restants = new ArrayList<>(murs);
@@ -124,6 +126,7 @@ public class GeometrieUtils {
             boolean trouve = false;
             for (int i = 0; i < restants.size(); i++) {
                 Mur candidat = restants.get(i);
+                if (candidat == null) continue;
                 if (correspondA(candidat.getPoint1(), dernierPoint)) {
                     courant = candidat;
                     ordonne.add(courant);
@@ -157,17 +160,20 @@ public class GeometrieUtils {
      * @return segments subdivisés et dédupliqués
      */
     public static List<SegmentSource> subdiviserEtDeduplicer(List<SegmentSource> bruts) {
+        if (bruts == null) return new ArrayList<>();
         List<SegmentSource> sources = new ArrayList<>();
 
         // Collecter tous les nœuds
         List<double[]> tousLesPoints = new ArrayList<>();
         for (SegmentSource ss : bruts) {
+            if (ss == null) continue;
             ajouterNoeudSiAbsent(tousLesPoints, ss.x1, ss.y1);
             ajouterNoeudSiAbsent(tousLesPoints, ss.x2, ss.y2);
         }
 
         // Subdiviser chaque segment aux intersections
         for (SegmentSource ss : bruts) {
+            if (ss == null) continue;
             List<double[]> pointsSurSegment = new ArrayList<>();
             pointsSurSegment.add(new double[]{ss.x1, ss.y1});
             pointsSurSegment.add(new double[]{ss.x2, ss.y2});
@@ -188,6 +194,9 @@ public class GeometrieUtils {
 
             double dx = ss.x2 - ss.x1, dy = ss.y2 - ss.y1;
             double len2 = dx * dx + dy * dy;
+            if (len2 < TOL) {
+                continue; // Éviter division par zéro et ignorer segment dégénéré
+            }
             pointsSurSegment.sort((a, b) -> {
                 double ta = ((a[0] - ss.x1) * dx + (a[1] - ss.y1) * dy) / len2;
                 double tb = ((b[0] - ss.x1) * dx + (b[1] - ss.y1) * dy) / len2;

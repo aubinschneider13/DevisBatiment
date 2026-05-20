@@ -73,18 +73,26 @@ public class Mur extends SurfaceAvecRevetement implements Dessin {
     public double calculerSurfaceNette(){
         double surfaceBrute = this.calculerSurface();
         double surfaceOuverture = 0;
-        for (Ouverture o : listeOuvertures) {
-            surfaceOuverture += o.getLargeur() * o.getHauteur();
+        if (listeOuvertures != null) {
+            for (Ouverture o : listeOuvertures) {
+                if (o != null) {
+                    surfaceOuverture += o.getLargeur() * o.getHauteur();
+                }
+            }
         }
-        return surfaceBrute - surfaceOuverture;
+        return Math.max(0.0, surfaceBrute - surfaceOuverture);
     }
 
     // Dans Mur.java — surcharger calculerPrixRevetement()
     @Override
     public double calculerPrixRevetement() {
         double total = 0;
-        for (Revetement r : getRevetements()) {
-            total += (float) r.calculerPrixTotal(calculerSurfaceNette());
+        if (getRevetements() != null) {
+            for (Revetement r : getRevetements()) {
+                if (r != null) {
+                    total += (float) r.calculerPrixTotal(calculerSurfaceNette());
+                }
+            }
         }
         return total;
     }
