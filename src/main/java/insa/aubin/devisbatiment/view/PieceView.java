@@ -3,8 +3,13 @@ package insa.aubin.devisbatiment.view;
 import insa.aubin.devisbatiment.controlleur.PieceControleur;
 import insa.aubin.devisbatiment.modele.AireImmeuble;
 import insa.aubin.devisbatiment.modele.Appartement;
+import insa.aubin.devisbatiment.modele.Couloir;
 import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
+import insa.aubin.devisbatiment.modele.Mur;
 import insa.aubin.devisbatiment.modele.Piece;
+import insa.aubin.devisbatiment.modele.Point;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -58,6 +63,25 @@ public class PieceView extends StackPane {
             );
         }
     }
+    //Constructeur Couloir
+    public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
+                    Couloir couloir, AireImmeuble aire) {
+       this(stage, gestionnaire, (Appartement) null, (AireImmeuble) null);
+
+       if (couloir != null && !couloir.getPolygones().isEmpty()) {
+           // On initialise avec chaque zone du couloir
+           for (List<Mur> zone : couloir.getZonesDelimiteurs()) {
+               List<Point> polygone = new ArrayList<>();
+               for (Mur m : zone) polygone.add(m.getPoint1());
+               this.controleur.initialiserAvecContourAppartement(
+                   polygone,
+                   zone,
+                   aire,
+                   null
+               );
+           }
+       }
+   }   
     // Constructeur principal
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
                      Appartement appartement, AireImmeuble aire) {

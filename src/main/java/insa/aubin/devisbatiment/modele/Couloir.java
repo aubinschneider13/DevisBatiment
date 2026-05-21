@@ -21,8 +21,8 @@ public class Couloir extends ElementDeConstruction {
         compteur++;
         this.numero = compteur;
     }
-    
-        public void ajouterZone(List<Mur> murs) {
+
+    public void ajouterZone(List<Mur> murs) {
         zonesDelimiteurs.add(new ArrayList<>(murs));
     }
 
@@ -36,18 +36,20 @@ public class Couloir extends ElementDeConstruction {
         return polygones;
     }
 
-    // Garde getPolygone() pour compatibilité, retourne le premier
     public List<Point> getPolygone() {
         if (zonesDelimiteurs.isEmpty()) return new ArrayList<>();
         return getPolygones().get(0);
     }
 
+    public List<List<Mur>> getZonesDelimiteurs() { return zonesDelimiteurs; }
+
+    public double getHauteurPlafond() { return hauteurPlafond; }
+
     @Override
     public String toCSV() {
         StringBuilder sb = new StringBuilder();
         sb.append(String.format(java.util.Locale.US,
-            "COULOIR;%s;%d;%.2f;%.2f",
-            getId(), numero, hauteurPlafond));
+            "COULOIR;%s;%d;%.2f", getId(), numero, hauteurPlafond));
         for (Point p : getPolygone()) {
             sb.append(String.format(java.util.Locale.US, ";%.2f;%.2f", p.getX(), p.getY()));
         }
@@ -56,10 +58,4 @@ public class Couloir extends ElementDeConstruction {
 
     @Override
     public String toString() { return "Couloir " + numero; }
-    
-    public List<List<Mur>> getZonesDelimiteurs() { return zonesDelimiteurs; }
-
-    public Iterable<List<Mur>> getZonesDelimiteurs() {
-        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
-    }
 }

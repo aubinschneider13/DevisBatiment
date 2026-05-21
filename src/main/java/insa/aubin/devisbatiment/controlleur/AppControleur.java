@@ -457,8 +457,8 @@ public class AppControleur {
             itemNiveau.getChildren().removeAll(itemsCouloirDuNiveau.keySet());
             itemsCouloirDuNiveau.clear();
 
-            TreeItem<String> itemCouloir = appView.getNavigateurView()
-                    .ajouterItemCouloir(itemNiveau, couloir.toString());
+            String nomCouloir = "Couloir du " + itemNiveau.getValue();
+            TreeItem<String> itemCouloir = appView.getNavigateurView().ajouterItemCouloir(itemNiveau, nomCouloir);
             itemsCouloirDuNiveau.put(itemCouloir, couloir);
             mapItemCouloir.put(itemCouloir, couloir);
             return itemCouloir;
