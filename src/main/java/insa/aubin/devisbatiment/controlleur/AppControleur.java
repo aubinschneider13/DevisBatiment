@@ -54,13 +54,15 @@ public class AppControleur {
     // --- Item TreeView actuellement sélectionné comme "niveau actif" ---
     private TreeItem<String> itemNiveauActif = null;
 
-    // --- Maps de suivi ---
+    // --- Maps de suivi (Fusion des vôtres et de celles de votre collègue) ---
     private final Map<TreeItem<String>, Piece> mapItemPiece = new HashMap<>();
     private final Map<TreeItem<String>, TreeItem<String>> mapPieceVersAppart = new HashMap<>();
     private final Map<Appartement, ContextePiece> contextePieces = new HashMap<>();
     private final Map<Piece, ContexteSousPiece> contexteSousPieces = new HashMap<>();
     private final Map<TreeItem<String>, Niveau> mapItemNiveau = new HashMap<>();
     private final Map<TreeItem<String>, Appartement> mapItemAppartement = new HashMap<>();
+    private final Map<TreeItem<String>, Couloir> mapItemCouloir = new HashMap<>();
+    private final Map<Couloir, ContexteCouloir> contexteCouloirs = new HashMap<>();
     private javafx.beans.value.ChangeListener<javafx.scene.control.Toggle> listenerEchelle = null;
 
     // =========================================================================
@@ -144,7 +146,6 @@ public class AppControleur {
         tb.getBtnEchelle()      .setOnAction(e -> contexteActif.onBtnEchelle());
         tb.getBtnMur()          .setOnAction(e -> contexteActif.onBtnMur());
         tb.getBtnAppartement()  .setOnAction(e -> contexteActif.onBtnAppartement());
-        tb.getBtnCouloir()      .setOnAction(e -> contexteActif.onBtnCouloir());
         tb.getBtnPiece()        .setOnAction(e -> contexteActif.onBtnPiece());
         tb.getBtnPorte()        .setOnAction(e -> contexteActif.onBtnPorte());
         tb.getBtnFenetre()      .setOnAction(e -> contexteActif.onBtnFenetre());
@@ -363,6 +364,16 @@ public class AppControleur {
             }
         }
 
+        // --- Clic sur un couloir ---
+        Couloir couloir = mapItemCouloir.get(item);
+        if (couloir != null) {
+            ContexteCouloir ctx = contexteCouloirs.computeIfAbsent(couloir, c ->
+                    new ContexteCouloir(c, appView, this, stage, gestionnaire));
+            basculerContexte(ctx);
+            tbDevis.getLabelTotalDevis().setText("Total estimé : -- €");
+            return;
+        }
+
         // --- Clic sur une pièce ---
         Piece piece = mapItemPiece.get(item);
         if (piece != null) {
@@ -440,9 +451,16 @@ public class AppControleur {
             return itemAppart;
         });
 
+        Map<TreeItem<String>, Couloir> itemsCouloirDuNiveau = new HashMap<>();
         ctrl.setOnCouloirCree(couloir -> {
+            // Vider les anciens items couloir de ce niveau dans le navigateur
+            itemNiveau.getChildren().removeAll(itemsCouloirDuNiveau.keySet());
+            itemsCouloirDuNiveau.clear();
+
             TreeItem<String> itemCouloir = appView.getNavigateurView()
                     .ajouterItemCouloir(itemNiveau, couloir.toString());
+            itemsCouloirDuNiveau.put(itemCouloir, couloir);
+            mapItemCouloir.put(itemCouloir, couloir);
             return itemCouloir;
         });
 

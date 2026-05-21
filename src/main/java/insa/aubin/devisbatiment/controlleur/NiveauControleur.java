@@ -136,7 +136,6 @@ public class NiveauControleur {
         switch (mode) {
             case "MUR"         -> gererClicMur(snap);
             case "APPARTEMENT" -> gererClicAppartement(snap);
-            case "COULOIR" -> gererClicCouloir(snap);
         }
     }
 
@@ -291,47 +290,86 @@ public class NiveauControleur {
         vue.setInstructions(
                 "« " + appart + " » créé — cliquez dans une autre zone pour en ajouter un.");
         vue.getCanvas().redrawAll();
+        
+        recalculerCouloirs();
     }
     
-    private void gererClicCouloir(Point2D snap) {
-        double px = snap.getX(), py = snap.getY();
+    public void recalculerCouloirs() {
+        for (Couloir c : couloirs) vue.getCanvas().getElements().remove(c);
+        couloirs.clear();
+        mapItemCouloir.clear();
 
-        for (Appartement a : appartements) {
-            if (GeometrieUtils.pointDansPolygone(px, py, a.getPolygone())) {
-                vue.setInstructions("Un appartement occupe déjà cette zone.");
-                return;
+        if (aireImmeuble == null || !aireImmeuble.isComplete()) return;
+
+        List<Point> polyAire = List.of(
+                aireImmeuble.getP1(), aireImmeuble.getP2(),
+                aireImmeuble.getP3(), aireImmeuble.getP4()
+        );
+
+        double minX = polyAire.stream().mapToDouble(Point::getX).min().orElse(0);
+        double maxX = polyAire.stream().mapToDouble(Point::getX).max().orElse(0);
+        double minY = polyAire.stream().mapToDouble(Point::getY).min().orElse(0);
+        double maxY = polyAire.stream().mapToDouble(Point::getY).max().orElse(0);
+
+        double pas = 0.5;
+        List<List<Point>> zonesDejaDetectees = new ArrayList<>();
+
+        Couloir couloir = new Couloir(niveau.getHauteurPlafond());
+
+        for (double x = minX + pas / 2; x < maxX; x += pas) {
+            for (double y = minY + pas / 2; y < maxY; y += pas) {
+                final double fx = x, fy = y;
+
+                if (!GeometrieUtils.estDansZone(fx, fy, polyAire)) continue;
+
+                boolean dansAppart = appartements.stream().anyMatch(a ->
+                        GeometrieUtils.pointDansPolygone(fx, fy, a.getPolygone()));
+                if (dansAppart) continue;
+
+                boolean dejaCouvert = zonesDejaDetectees.stream().anyMatch(poly ->
+                        GeometrieUtils.pointDansPolygone(fx, fy, poly));
+                if (dejaCouvert) continue;
+
+                List<SegmentSource> sources = collecterSegmentsSources();
+                List<SegmentSource> cycle = GeometrieUtils.trouverCycleMinimal(fx, fy, sources);
+                if (cycle == null || cycle.size() < 3) continue;
+
+                List<Mur> mursZone = new ArrayList<>();
+                for (SegmentSource ss : cycle) mursZone.add(ss.mur);
+                mursZone = GeometrieUtils.ordonnerMurs(mursZone);
+
+                List<Point> polygone = new ArrayList<>();
+                for (Mur m : mursZone) polygone.add(m.getPoint1());
+
+                boolean estAppart = appartements.stream().anyMatch(a ->
+                        polygonesSontEquivalents(polygone, a.getPolygone()));
+                if (estAppart) continue;
+
+                zonesDejaDetectees.add(polygone);
+                couloir.ajouterZone(mursZone); // ajouter au couloir unique
             }
         }
-        for (Couloir c : couloirs) {
-            if (GeometrieUtils.pointDansPolygone(px, py, c.getPolygone())) {
-                vue.setInstructions("Un couloir existe déjà dans cette zone.");
-                return;
+
+        if (!couloir.getPolygones().isEmpty()) {
+            couloirs.add(couloir);
+            niveau.ajouterCouloir(); 
+
+            if (onCouloirCree != null) {
+                TreeItem<String> itemCouloir = onCouloirCree.apply(couloir);
+                if (itemCouloir != null) mapItemCouloir.put(itemCouloir, couloir);
             }
         }
 
-        List<SegmentSource> sources = collecterSegmentsSources();
-        List<SegmentSource> cycle   = GeometrieUtils.trouverCycleMinimal(px, py, sources);
-
-        if (cycle == null || cycle.size() < 3) {
-            vue.setInstructions("Aucune zone fermée ici.");
-            return;
-        }
-
-        List<Mur> mursDelimiteurs = new ArrayList<>();
-        for (SegmentSource ss : cycle) mursDelimiteurs.add(ss.mur);
-        mursDelimiteurs = GeometrieUtils.ordonnerMurs(mursDelimiteurs);
-
-        Couloir couloir = niveau.ajouterCouloir(mursDelimiteurs);
-        couloirs.add(couloir);
-        vue.getCanvas().ajouterElement(couloir);
-
-        if (onCouloirCree != null) {
-            TreeItem<String> itemCouloir = onCouloirCree.apply(couloir);
-            if (itemCouloir != null) mapItemCouloir.put(itemCouloir, couloir);
-        }
-
-        vue.setInstructions("« " + couloir + " » créé.");
         vue.getCanvas().redrawAll();
+    }
+
+    private boolean polygonesSontEquivalents(List<Point> p1, List<Point> p2) {
+        if (p1.size() != p2.size()) return false;
+        double tol = 0.05;
+        return p1.stream().allMatch(a ->
+                p2.stream().anyMatch(b ->
+                        Math.abs(a.getX() - b.getX()) < tol &&
+                        Math.abs(a.getY() - b.getY()) < tol));
     }
 
     // =========================================================================
@@ -451,14 +489,6 @@ public class NiveauControleur {
         vue.getOptionsMurVue().setVisible(false);
         vue.setInstructions(
                 "Cliquez à l'intérieur d'une zone fermée pour créer un appartement");
-    }
-    
-    public void activerModeCouloir() {
-        annulerMurEnCours();
-        mode = "COULOIR";
-        vue.getCanvas().setPanActif(false);
-        vue.getOptionsMurVue().setVisible(false);
-        vue.setInstructions("Cliquez dans une zone fermée pour créer un couloir");
     }
 
     public void activerModeNavigation() {

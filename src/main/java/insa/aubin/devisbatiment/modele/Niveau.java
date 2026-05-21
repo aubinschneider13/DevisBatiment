@@ -62,8 +62,8 @@ public class Niveau extends ElementDeConstruction {
         return a;
     }
     
-    public Couloir ajouterCouloir(List<Mur> mursCouloir) {
-        Couloir c = new Couloir(mursCouloir, this.hauteurPlafond);
+    public Couloir ajouterCouloir() {
+        Couloir c = new Couloir(this.hauteurPlafond);
         this.couloirs.add(c);
         return c;
     }
