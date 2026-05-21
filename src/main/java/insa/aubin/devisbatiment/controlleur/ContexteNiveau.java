@@ -23,7 +23,7 @@ public class ContexteNiveau implements Contexte {
 
     /** Identifiants des boutons affichés dans ce contexte (ordre = ordre toolbar). */
     private static final List<String> BOUTONS = List.of(
-            "navigation", "echelle", "mur", "appartement", "couloir", "ajouterNiveau"
+            "navigation", "echelle", "mur", "appartement", "ajouterNiveau"
     );
 
     // --- Dépendances ---
@@ -91,11 +91,7 @@ public class ContexteNiveau implements Contexte {
     public void onBtnAppartement() {
         niveauControleur.activerModeAppartement();
     }
-    
-    @Override
-    public void onBtnCouloir() {
-        niveauControleur.activerModeCouloir();
-    }
+  
     /**
      * Bascule le panneau de sélection d'échelle.
      * Délégué à AppControleur car l'échelle est partagée entre tous les contextes.
