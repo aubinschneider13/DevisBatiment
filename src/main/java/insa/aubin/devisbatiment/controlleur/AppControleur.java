@@ -54,7 +54,7 @@ public class AppControleur {
     // --- Item TreeView actuellement sélectionné comme "niveau actif" ---
     private TreeItem<String> itemNiveauActif = null;
 
-    // --- Maps de suivi (Fusion des vôtres et de celles de votre collègue) ---
+    // --- Maps de suivi ---
     private final Map<TreeItem<String>, Piece> mapItemPiece = new HashMap<>();
     private final Map<TreeItem<String>, TreeItem<String>> mapPieceVersAppart = new HashMap<>();
     private final Map<Appartement, ContextePiece> contextePieces = new HashMap<>();
@@ -93,7 +93,7 @@ public class AppControleur {
     }
 
     // =========================================================================
-    // CONSTRUCTEUR 2 : RECHARGEMENT D'UN PROJET EXISTANT (Code collègue)
+    // CONSTRUCTEUR 2 : RECHARGEMENT D'UN PROJET EXISTANT
     // =========================================================================
     public AppControleur(AppView appView, Stage stage,
                          GestionnaireSauvegarde gestionnaire, Immeuble immeubleExistant) {
@@ -144,7 +144,7 @@ public class AppControleur {
         tb.getBtnEchelle()      .setOnAction(e -> contexteActif.onBtnEchelle());
         tb.getBtnMur()          .setOnAction(e -> contexteActif.onBtnMur());
         tb.getBtnAppartement()  .setOnAction(e -> contexteActif.onBtnAppartement());
-        tb.getBtnCouloir().setOnAction(e -> contexteActif.onBtnCouloir());
+        tb.getBtnCouloir()      .setOnAction(e -> contexteActif.onBtnCouloir());
         tb.getBtnPiece()        .setOnAction(e -> contexteActif.onBtnPiece());
         tb.getBtnPorte()        .setOnAction(e -> contexteActif.onBtnPorte());
         tb.getBtnFenetre()      .setOnAction(e -> contexteActif.onBtnFenetre());
@@ -194,16 +194,25 @@ public class AppControleur {
                 boolean targetSol = dialog.isAppliquerAuSol();
                 boolean targetPlafond = dialog.isAppliquerAuPlafond();
 
-                 for (SurfaceAvecRevetement surface : selection) {
-                     if (surface instanceof CoteMur && !targetMurs) continue;
-                     if (surface instanceof Sol && !targetSol) continue;
-                     if (surface instanceof Plafond && !targetPlafond) continue;
+                for (SurfaceAvecRevetement surface : selection) {
+                    boolean compatibleEtVise = false;
 
-                     if (surface.estCompatibleAvec(revChoisi)) {
-                         surface.getRevetements().clear();
-                         surface.ajouterRevetement(revChoisi);
-                     }
-                 }
+                    // ✅ CORRECTION : On teste "CoteMur" (qui hérite bien de SurfaceAvecRevetement)
+                    if (surface instanceof CoteMur && targetMurs) {
+                        compatibleEtVise = surface.estCompatibleAvec(revChoisi);
+                    }
+                    else if (surface instanceof Sol && targetSol) {
+                        compatibleEtVise = surface.estCompatibleAvec(revChoisi);
+                    }
+                    else if (surface instanceof Plafond && targetPlafond) {
+                        compatibleEtVise = surface.estCompatibleAvec(revChoisi);
+                    }
+
+                    if (compatibleEtVise) {
+                        surface.getRevetements().clear();
+                        surface.ajouterRevetement(revChoisi);
+                    }
+                }
 
                 if (contexteActif instanceof ContexteSousPiece ctx) {
                     ctx.viderSelection();
@@ -217,7 +226,7 @@ public class AppControleur {
 
                 appView.setInstructions("Matériau " + revChoisi.getDesignation() + " appliqué avec succès !");
 
-                // Rafraîchir le panneau de propriétés (Votre code)
+                // Rafraîchir le panneau de propriétés
                 TreeItem<String> itemSelectionne = appView.getNavigateurView()
                         .getTreeView().getSelectionModel().getSelectedItem();
                 if (itemSelectionne != null) {
@@ -245,7 +254,7 @@ public class AppControleur {
             fileChooser.setTitle("Exporter le devis");
             fileChooser.setInitialFileName("devis_" + immeuble.getNomBatiment() + ".txt");
             fileChooser.getExtensionFilters().add(
-                new javafx.stage.FileChooser.ExtensionFilter("Fichiers Texte (*.txt)", "*.txt")
+                    new javafx.stage.FileChooser.ExtensionFilter("Fichiers Texte (*.txt)", "*.txt")
             );
             java.io.File file = fileChooser.showSaveDialog(stage);
             if (file != null) {
@@ -334,7 +343,7 @@ public class AppControleur {
             if (appart != null) {
                 itemNiveauActif = itemsNiveau.get(i);
 
-                boolean estNouveau = !contextePieces.containsKey(appart); // (Code collègue pour le rechargement)
+                boolean estNouveau = !contextePieces.containsKey(appart);
 
                 ContextePiece ctx = contextePieces.computeIfAbsent(appart, a ->
                         new ContextePiece(a, appView, this, stage, gestionnaire, item)
@@ -430,10 +439,10 @@ public class AppControleur {
 
             return itemAppart;
         });
-        
+
         ctrl.setOnCouloirCree(couloir -> {
             TreeItem<String> itemCouloir = appView.getNavigateurView()
-                .ajouterItemCouloir(itemNiveau, couloir.toString());
+                    .ajouterItemCouloir(itemNiveau, couloir.toString());
             return itemCouloir;
         });
 
@@ -531,7 +540,7 @@ public class AppControleur {
     }
 
     // =========================================================================
-    // ENREGISTREMENT ET CHARGEMENT (Code collègue + vos maps de propriétés)
+    // ENREGISTREMENT ET CHARGEMENT
     // =========================================================================
 
     public void enregistrerPiece(TreeItem<String> itemPiece, Piece piece,
@@ -559,7 +568,7 @@ public class AppControleur {
             TreeItem<String> itemNiveau =
                     appView.getNavigateurView().ajouterItemNiveau(nomNiveau);
             itemsNiveau.add(itemNiveau);
-            mapItemNiveau.put(itemNiveau, niveau); // Fusion pour vos propriétés UI
+            mapItemNiveau.put(itemNiveau, niveau);
 
             NiveauView niveauView = new NiveauView();
             NiveauControleur ctrl = new NiveauControleur(
@@ -575,7 +584,7 @@ public class AppControleur {
                 TreeItem<String> itemAppart = appView.getNavigateurView()
                         .ajouterItemAppartement(itemNiveau, appart.toString());
                 mapApparts.put(itemAppart, appart);
-                mapItemAppartement.put(itemAppart, appart); // Fusion pour vos propriétés UI
+                mapItemAppartement.put(itemAppart, appart);
 
                 for (Piece piece : appart.getPieces()) {
                     TreeItem<String> itemPiece = appView.getNavigateurView()
@@ -591,7 +600,7 @@ public class AppControleur {
             ctrl.setOnAppartementCree(appart -> {
                 TreeItem<String> itemAppart = appView.getNavigateurView()
                         .ajouterItemAppartement(itemNiveau, appart.toString());
-                mapItemAppartement.put(itemAppart, appart); // Fusion
+                mapItemAppartement.put(itemAppart, appart);
                 gestionnaire.sauvegarderAppartement(appart, niveauFinal, immeuble);
                 return itemAppart;
             });

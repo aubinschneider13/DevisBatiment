@@ -208,7 +208,7 @@ public class PieceControleur {
             case ETAT_PIECE     -> gererClicPiece(pClic);
             case ETAT_PORTE     -> gererClicOuverture(pClic, true);
             case ETAT_FENETRE   -> gererClicOuverture(pClic, false);
-            case ETAT_SELECTION -> gererClicSelection(pClic); // ✅
+            case ETAT_SELECTION -> gererClicSelection(pClic, event); // ✅
         }
     }
 
@@ -227,39 +227,55 @@ public class PieceControleur {
     }
 
     // =========================================================================
-    // GESTION DU MODE SÉLECTION (Revêtements)
+    // GESTION DU MODE SÉLECTION (Revêtements) - MISE À JOUR BIFACE
     // =========================================================================
 
-    // ✅ Provenant de master : Sélection biface géométrique précise
-    private void gererClicSelection(Point pClic) {
-        Mur cibleCanvas = trouverMurProche(pClic);
+    private void gererClicSelection(Point pClic, MouseEvent event) {
+        // Sensibilité ajustée à 0.15 (15 cm) pour mieux distinguer le "pile" du "face"
+        Mur cibleCanvas = trouverMurProcheAjuste(pClic, 0.15);
 
-        if (cibleCanvas != null && cibleCanvas.distanceA(pClic) < 0.5) {
-            // FIX MURS : On cherche l'instance correspondante dans le VRAI modèle
+        if (cibleCanvas != null) {
             Mur vraiMurModele = retrouverVraiMurModele(cibleCanvas);
             Mur ref = vraiMurModele != null ? vraiMurModele : cibleCanvas;
 
-            // Déterminer géométriquement si le clic est à gauche ou à droite du segment
-            double x1 = ref.getPoint1().getX();
-            double y1 = ref.getPoint1().getY();
-            double x2 = ref.getPoint2().getX();
-            double y2 = ref.getPoint2().getY();
-            double px = pClic.getX();
-            double py = pClic.getY();
-
-            double cross = (x2 - x1) * (py - y1) - (y2 - y1) * (px - x1);
-            if (cross > 0) {
+            // Raccourci de secours : Si SHIFT est enfoncé, on sélectionne les DEUX côtés d'un coup
+            if (event.isShiftDown()) {
+                // On s'assure d'ajouter (ou d'inverser) les deux cloisons
                 basculerSelection(ref.getCoteGauche());
-            } else {
                 basculerSelection(ref.getCoteDroit());
+                vue.setInstructions("Sélection biface : Côté Gauche ET Droit synchronisés.");
+            } else {
+                // Calcul vectoriel de précision par rapport à l'axe du mur
+                double x1 = ref.getPoint1().getX();
+                double y1 = ref.getPoint1().getY();
+                double x2 = ref.getPoint2().getX();
+                double y2 = ref.getPoint2().getY();
+                double px = pClic.getX();
+                double py = pClic.getY();
+
+                double cross = (x2 - x1) * (py - y1) - (y2 - y1) * (px - x1);
+
+                // On s'assure d'extraire l'original du mur pour avoir les bonnes références d'affichage
+                Mur originalRef = ref.getOriginal();
+
+                if (event.isShiftDown()) {
+                    basculerSelection(originalRef.getCoteGauche());
+                    basculerSelection(originalRef.getCoteDroit());
+                } else {
+                    if (cross > 0) {
+                        basculerSelection(originalRef.getCoteGauche());
+                    } else {
+                        basculerSelection(originalRef.getCoteDroit());
+                    }
+                }
             }
         } else {
-            // Clic au centre de la pièce
+            // Clic au centre de la pièce (Sol + Plafond)
             for (Piece piece : pieces) {
                 if (GeometrieUtils.pointDansPolygone(pClic.getX(), pClic.getY(), piece.getPoints())) {
-                    // FIX PLAFOND : On sélectionne le Sol ET le Plafond simultanément
                     basculerSelection(piece.getSol());
                     basculerSelection(piece.getPlafond());
+                    vue.setInstructions("Centre de pièce détecté : Sol et Plafond sélectionnés.");
                     break;
                 }
             }
@@ -267,27 +283,29 @@ public class PieceControleur {
     }
 
     /**
-     * Compare les coordonnées du mur graphique avec les murs métier en mémoire
-     * pour retourner la bonne référence (celle qui impacte le devis).
+     * Compare les coordonnées du mur graphique avec les murs métier en mémoire.
+     * Donne la priorité à l'appartement global pour capturer TOUTES les faces,
+     * même celles qui font face à un couloir ou à l'extérieur.
      */
     private Mur retrouverVraiMurModele(Mur murCanvas) {
-        // 1. NOUVEAU : Si on est dans la vue d'une pièce (murs translatés), on utilise la map magique !
-        if (mapCopieVersOriginal.containsKey(murCanvas)) {
+        // 1. Si on est dans la vue d'une pièce isolée (murs copiés/translatés)
+        if (mapCopieVersOriginal != null && mapCopieVersOriginal.containsKey(murCanvas)) {
             return mapCopieVersOriginal.get(murCanvas);
         }
 
-        // 2. Recherche dans les pièces actuellement gérées par le contrôleur
-        for (Piece p : pieces) {
-            for (Mur m : p.getMurs()) {
+        // 2. PRIORITÉ ABSOLUE : On cherche dans la liste complète de l'appartement
+        // Grâce à la nouvelle méthode, cela inclut les cloisons intérieures !
+        if (appartement != null) {
+            for (Mur m : appartement.getMurs()) {
                 if (sontMursIdentiques(murCanvas, m)) {
-                    return m;
+                    return m; // Retourne le mur d'origine qui possède ses deux côtés bien initialisés
                 }
             }
         }
 
-        // 3. Si on est dans le contexte global de l'appartement
-        if (appartement != null) {
-            for (Piece p : appartement.getPieces()) {
+        // 3. SECOURS : Si l'appartement n'est pas défini, on cherche dans les pièces
+        if (pieces != null) {
+            for (Piece p : pieces) {
                 for (Mur m : p.getMurs()) {
                     if (sontMursIdentiques(murCanvas, m)) {
                         return m;
@@ -296,7 +314,7 @@ public class PieceControleur {
             }
         }
 
-        return murCanvas; // Secours : on retourne le mur cliqué si on n'a rien trouvé
+        return murCanvas;
     }
 
     /**
@@ -770,6 +788,21 @@ public class PieceControleur {
             if (d instanceof Mur m) {
                 double dist = m.distanceA(p);
                 if (dist < distMin) { distMin = dist; plusProche = m; }
+            }
+        }
+        return plusProche;
+    }
+
+    private Mur trouverMurProcheAjuste(Point p, double sensibiliteMax) {
+        Mur plusProche = null;
+        double distMin = sensibiliteMax;
+        for (Dessin d : vue.getCanvas().getElements()) {
+            if (d instanceof Mur m) {
+                double dist = m.distanceA(p);
+                if (dist < distMin) {
+                    distMin = dist;
+                    plusProche = m;
+                }
             }
         }
         return plusProche;

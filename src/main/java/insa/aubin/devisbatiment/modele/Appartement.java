@@ -162,6 +162,27 @@ public class Appartement extends ElementDeConstruction implements Dessin {
 
     public List<Mur> getMursDelimiteurs()              { return mursDelimiteurs; }
     public void setMursDelimiteurs(List<Mur> murs)     { this.mursDelimiteurs = new ArrayList<>(murs); }
+
+    /**
+     * Rassemble tous les murs de l'appartement :
+     * les murs délimiteurs extérieurs ET toutes les cloisons intérieures des pièces.
+     * Utile pour la détection et la sélection globale des revêtements.
+     */
+    public List<Mur> getMurs() {
+        List<Mur> tousLesMurs = new ArrayList<>(this.mursDelimiteurs);
+        for (Piece p : this.pieces) {
+            if (p.getMurs() != null) {
+                for (Mur m : p.getMurs()) {
+                    // Évite les doublons si un mur est partagé
+                    if (!tousLesMurs.contains(m)) {
+                        tousLesMurs.add(m);
+                    }
+                }
+            }
+        }
+        return tousLesMurs;
+    }
+
     public List<Piece> getPieces()                     { return pieces; }
     public int getNbPieces()                           { return pieces.size(); }
     public double getHauteurPlafond()                  { return hauteurPlafond; }
