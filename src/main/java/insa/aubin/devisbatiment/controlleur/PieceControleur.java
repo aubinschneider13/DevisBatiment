@@ -42,6 +42,7 @@ public class PieceControleur {
     public static final int ETAT_FENETRE   = 50;
     public static final int ETAT_PIECE     = 60;
     public static final int ETAT_SELECTION = 70; // ✅ Ajouté de vos modifications
+    public static final int ETAT_EDITION   = 80;
 
     // =========================================================================
     // ATTRIBUTS
@@ -80,8 +81,18 @@ public class PieceControleur {
     // Mur actuellement survolé (pour portes / fenêtres)
     private Mur murSurvole = null;
 
+    // État de l'inversion et suivi de la porte fantôme
+    private Porte porteEnCours = null;
+    private Point dernierPointSouris = new Point(0, 0);
+
     // ✅ Ajouté : Variables de votre mode sélection pour les revêtements
     private final List<SurfaceAvecRevetement> surfacesSelectionnees = new ArrayList<>();
+
+    private Runnable onModification = null;
+
+    public void setOnModification(Runnable onModification) {
+        this.onModification = onModification;
+    }
 
     // =========================================================================
     // CONSTRUCTEUR
@@ -134,11 +145,20 @@ public class PieceControleur {
         // ✅ Provenant de origin/master : Nettoyer le fantôme d'ouverture en quittant le mode
         if (this.etat == ETAT_PORTE || this.etat == ETAT_FENETRE) {
             murSurvole = null;
+            porteEnCours = null;
             vue.getCanvas().setFantome(null, 0, 0, 0, false);
         }
+        
+        // Reset selection highlight when changing states
+        vue.getCanvas().setElementSelectionne(null);
+
         this.etat = nouvelEtat;
         vue.getCanvas().setPanActif(nouvelEtat == ETAT_RIEN);
         vue.getOptionsMurVue().setVisible(nouvelEtat == ETAT_MUR);
+
+        if (nouvelEtat == ETAT_PORTE || nouvelEtat == ETAT_FENETRE || nouvelEtat == ETAT_MUR || nouvelEtat == ETAT_EDITION) {
+            javafx.application.Platform.runLater(() -> vue.getCanvas().requestFocus());
+        }
 
         switch (nouvelEtat) {
             case ETAT_RIEN    -> vue.setInstructions(
@@ -151,7 +171,9 @@ public class PieceControleur {
             case ETAT_FENETRE -> vue.setInstructions(
                     "Survolez un mur puis cliquez pour insérer une fenêtre — Échap pour annuler");
             case ETAT_SELECTION -> vue.setInstructions(
-                    "Mode Matériaux — Cliquez sur un mur ou un sol pour le sélectionner"); // ✅
+                    "Mode Matériaux — Cliquez sur un mur ou un sol pour le sélectionner");
+            case ETAT_EDITION   -> vue.setInstructions(
+                    "Outil Sélection / Édition — Clic gauche pour sélectionner, Clic droit sur porte pour inverser, Suppr pour supprimer");
         }
     }
 
@@ -199,16 +221,19 @@ public class PieceControleur {
     // =========================================================================
 
     public void clicDansZoneDeDessin(MouseEvent event) {
-        Point pClic = posInModel(event.getX(), event.getY());
+        Point pClic = (etat == ETAT_SELECTION || etat == ETAT_EDITION)
+                ? posInModelUnsnapped(event.getX(), event.getY())
+                : posInModel(event.getX(), event.getY());
 
         if (!estDansAppartement(pClic.getX(), pClic.getY())) return;
 
         switch (etat) {
-            case ETAT_MUR       -> gererClicMur(pClic);
-            case ETAT_PIECE     -> gererClicPiece(pClic);
-            case ETAT_PORTE     -> gererClicOuverture(pClic, true);
-            case ETAT_FENETRE   -> gererClicOuverture(pClic, false);
-            case ETAT_SELECTION -> gererClicSelection(pClic, event); // ✅
+            case ETAT_MUR       -> { if (event.getButton() == javafx.scene.input.MouseButton.PRIMARY) gererClicMur(pClic); }
+            case ETAT_PIECE     -> { if (event.getButton() == javafx.scene.input.MouseButton.PRIMARY) gererClicPiece(pClic); }
+            case ETAT_PORTE     -> { if (event.getButton() == javafx.scene.input.MouseButton.PRIMARY) gererClicOuverture(pClic, true); }
+            case ETAT_FENETRE   -> { if (event.getButton() == javafx.scene.input.MouseButton.PRIMARY) gererClicOuverture(pClic, false); }
+            case ETAT_SELECTION -> gererClicSelection(pClic, event);
+            case ETAT_EDITION   -> gererClicEdition(pClic, event);
         }
     }
 
@@ -231,43 +256,146 @@ public class PieceControleur {
     // =========================================================================
 
     private void gererClicSelection(Point pClic, MouseEvent event) {
-        // Sensibilité ajustée à 0.15 (15 cm) pour mieux distinguer le "pile" du "face"
-        Mur cibleCanvas = trouverMurProcheAjuste(pClic, 0.15);
+        if (event.getButton() == javafx.scene.input.MouseButton.SECONDARY) {
+            // Clic droit : trouver la porte la plus proche à proximité du point cliqué
+            Porte porteLaPlusProche = null;
+            Mur murParentDeLaPorte = null;
+            double distMinPorte = 0.35; // Sensibilité : 35 cm max de la porte
 
-        if (cibleCanvas != null) {
-            Mur vraiMurModele = retrouverVraiMurModele(cibleCanvas);
-            Mur ref = vraiMurModele != null ? vraiMurModele : cibleCanvas;
+            for (Dessin d : vue.getCanvas().getElements()) {
+                if (d instanceof Mur m) {
+                    Mur vraiMur = retrouverVraiMurModele(m);
+                    Mur ref = vraiMur != null ? vraiMur : m;
 
-            // Raccourci de secours : Si SHIFT est enfoncé, on sélectionne les DEUX côtés d'un coup
-            if (event.isShiftDown()) {
-                // On s'assure d'ajouter (ou d'inverser) les deux cloisons
-                basculerSelection(ref.getCoteGauche());
-                basculerSelection(ref.getCoteDroit());
-                vue.setInstructions("Sélection biface : Côté Gauche ET Droit synchronisés.");
-            } else {
-                // Calcul vectoriel de précision par rapport à l'axe du mur
-                double x1 = ref.getPoint1().getX();
-                double y1 = ref.getPoint1().getY();
-                double x2 = ref.getPoint2().getX();
-                double y2 = ref.getPoint2().getY();
-                double px = pClic.getX();
-                double py = pClic.getY();
-
-                double cross = (x2 - x1) * (py - y1) - (y2 - y1) * (px - x1);
-
-                // On s'assure d'extraire l'original du mur pour avoir les bonnes références d'affichage
-                Mur originalRef = ref.getOriginal();
-
-                if (event.isShiftDown()) {
-                    basculerSelection(originalRef.getCoteGauche());
-                    basculerSelection(originalRef.getCoteDroit());
-                } else {
-                    if (cross > 0) {
-                        basculerSelection(originalRef.getCoteGauche());
-                    } else {
-                        basculerSelection(originalRef.getCoteDroit());
+                    for (Ouverture o : ref.getListeOuvertures()) {
+                        if (o instanceof Porte p) {
+                            Point posPorte = ref.getPointSurMur(p.getPositionSurMur());
+                            double dist = Math.hypot(posPorte.getX() - pClic.getX(), posPorte.getY() - pClic.getY());
+                            if (dist < distMinPorte) {
+                                distMinPorte = dist;
+                                porteLaPlusProche = p;
+                                murParentDeLaPorte = ref;
+                            }
+                        }
                     }
                 }
+            }
+
+            if (porteLaPlusProche != null) {
+                // Inverser l'orientation
+                boolean nouvelleInversion = !porteLaPlusProche.isOuvertureInversee();
+                Point posAbsolue = murParentDeLaPorte.getPointSurMur(porteLaPlusProche.getPositionSurMur());
+
+                // Mettre à jour toutes les copies géométriquement correspondantes
+                // 1. Sur les éléments du canvas
+                for (Dessin d : vue.getCanvas().getElements()) {
+                    if (d instanceof Mur m) {
+                        for (Ouverture o : m.getListeOuvertures()) {
+                            if (o instanceof Porte p) {
+                                Point posP = m.getPointSurMur(p.getPositionSurMur());
+                                if (Math.hypot(posP.getX() - posAbsolue.getX(), posP.getY() - posAbsolue.getY()) < 0.15) {
+                                    p.setOuvertureInversee(nouvelleInversion);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Sur les murs de l'appartement en mémoire
+                if (appartement != null) {
+                    for (Mur m : appartement.getMurs()) {
+                        for (Ouverture o : m.getListeOuvertures()) {
+                            if (o instanceof Porte p) {
+                                Point posP = m.getPointSurMur(p.getPositionSurMur());
+                                if (Math.hypot(posP.getX() - posAbsolue.getX(), posP.getY() - posAbsolue.getY()) < 0.15) {
+                                    p.setOuvertureInversee(nouvelleInversion);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Sur les murs des pièces
+                for (Piece piece : pieces) {
+                    for (Mur m : piece.getMurs()) {
+                        for (Ouverture o : m.getListeOuvertures()) {
+                            if (o instanceof Porte p) {
+                                Point posP = m.getPointSurMur(p.getPositionSurMur());
+                                if (Math.hypot(posP.getX() - posAbsolue.getX(), posP.getY() - posAbsolue.getY()) < 0.15) {
+                                    p.setOuvertureInversee(nouvelleInversion);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. Sur les clones translatés de mapCopieVersOriginal
+                if (mapCopieVersOriginal != null) {
+                    for (Mur clone : mapCopieVersOriginal.keySet()) {
+                        for (Ouverture o : clone.getListeOuvertures()) {
+                            if (o instanceof Porte p) {
+                                Point posP = clone.getPointSurMur(p.getPositionSurMur());
+                                if (Math.hypot(posP.getX() - posAbsolue.getX(), posP.getY() - posAbsolue.getY()) < 0.15) {
+                                    p.setOuvertureInversee(nouvelleInversion);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                vue.redrawAll();
+                vue.setInstructions("Orientation de la porte inversée avec succès !");
+            }
+            return;
+        }
+
+        CoteMur coteElu = null;
+        double distMin = 0.10; // Sensibilité maximale : 10 cm par rapport aux lignes des faces réelles
+
+        for (Dessin d : vue.getCanvas().getElements()) {
+            if (d instanceof Mur m) {
+                // On s'assure d'obtenir le vrai mur du modèle
+                Mur vraiMur = retrouverVraiMurModele(m);
+                Mur ref = vraiMur != null ? vraiMur : m;
+
+                double x1 = ref.getPoint1().getX(), y1 = ref.getPoint1().getY();
+                double x2 = ref.getPoint2().getX(), y2 = ref.getPoint2().getY();
+                double dx = x2 - x1, dy = y2 - y1;
+                double len = Math.hypot(dx, dy);
+                if (len == 0) continue;
+
+                // Vecteur normal unitaire (gauche)
+                double nx = -dy / len;
+                double ny = dx / len;
+                double offset = 0.08;
+                double ox = offset * nx;
+                double oy = offset * ny;
+
+                // Distance exacte du clic aux lignes des faces gauche et droite
+                double distG = ref.distanceA(new Point(pClic.getX() - ox, pClic.getY() - oy));
+                double distD = ref.distanceA(new Point(pClic.getX() + ox, pClic.getY() + oy));
+
+                Mur originalRef = ref.getOriginal();
+
+                if (distG < distMin) {
+                    distMin = distG;
+                    coteElu = originalRef.getCoteGauche();
+                }
+                if (distD < distMin) {
+                    distMin = distD;
+                    coteElu = originalRef.getCoteDroit();
+                }
+            }
+        }
+
+        if (coteElu != null) {
+            Mur parent = coteElu.getMurParent();
+            if (event.isShiftDown()) {
+                basculerSelection(parent.getCoteGauche());
+                basculerSelection(parent.getCoteDroit());
+                vue.setInstructions("Sélection biface : Côté Gauche ET Droit synchronisés.");
+            } else {
+                basculerSelection(coteElu);
             }
         } else {
             // Clic au centre de la pièce (Sol + Plafond)
@@ -445,7 +573,40 @@ public class PieceControleur {
         if (mur1Rect != null) vue.getCanvas().getElements().remove(mur1Rect);
         if (mur2Rect != null) vue.getCanvas().getElements().remove(mur2Rect);
         reinitialiserRectangle();
+        porteEnCours = null;
+        vue.getCanvas().setFantome(null, 0, 0, 0, false);
         vue.redrawAll();
+    }
+
+    public void gererToucheClavier(javafx.scene.input.KeyEvent e) {
+        if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+            annulerConstruction();
+        } else if (e.getCode() == javafx.scene.input.KeyCode.R) {
+            if (etat == ETAT_PORTE && porteEnCours != null) {
+                // Inverser le sens d'ouverture de la porte
+                porteEnCours.setOuvertureInversee(!porteEnCours.isOuvertureInversee());
+                
+                // Mettre à jour immédiatement l'affichage du fantôme
+                if (murSurvole != null) {
+                    boolean compatible = murSurvole.getTypeMur() != Mur.TypeMur.EXTERIEUR;
+                    double angle = Math.toDegrees(Math.atan2(
+                            murSurvole.getPoint2().getY() - murSurvole.getPoint1().getY(),
+                            murSurvole.getPoint2().getX() - murSurvole.getPoint1().getX()));
+                    Point posAccrochage = projeterSurMur(dernierPointSouris, murSurvole, true);
+                    vue.getCanvas().setFantome(porteEnCours, posAccrochage.getX(), posAccrochage.getY(), angle, compatible);
+                } else {
+                    vue.getCanvas().setFantome(porteEnCours, dernierPointSouris.getX(), dernierPointSouris.getY(), 0, false);
+                }
+                vue.redrawAll();
+            }
+        } else if (e.getCode() == javafx.scene.input.KeyCode.DELETE || e.getCode() == javafx.scene.input.KeyCode.BACK_SPACE) {
+            if (this.etat == ETAT_EDITION) {
+                Object sel = vue.getCanvas().getElementSelectionne();
+                if (sel != null) {
+                    supprimerElement(sel);
+                }
+            }
+        }
     }
 
     private void reinitialiserRectangle() {
@@ -526,33 +687,40 @@ public class PieceControleur {
         vue.redrawAll();
     }
 
+    public static class DessinPiece implements Dessin {
+        private final Piece piece;
+        public DessinPiece(Piece piece) {
+            this.piece = piece;
+        }
+        public Piece getPiece() { return piece; }
+        @Override
+        public void dessiner(GraphicsContext gc) {
+            List<Point> pts = piece.getPoints();
+            if (pts == null || pts.size() < 3) return;
+
+            double[] xs = pts.stream().mapToDouble(Point::getX).toArray();
+            double[] ys = pts.stream().mapToDouble(Point::getY).toArray();
+
+            gc.setFill(PaletteVisuelle.fondPiece(piece.getNumero()));
+            gc.fillPolygon(xs, ys, pts.size());
+
+            double cx = pts.stream().mapToDouble(Point::getX).average().orElse(0);
+            double cy = pts.stream().mapToDouble(Point::getY).average().orElse(0);
+            gc.save();
+            gc.scale(1, -1);
+            gc.setFill(PaletteVisuelle.contourPiece(piece.getNumero()));
+            gc.setFont(javafx.scene.text.Font.font(
+                    "Arial", javafx.scene.text.FontWeight.BOLD, 0.25));
+            gc.fillText(piece.toString(), cx - 0.3, -cy + 0.1);
+            gc.restore();
+        }
+
+        @Override public Color getColor()        { return Color.ORANGE; }
+        @Override public void  setColor(Color c) { }
+    }
+
     private Dessin creerDessinPiece(Piece piece) {
-        return new Dessin() {
-            @Override
-            public void dessiner(GraphicsContext gc) {
-                List<Point> pts = piece.getPoints();
-                if (pts == null || pts.size() < 3) return;
-
-                double[] xs = pts.stream().mapToDouble(Point::getX).toArray();
-                double[] ys = pts.stream().mapToDouble(Point::getY).toArray();
-
-                gc.setFill(PaletteVisuelle.fondPiece(piece.getNumero()));
-                gc.fillPolygon(xs, ys, pts.size());
-
-                double cx = pts.stream().mapToDouble(Point::getX).average().orElse(0);
-                double cy = pts.stream().mapToDouble(Point::getY).average().orElse(0);
-                gc.save();
-                gc.scale(1, -1);
-                gc.setFill(PaletteVisuelle.contourPiece(piece.getNumero()));
-                gc.setFont(javafx.scene.text.Font.font(
-                        "Arial", javafx.scene.text.FontWeight.BOLD, 0.25));
-                gc.fillText(piece.toString(), cx - 0.3, -cy + 0.1);
-                gc.restore();
-            }
-
-            @Override public Color getColor()        { return Color.ORANGE; }
-            @Override public void  setColor(Color c) { }
-        };
+        return new DessinPiece(piece);
     }
 
     // =========================================================================
@@ -567,13 +735,28 @@ public class PieceControleur {
         double marge   = largeur / (2 * cible.calculerLongueur());
         double t       = Math.max(marge, Math.min(1.0 - marge, cible.calculerPositionSurMur(pClic)));
 
+        boolean inversee = false;
+        if (estPorte && porteEnCours != null) {
+            inversee = porteEnCours.isOuvertureInversee();
+        }
+
         // 1. Ajout visuel sur le canvas
-        cible.ajouterOuverture(estPorte ? new Porte(t) : new Fenetre(t));
+        Porte p1 = null;
+        if (estPorte) {
+            p1 = new Porte(t);
+            p1.setOuvertureInversee(inversee);
+        }
+        cible.ajouterOuverture(estPorte ? p1 : new Fenetre(t));
 
         // 2. Si on est dans la vue d'une pièce, on sécurise l'ajout dans le vrai mur en mémoire
         Mur vraiMur = retrouverVraiMurModele(cible);
         if (vraiMur != null && vraiMur != cible) {
-            vraiMur.ajouterOuverture(estPorte ? new Porte(t) : new Fenetre(t));
+            Porte p2 = null;
+            if (estPorte) {
+                p2 = new Porte(t);
+                p2.setOuvertureInversee(inversee);
+            }
+            vraiMur.ajouterOuverture(estPorte ? p2 : new Fenetre(t));
         }
 
         // 3. Si on est dans la vue Appartement, on propage la découpe aux sous-murs des pièces
@@ -585,17 +768,34 @@ public class PieceControleur {
                     if (tPiece >= -0.05 && tPiece <= 1.05) {
                         double margePiece = largeur / (2 * murPiece.calculerLongueur());
                         tPiece = Math.max(margePiece, Math.min(1.0 - margePiece, tPiece));
-                        murPiece.ajouterOuverture(estPorte ? new Porte(tPiece) : new Fenetre(tPiece));
+                        Porte pPiece = null;
+                        if (estPorte) {
+                            pPiece = new Porte(tPiece);
+                            pPiece.setOuvertureInversee(inversee);
+                        }
+                        murPiece.ajouterOuverture(estPorte ? pPiece : new Fenetre(tPiece));
                     }
                 }
             }
         }
+        vue.redrawAll();
+        if (onModification != null) {
+            onModification.run();
+        }
     }
 
     private void gererMouvementOuverture(Point pSouris) {
+        this.dernierPointSouris = pSouris;
         murSurvole = trouverMurProche(pSouris);
         boolean estPorte = (etat == ETAT_PORTE);
-        Fantome fantome  = estPorte ? new Porte() : new Fenetre();
+        
+        if (estPorte) {
+            if (porteEnCours == null) {
+                porteEnCours = new Porte();
+            }
+        }
+        
+        Fantome fantome  = estPorte ? porteEnCours : new Fenetre();
 
         if (murSurvole != null) {
             boolean compatible = estPorte
@@ -642,8 +842,10 @@ public class PieceControleur {
 
             // --- FIX 1 : COPIER LES OUVERTURES SUR LE CLONE ---
             for (Ouverture ouv : murOriginal.getListeOuvertures()) {
-                if (ouv instanceof Porte) {
-                    copie.ajouterOuverture(new Porte(ouv.getPositionSurMur()));
+                if (ouv instanceof Porte pOuv) {
+                    Porte pClone = new Porte(ouv.getPositionSurMur());
+                    pClone.setOuvertureInversee(pOuv.isOuvertureInversee());
+                    copie.ajouterOuverture(pClone);
                 } else if (ouv instanceof Fenetre) {
                     copie.ajouterOuverture(new Fenetre(ouv.getPositionSurMur()));
                 }
@@ -749,6 +951,11 @@ public class PieceControleur {
 
     public Point posInModel(double x, double y) {
         Point2D p = vue.getCanvas().snapToGrid(x, y);
+        return new Point(p.getX(), p.getY());
+    }
+
+    public Point posInModelUnsnapped(double x, double y) {
+        Point2D p = vue.getCanvas().getModelPosUnsnapped(x, y);
         return new Point(p.getX(), p.getY());
     }
 
@@ -895,7 +1102,13 @@ public class PieceControleur {
                                     }
 
                                     if (!existe) {
-                                        murCanvas.ajouterOuverture(ouv instanceof Porte ? new Porte(tCanvas) : new Fenetre(tCanvas));
+                                        if (ouv instanceof Porte pOuv) {
+                                            Porte pNew = new Porte(tCanvas);
+                                            pNew.setOuvertureInversee(pOuv.isOuvertureInversee());
+                                            murCanvas.ajouterOuverture(pNew);
+                                        } else {
+                                            murCanvas.ajouterOuverture(new Fenetre(tCanvas));
+                                        }
                                     }
                                 }
                             }
@@ -917,9 +1130,325 @@ public class PieceControleur {
 
             clone.getListeOuvertures().clear();
             for (Ouverture ouv : original.getListeOuvertures()) {
-                clone.ajouterOuverture(ouv instanceof Porte ? new Porte(ouv.getPositionSurMur()) : new Fenetre(ouv.getPositionSurMur()));
+                if (ouv instanceof Porte pOuv) {
+                    Porte pClone = new Porte(ouv.getPositionSurMur());
+                    pClone.setOuvertureInversee(pOuv.isOuvertureInversee());
+                    clone.ajouterOuverture(pClone);
+                } else {
+                    clone.ajouterOuverture(new Fenetre(ouv.getPositionSurMur()));
+                }
             }
         }
         vue.redrawAll();
+    }
+
+    public void gererClicEdition(Point pClic, MouseEvent event) {
+        if (event.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
+            // Clic gauche : Sélection
+            Object selection = null;
+
+            // 1. Chercher d'abord une Ouverture (Porte ou Fenetre) - Sensibilité 0.40m
+            double distMinOuverture = 0.40;
+            Ouverture ouvertureElue = null;
+            for (Dessin d : vue.getCanvas().getElements()) {
+                if (d instanceof Mur m) {
+                    for (Ouverture o : m.getListeOuvertures()) {
+                        Point posAbs = m.getPointSurMur(o.getPositionSurMur());
+                        double dist = Math.hypot(posAbs.getX() - pClic.getX(), posAbs.getY() - pClic.getY());
+                        if (dist < distMinOuverture) {
+                            distMinOuverture = dist;
+                            ouvertureElue = o;
+                        }
+                    }
+                }
+            }
+            if (ouvertureElue != null) {
+                selection = ouvertureElue;
+            }
+
+            // 2. Si aucune ouverture n'est proche, chercher un Mur - Sensibilité 0.25m
+            if (selection == null) {
+                double distMinMur = 0.25;
+                Mur murElu = null;
+                for (Dessin d : vue.getCanvas().getElements()) {
+                    if (d instanceof Mur m) {
+                        double dist = m.distanceA(pClic);
+                        if (dist < distMinMur) {
+                            distMinMur = dist;
+                            murElu = m;
+                        }
+                    }
+                }
+                if (murElu != null) {
+                    selection = murElu;
+                }
+            }
+
+            // 3. Si aucun mur n'est proche, chercher une Pièce (pointDansPolygone)
+            if (selection == null) {
+                for (Piece piece : pieces) {
+                    if (GeometrieUtils.pointDansPolygone(pClic.getX(), pClic.getY(), piece.getPoints())) {
+                        selection = piece;
+                        break;
+                    }
+                }
+            }
+
+            // Assigner l'élément sélectionné
+            vue.getCanvas().setElementSelectionne(selection);
+            if (selection != null) {
+                if (selection instanceof Ouverture) {
+                    vue.setInstructions("Ouverture sélectionnée — Cliquer droit sur porte pour inverser, Suppr pour supprimer.");
+                } else if (selection instanceof Mur) {
+                    vue.setInstructions("Cloison sélectionnée — Suppr pour supprimer.");
+                } else if (selection instanceof Piece) {
+                    vue.setInstructions("Pièce sélectionnée — Suppr pour supprimer.");
+                }
+            } else {
+                vue.setInstructions("Aucun élément proche. Clic gauche pour sélectionner, Clic droit sur porte pour inverser.");
+            }
+        } else if (event.getButton() == javafx.scene.input.MouseButton.SECONDARY) {
+            // Clic droit : Inverser l'orientation de la porte la plus proche (sensibilité 0.40m)
+            Porte porteLaPlusProche = null;
+            Mur murParentDeLaPorte = null;
+            double distMinPorte = 0.40; // Sensibilité : 40 cm max
+
+            for (Dessin d : vue.getCanvas().getElements()) {
+                if (d instanceof Mur m) {
+                    // Obtenir le vrai mur pour s'assurer qu'on cherche au bon endroit
+                    Mur vraiMur = retrouverVraiMurModele(m);
+                    Mur ref = vraiMur != null ? vraiMur : m;
+
+                    for (Ouverture o : ref.getListeOuvertures()) {
+                        if (o instanceof Porte p) {
+                            Point posPorte = ref.getPointSurMur(p.getPositionSurMur());
+                            double dist = Math.hypot(posPorte.getX() - pClic.getX(), posPorte.getY() - pClic.getY());
+                            if (dist < distMinPorte) {
+                                distMinPorte = dist;
+                                porteLaPlusProche = p;
+                                murParentDeLaPorte = ref;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (porteLaPlusProche != null) {
+                // Inverser l'orientation
+                boolean nouvelleInversion = !porteLaPlusProche.isOuvertureInversee();
+                Point posAbsolue = murParentDeLaPorte.getPointSurMur(porteLaPlusProche.getPositionSurMur());
+
+                // Mettre à jour toutes les copies géométriquement correspondantes (< 0.15m)
+                // 1. Sur les éléments du canvas
+                for (Dessin d : vue.getCanvas().getElements()) {
+                    if (d instanceof Mur m) {
+                        for (Ouverture o : m.getListeOuvertures()) {
+                            if (o instanceof Porte p) {
+                                Point posP = m.getPointSurMur(p.getPositionSurMur());
+                                if (Math.hypot(posP.getX() - posAbsolue.getX(), posP.getY() - posAbsolue.getY()) < 0.15) {
+                                    p.setOuvertureInversee(nouvelleInversion);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Sur les murs de l'appartement en mémoire
+                if (appartement != null) {
+                    for (Mur m : appartement.getMurs()) {
+                        for (Ouverture o : m.getListeOuvertures()) {
+                            if (o instanceof Porte p) {
+                                Point posP = m.getPointSurMur(p.getPositionSurMur());
+                                if (Math.hypot(posP.getX() - posAbsolue.getX(), posP.getY() - posAbsolue.getY()) < 0.15) {
+                                    p.setOuvertureInversee(nouvelleInversion);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 3. Sur les murs des pièces
+                for (Piece piece : pieces) {
+                    for (Mur m : piece.getMurs()) {
+                        for (Ouverture o : m.getListeOuvertures()) {
+                            if (o instanceof Porte p) {
+                                Point posP = m.getPointSurMur(p.getPositionSurMur());
+                                if (Math.hypot(posP.getX() - posAbsolue.getX(), posP.getY() - posAbsolue.getY()) < 0.15) {
+                                    p.setOuvertureInversee(nouvelleInversion);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. Sur les clones translatés de mapCopieVersOriginal
+                if (mapCopieVersOriginal != null) {
+                    for (Mur clone : mapCopieVersOriginal.keySet()) {
+                        for (Ouverture o : clone.getListeOuvertures()) {
+                            if (o instanceof Porte p) {
+                                Point posP = clone.getPointSurMur(p.getPositionSurMur());
+                                if (Math.hypot(posP.getX() - posAbsolue.getX(), posP.getY() - posAbsolue.getY()) < 0.15) {
+                                    p.setOuvertureInversee(nouvelleInversion);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                vue.redrawAll();
+                vue.setInstructions("Orientation de la porte inversée avec succès !");
+                if (onModification != null) {
+                    onModification.run();
+                }
+            }
+        }
+    }
+
+    public void supprimerElement(Object sel) {
+        if (sel == null) return;
+
+        if (sel instanceof Ouverture) {
+            Ouverture ouv = (Ouverture) sel;
+            Point posAbs = null;
+            // 1. Trouver le mur parent et la position absolue
+            for (Dessin d : vue.getCanvas().getElements()) {
+                if (d instanceof Mur m) {
+                    if (m.getListeOuvertures().contains(ouv)) {
+                        posAbs = m.getPointSurMur(ouv.getPositionSurMur());
+                        break;
+                    }
+                }
+            }
+            
+            if (posAbs != null) {
+                final Point finalPosAbs = posAbs;
+                // A. Supprimer du canevas graphique
+                for (Dessin d : vue.getCanvas().getElements()) {
+                    if (d instanceof Mur m) {
+                        m.getListeOuvertures().removeIf(o -> {
+                            Point p = m.getPointSurMur(o.getPositionSurMur());
+                            return Math.hypot(p.getX() - finalPosAbs.getX(), p.getY() - finalPosAbs.getY()) < 0.15;
+                        });
+                    }
+                }
+
+                // B. Supprimer des murs de l'appartement en mémoire
+                if (appartement != null) {
+                    for (Mur m : appartement.getMurs()) {
+                        m.getListeOuvertures().removeIf(o -> {
+                            Point p = m.getPointSurMur(o.getPositionSurMur());
+                            return Math.hypot(p.getX() - finalPosAbs.getX(), p.getY() - finalPosAbs.getY()) < 0.15;
+                        });
+                    }
+                }
+
+                // C. Supprimer des murs de toutes les pièces
+                for (Piece piece : pieces) {
+                    for (Mur m : piece.getMurs()) {
+                        m.getListeOuvertures().removeIf(o -> {
+                            Point p = m.getPointSurMur(o.getPositionSurMur());
+                            return Math.hypot(p.getX() - finalPosAbs.getX(), p.getY() - finalPosAbs.getY()) < 0.15;
+                        });
+                    }
+                }
+
+                // D. Supprimer des clones translatés
+                if (mapCopieVersOriginal != null) {
+                    for (Mur clone : mapCopieVersOriginal.keySet()) {
+                        clone.getListeOuvertures().removeIf(o -> {
+                            Point p = clone.getPointSurMur(o.getPositionSurMur());
+                            return Math.hypot(p.getX() - finalPosAbs.getX(), p.getY() - finalPosAbs.getY()) < 0.15;
+                        });
+                    }
+                }
+            }
+        }
+        else if (sel instanceof Mur) {
+            Mur deletedWall = (Mur) sel;
+
+            // 1. Supprimer toutes les pièces dépendantes de ce mur
+            List<Piece> piecesToDelete = new ArrayList<>();
+            for (Piece piece : pieces) {
+                if (piece.getMurs().stream().anyMatch(m -> sontMursIdentiques(m, deletedWall))) {
+                    piecesToDelete.add(piece);
+                }
+            }
+
+            for (Piece p : piecesToDelete) {
+                // A. Retirer du TreeView et de la mapItemPiece
+                TreeItem<String> itemPiece = null;
+                for (Map.Entry<TreeItem<String>, Piece> entry : mapItemPiece.entrySet()) {
+                    if (entry.getValue() == p) {
+                        itemPiece = entry.getKey();
+                        break;
+                    }
+                }
+                if (itemPiece != null) {
+                    TreeItem<String> parent = itemPiece.getParent();
+                    if (parent != null) {
+                        parent.getChildren().remove(itemPiece);
+                    }
+                    mapItemPiece.remove(itemPiece);
+                }
+
+                // B. Retirer des listes locales et du modèle
+                pieces.remove(p);
+                if (appartement != null) {
+                    appartement.supprimerPiece(p);
+                }
+
+                // C. Retirer le dessin de la pièce sur le canevas
+                vue.getCanvas().getElements().removeIf(d -> d instanceof DessinPiece dp && dp.getPiece() == p);
+            }
+
+            // 2. Retirer le mur lui-même (et tous ses clones correspondants)
+            vue.getCanvas().getElements().removeIf(d -> d instanceof Mur m && sontMursIdentiques(m, deletedWall));
+
+            if (appartement != null) {
+                appartement.getMursDelimiteurs().removeIf(m -> sontMursIdentiques(m, deletedWall));
+            }
+
+            if (mapCopieVersOriginal != null) {
+                mapCopieVersOriginal.keySet().removeIf(m -> sontMursIdentiques(m, deletedWall));
+                mapCopieVersOriginal.values().removeIf(m -> sontMursIdentiques(m, deletedWall));
+            }
+        }
+        else if (sel instanceof Piece) {
+            Piece p = (Piece) sel;
+
+            // A. Retirer du TreeView et de la mapItemPiece
+            TreeItem<String> itemPiece = null;
+            for (Map.Entry<TreeItem<String>, Piece> entry : mapItemPiece.entrySet()) {
+                if (entry.getValue() == p) {
+                    itemPiece = entry.getKey();
+                    break;
+                }
+            }
+            if (itemPiece != null) {
+                TreeItem<String> parent = itemPiece.getParent();
+                if (parent != null) {
+                    parent.getChildren().remove(itemPiece);
+                }
+                mapItemPiece.remove(itemPiece);
+            }
+
+            // B. Retirer des listes locales et du modèle
+            pieces.remove(p);
+            if (appartement != null) {
+                appartement.supprimerPiece(p);
+            }
+
+            // C. Retirer le dessin de la pièce sur le canevas
+            vue.getCanvas().getElements().removeIf(d -> d instanceof DessinPiece dp && dp.getPiece() == p);
+        }
+
+        // Nettoyer la sélection et redessiner
+        vue.getCanvas().setElementSelectionne(null);
+        vue.redrawAll();
+
+        // Notifier le contrôleur principal pour rafraîchir le devis et les propriétés
+        if (onModification != null) {
+            onModification.run();
+        }
     }
 }

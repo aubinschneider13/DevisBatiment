@@ -61,6 +61,14 @@ public class Mur extends ElementDeConstruction implements Dessin {
     // Méthode pour ajouter une ouverture dans la liste
     public void ajouterOuverture(Ouverture o) {
         if (o == null) return;
+
+        // Anti-doublon strict basé sur la position (évite le cumul lors des synchronisations)
+        for (Ouverture existante : this.listeOuvertures) {
+            if (Math.abs(existante.getPositionSurMur() - o.getPositionSurMur()) < 0.02) {
+                return; // L'ouverture est déjà physiquement là, on ignore l'ajout
+            }
+        }
+
         if (o instanceof Fenetre && typeMur != TypeMur.EXTERIEUR) {
             return; // fenêtre uniquement sur mur extérieur
         }
@@ -105,6 +113,18 @@ public class Mur extends ElementDeConstruction implements Dessin {
             }
         }
         return Math.max(0.0, surfaceBrute - surfaceOuverture);
+    }
+
+    public double calculerPrixMenuiseries() {
+        double total = 0.0;
+        if (listeOuvertures != null) {
+            for (Ouverture o : listeOuvertures) {
+                if (o != null) {
+                    total += o.getPrixForfaitaire();
+                }
+            }
+        }
+        return total;
     }
 
     /** Calcule la distance la plus courte entre un point et ce segment de mur */
@@ -227,8 +247,8 @@ public class Mur extends ElementDeConstruction implements Dessin {
             gc.translate(pos.getX(), pos.getY());
             gc.rotate(angle);
 
-            if (o instanceof Porte) {
-                dessinerSymbolePorte(gc, o.getLargeur());
+            if (o instanceof Porte p) {
+                dessinerSymbolePorte(gc, p.getLargeur(), p.isOuvertureInversee());
             } else if (o instanceof Fenetre) {
                 dessinerSymboleFenetre(gc, o.getLargeur());
             }
@@ -247,7 +267,7 @@ public class Mur extends ElementDeConstruction implements Dessin {
         gc.strokeOval(x2 - rayon, y2 - rayon, rayon * 2, rayon * 2);
     }
 
-    private void dessinerSymbolePorte(GraphicsContext gc, double largeur) {
+    private void dessinerSymbolePorte(GraphicsContext gc, double largeur, boolean inversee) {
         double l = largeur;
 
         // 1. Ouverture dans le mur
@@ -261,16 +281,23 @@ public class Mur extends ElementDeConstruction implements Dessin {
         gc.strokeLine(-l / 2, -0.08, -l / 2, 0.08);
         gc.strokeLine( l / 2, -0.08,  l / 2, 0.08);
 
-        // 3. Vantail
+        // 3. Vantail & Arc de débattement (sensibles à l'inversion)
+        gc.save();
+        if (inversee) {
+            gc.scale(1, -1);
+        }
+
+        // Vantail
         gc.setStroke(Color.web("#8B4513"));
         gc.setLineWidth(0.06);
         gc.strokeLine(-l / 2, 0, -l / 2, -l);
 
-        // 4. Arc de débattement
+        // Arc de débattement
         gc.setLineWidth(0.04);
         gc.setLineDashes(0.06, 0.04);
         gc.strokeArc(-l / 2 - l, -l, l * 2, l * 2, 0, 90, javafx.scene.shape.ArcType.OPEN);
         gc.setLineDashes(0);
+        gc.restore();
     }  
 
     private void dessinerSymboleFenetre(GraphicsContext gc, double largeur) {

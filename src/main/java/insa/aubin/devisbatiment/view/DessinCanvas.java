@@ -145,6 +145,17 @@ public class DessinCanvas extends Canvas {
     }
 
     /**
+     * Convertit les coordonnées pixels en coordonnées modèle
+     * SANS magnétisme ni snap sur la grille.
+     * Le Y est inversé pour avoir les Y positifs vers le haut.
+     */
+    public Point2D getModelPosUnsnapped(double px, double py) {
+        double mx = (px - offsetX) / zoomFactor;
+        double my = -(py - offsetY) / zoomFactor; // Y inversé
+        return new Point2D(mx, my);
+    }
+
+    /**
      * Méthode conservée pour compatibilité — retourne la valeur telle quelle,
      * le vrai snap se fait dans snapToGrid().
      */
@@ -198,6 +209,76 @@ public class DessinCanvas extends Canvas {
                     }
                 }
             }
+        }
+
+        // Dessin de la surbrillance de l'élément sélectionné
+        if (elementSelectionne != null) {
+            gc.save();
+            gc.setStroke(Color.web("#FF9800"));
+            gc.setFill(Color.web("#FF9800", 0.35));
+
+            if (elementSelectionne instanceof Mur m) {
+                double x1 = m.getPoint1().getX(), y1 = m.getPoint1().getY();
+                double x2 = m.getPoint2().getX(), y2 = m.getPoint2().getY();
+                
+                gc.setLineWidth(0.12);
+                gc.strokeLine(x1, y1, x2, y2);
+                
+                gc.setFill(Color.web("#FF9800"));
+                double rayon = 0.1;
+                gc.fillOval(x1 - rayon, y1 - rayon, rayon * 2, rayon * 2);
+                gc.fillOval(x2 - rayon, y2 - rayon, rayon * 2, rayon * 2);
+            }
+            else if (elementSelectionne instanceof Ouverture o) {
+                Mur m = null;
+                for (Dessin d : elements) {
+                    if (d instanceof Mur wall) {
+                        if (wall.getListeOuvertures().contains(o)) {
+                            m = wall;
+                            break;
+                        }
+                    }
+                }
+                if (m != null) {
+                    double x1 = m.getPoint1().getX(), y1 = m.getPoint1().getY();
+                    double x2 = m.getPoint2().getX(), y2 = m.getPoint2().getY();
+                    double dx = x2 - x1;
+                    double dy = y2 - y1;
+                    double angle = Math.toDegrees(Math.atan2(dy, dx));
+                    Point pos = m.getPointSurMur(o.getPositionSurMur());
+                    
+                    gc.save();
+                    gc.translate(pos.getX(), pos.getY());
+                    gc.rotate(angle);
+                    
+                    double l = o.getLargeur();
+                    gc.setLineWidth(0.04);
+                    
+                    if (o instanceof Porte p) {
+                        double leafSign = p.isOuvertureInversee() ? 1.0 : -1.0;
+                        double minY = Math.min(0.0, leafSign * l) - 0.05;
+                        double maxY = Math.max(0.0, leafSign * l) + 0.05;
+                        gc.strokeRect(-l / 2 - 0.05, minY, l + 0.1, maxY - minY);
+                        gc.fillRect(-l / 2 - 0.05, minY, l + 0.1, maxY - minY);
+                    } else {
+                        gc.strokeRect(-l / 2 - 0.05, -0.1, l + 0.1, 0.2);
+                        gc.fillRect(-l / 2 - 0.05, -0.1, l + 0.1, 0.2);
+                    }
+                    
+                    gc.restore();
+                }
+            }
+            else if (elementSelectionne instanceof Piece p) {
+                List<Point> poly = p.getPoints();
+                if (poly != null && poly.size() >= 3) {
+                    double[] xs = poly.stream().mapToDouble(Point::getX).toArray();
+                    double[] ys = poly.stream().mapToDouble(Point::getY).toArray();
+                    gc.fillPolygon(xs, ys, poly.size());
+                    gc.setLineWidth(0.06);
+                    gc.strokePolygon(xs, ys, poly.size());
+                }
+            }
+            gc.restore();
         }
 
         // Fantôme par-dessus tout
@@ -309,5 +390,16 @@ public class DessinCanvas extends Canvas {
 
     public void setSelection(List<SurfaceAvecRevetement> selection) {
         this.selection = selection;
+    }
+
+    private Object elementSelectionne = null;
+
+    public Object getElementSelectionne() {
+        return elementSelectionne;
+    }
+
+    public void setElementSelectionne(Object element) {
+        this.elementSelectionne = element;
+        redrawAll();
     }
 }

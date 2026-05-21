@@ -46,4 +46,5 @@ public abstract class Ouverture extends ElementDeConstruction{
         this.positionSurMur = Math.max(0.0, Math.min(1.0, t));
     }
     
+    public abstract double getPrixForfaitaire();
 }

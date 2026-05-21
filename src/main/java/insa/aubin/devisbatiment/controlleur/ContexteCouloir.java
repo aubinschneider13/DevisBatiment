@@ -5,6 +5,7 @@ import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
 import insa.aubin.devisbatiment.view.AppView;
 import insa.aubin.devisbatiment.view.PieceView;
 import javafx.stage.Stage;
+import javafx.scene.input.KeyEvent;
 
 import java.util.List;
 
@@ -88,4 +89,11 @@ public class ContexteCouloir implements Contexte {
 
     public Couloir getCouloir() { return couloir; }
     public PieceControleur getPieceControleur() { return pieceControleur; }
+
+    @Override
+    public void gererToucheClavier(KeyEvent e) {
+        if (pieceControleur != null) {
+            pieceControleur.gererToucheClavier(e);
+        }
+    }
 }

@@ -23,6 +23,11 @@ public class Fenetre extends Ouverture implements Fantome {
     }
 
     @Override
+    public double getPrixForfaitaire() {
+        return 300.0;
+    }
+
+    @Override
     public String toString() {
         return "Fenetre [id=" + getId() + ", largeur=" + COTE_FENETRE + ", hauteur=" + COTE_FENETRE + "]";
     }

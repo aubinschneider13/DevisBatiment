@@ -8,6 +8,7 @@ import insa.aubin.devisbatiment.modele.SurfaceAvecRevetement;
 import insa.aubin.devisbatiment.view.AppView;
 import insa.aubin.devisbatiment.view.PieceView;
 import javafx.stage.Stage;
+import javafx.scene.input.KeyEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +31,7 @@ public class ContextePiece implements Contexte {
 
     /** Identifiants des boutons affichés dans ce contexte (ordre = ordre toolbar). */
     private static final List<String> BOUTONS = List.of(
-            "navigation", "echelle", "mur", "piece","porte","fenetre"
+            "navigation", "selection", "echelle", "mur", "piece","porte","fenetre"
     );
 
     // --- Dépendances ---
@@ -101,6 +102,9 @@ public class ContextePiece implements Contexte {
                 appControleur.enregistrerPiece(itemPiece, piece, itemAppartement);
                 return itemPiece;
             });
+            pieceControleur.setOnModification(() -> {
+                appControleur.rafraichirDevisEtProprietes();
+            });
             callbackBranche = true;
         }
         appView.afficherPiece(pieceView);
@@ -129,6 +133,14 @@ public class ContextePiece implements Contexte {
     public void onBtnNavigation() {
         if (pieceControleur != null) {
             pieceControleur.changerEtat(PieceControleur.ETAT_RIEN);
+        }
+    }
+
+    /** Active le mode Sélection/Édition. */
+    @Override
+    public void onBtnSelection() {
+        if (pieceControleur != null) {
+            pieceControleur.changerEtat(PieceControleur.ETAT_EDITION);
         }
     }
 
@@ -230,5 +242,12 @@ public class ContextePiece implements Contexte {
     
     public PieceControleur getPieceControleur() {
         return pieceControleur;
+    }
+
+    @Override
+    public void gererToucheClavier(KeyEvent e) {
+        if (pieceControleur != null) {
+            pieceControleur.gererToucheClavier(e);
+        }
     }
 }

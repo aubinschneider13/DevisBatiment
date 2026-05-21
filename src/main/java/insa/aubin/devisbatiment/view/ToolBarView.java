@@ -32,6 +32,7 @@ public class ToolBarView extends HBox {
 
     // Chemins des icônes (identiques à ceux utilisés dans ImmeubleView / PieceView)
     private static final String CHEMIN_MAIN       = "/images/main_icone.png";
+    private static final String CHEMIN_SELECTION  = "/images/selection_icone.png";
     private static final String CHEMIN_ECHELLE    = "/images/echelle_icone.png";
     private static final String CHEMIN_MUR        = "/images/mur_icone.png";
     private static final String CHEMIN_PIECE      = "/images/piece_icone.png";
@@ -42,6 +43,7 @@ public class ToolBarView extends HBox {
 
     // --- Boutons ---
     private final Button btnNavigation;
+    private final Button btnSelection;
     private final Button btnEchelle;
     private final Button btnMur;
     private final Button btnPiece;
@@ -65,6 +67,7 @@ public class ToolBarView extends HBox {
 
         // --- Construction des boutons ---
         btnNavigation    = creerBouton("Naviguer",       CHEMIN_MAIN,        80);
+        btnSelection     = creerBouton("Sélection",      CHEMIN_SELECTION,   80);
         btnEchelle       = creerBouton("Échelle",        CHEMIN_ECHELLE,     70);
         btnMur           = creerBouton("Mur",            CHEMIN_MUR,       60);
         btnPiece         = creerBouton("Piece",          CHEMIN_PIECE,         60);
@@ -95,6 +98,7 @@ public class ToolBarView extends HBox {
 
         // --- Remplissage de la map id → bouton ---
         boutonsParId.put("navigation",    btnNavigation);
+        boutonsParId.put("selection",     btnSelection);
         boutonsParId.put("echelle",       btnEchelle);
         boutonsParId.put("mur",           btnMur);
         boutonsParId.put("piece",         btnPiece);
@@ -115,7 +119,7 @@ public class ToolBarView extends HBox {
 
         // --- Assemblage (tous les boutons présents ; la visibilité est gérée dynamiquement) ---
         getChildren().addAll(
-            btnNavigation, btnEchelle,
+            btnNavigation, btnSelection, btnEchelle,
             sep1,
             btnValiderAire, btnAjouterNiveau,
             btnMur, btnPiece, btnAppartement,
@@ -197,6 +201,7 @@ public class ToolBarView extends HBox {
     // =========================================================================
 
     public Button getBtnNavigation()    { return btnNavigation;    }
+    public Button getBtnSelection()     { return btnSelection;     }
     public Button getBtnEchelle()       { return btnEchelle;       }
     public Button getBtnMur()           { return btnMur;           }
     public Button getBtnAppartement()   { return btnAppartement;   }
