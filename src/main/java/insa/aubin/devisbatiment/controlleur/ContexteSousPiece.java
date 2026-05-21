@@ -6,6 +6,7 @@ import insa.aubin.devisbatiment.modele.SurfaceAvecRevetement;
 import insa.aubin.devisbatiment.view.AppView;
 import insa.aubin.devisbatiment.view.PieceView;
 import javafx.stage.Stage;
+import javafx.scene.input.KeyEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -164,5 +165,12 @@ public class ContexteSousPiece implements Contexte {
 
     public PieceControleur getPieceControleur() {
         return pieceControleur;
+    }
+
+    @Override
+    public void gererToucheClavier(KeyEvent e) {
+        if (pieceControleur != null) {
+            pieceControleur.gererToucheClavier(e);
+        }
     }
 }

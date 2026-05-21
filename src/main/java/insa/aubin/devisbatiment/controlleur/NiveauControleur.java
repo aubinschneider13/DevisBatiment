@@ -569,6 +569,15 @@ public class NiveauControleur {
                 "Navigation — molette pour zoomer, clic droit pour déplacer");
     }
 
+    public void activerModeSelection() {
+        annulerMurEnCours();
+        mode = "SELECTION";
+        vue.getCanvas().setPanActif(false);
+        vue.getOptionsMurVue().setVisible(false);
+        vue.setInstructions(
+                "Outil Sélection/Édition actif — Sélectionnez un élément pour voir ses propriétés");
+    }
+
     private void mettreAJourInstructionsMur() {
         if (vue.getOptionsMurVue().estRectangulaire()) {
             vue.setInstructions("Mode rectangle — cliquez pour le premier coin");

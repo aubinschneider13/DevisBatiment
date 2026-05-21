@@ -120,17 +120,18 @@ public class PieceView extends StackPane {
         this.controleur = new PieceControleur(this, stage, gestionnaire);
 
         canvas.setOnMouseClicked(e -> {
-            if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
-                this.controleur.clicDansZoneDeDessin(e);
-            }
+            this.controleur.clicDansZoneDeDessin(e);
         });
         canvas.setOnMouseMoved(e -> this.controleur.mouseMovedDansZoneDessin(e));
 
+        canvas.setFocusTraversable(true);
+        canvas.setOnKeyPressed(e -> {
+            this.controleur.gererToucheClavier(e);
+        });
+
         this.setFocusTraversable(true);
         this.setOnKeyPressed(e -> {
-            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
-                this.controleur.annulerConstruction();
-            }
+            this.controleur.gererToucheClavier(e);
         });
 
         // ✅ Appelé EN DERNIER, après initialisation du contrôleur

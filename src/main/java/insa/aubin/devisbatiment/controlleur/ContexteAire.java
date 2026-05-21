@@ -3,6 +3,7 @@ package insa.aubin.devisbatiment.controlleur;
 import insa.aubin.devisbatiment.controlleur.AppControleur;
 import insa.aubin.devisbatiment.controlleur.ImmeubleControleur;
 import insa.aubin.devisbatiment.view.AppView;
+import javafx.scene.input.KeyEvent;
 
 import java.util.List;
 
@@ -111,5 +112,14 @@ public class ContexteAire implements Contexte {
             return List.of("navigation", "echelle", "ajouterNiveau");
         }
         return List.of("navigation", "echelle", "validerAire");
+    }
+
+    @Override
+    public void gererToucheClavier(KeyEvent e) {
+        if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+            if (immeubleControleur != null) {
+                immeubleControleur.annulerAire();
+            }
+        }
     }
 }

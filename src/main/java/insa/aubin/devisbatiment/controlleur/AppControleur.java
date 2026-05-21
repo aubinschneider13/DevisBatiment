@@ -81,8 +81,8 @@ public class AppControleur {
         brancherNavigateur();
 
         appView.setOnKeyPressed(e -> {
-            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
-                onEchap();
+            if (contexteActif != null) {
+                contexteActif.gererToucheClavier(e);
             }
         });
 
@@ -109,7 +109,9 @@ public class AppControleur {
         brancherNavigateur();
 
         appView.setOnKeyPressed(e -> {
-            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) onEchap();
+            if (contexteActif != null) {
+                contexteActif.gererToucheClavier(e);
+            }
         });
 
         immeubleControleur = new ImmeubleControleur(
@@ -143,6 +145,7 @@ public class AppControleur {
         ToolBarView tb = appView.getToolBarView();
 
         tb.getBtnNavigation()   .setOnAction(e -> contexteActif.onBtnNavigation());
+        tb.getBtnSelection()    .setOnAction(e -> contexteActif.onBtnSelection());
         tb.getBtnEchelle()      .setOnAction(e -> contexteActif.onBtnEchelle());
         tb.getBtnMur()          .setOnAction(e -> contexteActif.onBtnMur());
         tb.getBtnAppartement()  .setOnAction(e -> contexteActif.onBtnAppartement());
@@ -395,6 +398,38 @@ public class AppControleur {
         }
     }
 
+    /**
+     * Recalcule instantanément le devis et met à jour le panneau des propriétés
+     * à droite selon l'élément actuellement sélectionné dans l'arbre.
+     */
+    public void rafraichirDevisEtProprietes() {
+        ToolBarDevisView tbDevis = appView.getToolBarDevisView();
+        NavigateurView nav = appView.getNavigateurView();
+
+        // 1. Mise à jour du libellé de devis selon le contexte actif
+        if (contexteActif instanceof ContextePiece ctx) {
+            double totalDevis = ctx.getAppartement().calculerDevis();
+            tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
+        } else if (contexteActif instanceof ContexteSousPiece ctx) {
+            double totalDevis = ctx.getPiece().calculerDevis();
+            tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
+        }
+
+        // 2. Mise à jour de la fiche de propriétés latérale droite
+        TreeItem<String> itemSelectionne = nav.getTreeView().getSelectionModel().getSelectedItem();
+        if (itemSelectionne != null) {
+            Piece pieceSelectionnee = mapItemPiece.get(itemSelectionne);
+            if (pieceSelectionnee != null) {
+                nav.afficherProprietesPiece(pieceSelectionnee);
+            } else {
+                Appartement appart = mapItemAppartement.get(itemSelectionne);
+                if (appart != null) {
+                    nav.afficherProprietesAppartement(appart);
+                }
+            }
+        }
+    }
+
     // =========================================================================
     // ÉVÉNEMENTS TOOLBAR
     // =========================================================================
@@ -498,18 +533,7 @@ public class AppControleur {
         }
     }
 
-    private void onEchap() {
-        if (contexteActif instanceof ContexteNiveau ctx) {
-            ctx.getNiveauControleur().annulerMurEnCours();
-        } else if (contexteActif instanceof ContexteAire) {
-            immeubleControleur.annulerAire();
-        } else if (contexteActif instanceof ContexteSousPiece ctx) {
-            ctx.onEchap();
-        } else if (contexteActif instanceof ContextePiece ctx) {
-            ctx.getPieceControleur().annulerConstruction();
-            ctx.getPieceControleur().changerEtat(PieceControleur.ETAT_RIEN);
-        }
-    }
+
 
     public void retourDashboard() {
         Appartement.resetCompteur();

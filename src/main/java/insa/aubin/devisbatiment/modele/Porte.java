@@ -7,6 +7,16 @@ public class Porte extends Ouverture implements Fantome {
     public static final double LARGEUR_PORTE = 0.90;
     public static final double HAUTEUR_PORTE = 2.10;
 
+    private boolean ouvertureInversee = false;
+
+    public boolean isOuvertureInversee() {
+        return ouvertureInversee;
+    }
+
+    public void setOuvertureInversee(boolean ouvertureInversee) {
+        this.ouvertureInversee = ouvertureInversee;
+    }
+
     public Porte(double positionSurMur) {
         super("Porte", LARGEUR_PORTE, HAUTEUR_PORTE, positionSurMur);
     }
@@ -17,7 +27,12 @@ public class Porte extends Ouverture implements Fantome {
 
     @Override
     public String toCSV() {
-        return "PORTE;" + getId() + ";" + LARGEUR_PORTE + ";" + HAUTEUR_PORTE;
+        return "PORTE;" + getId() + ";" + LARGEUR_PORTE + ";" + HAUTEUR_PORTE + ";" + (ouvertureInversee ? "1" : "0");
+    }
+
+    @Override
+    public double getPrixForfaitaire() {
+        return 150.0;
     }
 
     @Override
@@ -53,17 +68,22 @@ public class Porte extends Ouverture implements Fantome {
         gc.strokeLine(-l / 2, -0.08, -l / 2, 0.08);
         gc.strokeLine( l / 2, -0.08,  l / 2, 0.08);
 
-        // 3. Vantail : part du jambage gauche, descend perpendiculairement
+        // 3. Vantail & Arc de débattement (sensibles à l'inversion)
+        gc.save();
+        if (ouvertureInversee) {
+            gc.scale(1, -1);
+        }
+
+        // Vantail : part du jambage gauche, descend perpendiculairement
         gc.setLineWidth(0.06);
         gc.strokeLine(-l / 2, 0, -l / 2, -l);
 
-        // 4. Arc de débattement : du bout du vantail jusqu'au jambage droit
-        //    Centre = jambage gauche (-l/2, 0), rayon = l
-        //    L'arc va de 90° (bout du vantail, vers le haut) à 0° (jambage droit)
+        // Arc de débattement : du bout du vantail jusqu'au jambage droit
         gc.setLineWidth(0.04);
         gc.setLineDashes(0.06, 0.04);
         gc.strokeArc(-l / 2 - l, -l, l * 2, l * 2, 0, 90, javafx.scene.shape.ArcType.OPEN);
         gc.setLineDashes(0);
+        gc.restore();
 
         gc.setGlobalAlpha(1.0);
         gc.restore();

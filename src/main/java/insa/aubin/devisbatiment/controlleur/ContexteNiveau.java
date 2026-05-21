@@ -4,6 +4,7 @@ import insa.aubin.devisbatiment.controlleur.AppControleur;
 import insa.aubin.devisbatiment.controlleur.NiveauControleur;
 import insa.aubin.devisbatiment.view.AppView;
 import javafx.scene.control.TreeItem;
+import javafx.scene.input.KeyEvent;
 
 import java.util.List;
 
@@ -23,7 +24,7 @@ public class ContexteNiveau implements Contexte {
 
     /** Identifiants des boutons affichés dans ce contexte (ordre = ordre toolbar). */
     private static final List<String> BOUTONS = List.of(
-            "navigation", "echelle", "mur", "appartement", "ajouterNiveau"
+            "navigation", "selection", "echelle", "mur", "appartement", "ajouterNiveau"
     );
 
     // --- Dépendances ---
@@ -142,5 +143,21 @@ public class ContexteNiveau implements Contexte {
     /** Expose le NiveauControleur pour qu'AppControleur puisse interroger la map items→appartements. */
     public NiveauControleur getNiveauControleur() {
         return niveauControleur;
+    }
+
+    @Override
+    public void onBtnSelection() {
+        if (niveauControleur != null) {
+            niveauControleur.activerModeSelection();
+        }
+    }
+
+    @Override
+    public void gererToucheClavier(KeyEvent e) {
+        if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+            if (niveauControleur != null) {
+                niveauControleur.annulerMurEnCours();
+            }
+        }
     }
 }

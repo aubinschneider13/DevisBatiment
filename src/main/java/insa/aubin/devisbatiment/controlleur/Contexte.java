@@ -1,6 +1,7 @@
 package insa.aubin.devisbatiment.controlleur;
 
 import javafx.scene.control.TreeItem;
+import javafx.scene.input.KeyEvent;
 import java.util.List;
 
 /**
@@ -51,6 +52,9 @@ public interface Contexte {
 
     /** Bouton "Naviguer" — active le mode pan/zoom sur le canvas courant. */
     default void onBtnNavigation() { }
+
+    /** Bouton "Sélection" — active l'outil Sélection/Édition. */
+    default void onBtnSelection() { }
 
     /** Bouton "Mur" — active le mode dessin de mur. */
     default void onBtnMur() { }
@@ -115,4 +119,13 @@ public interface Contexte {
      * @param item l'item sélectionné dans le TreeView (peut être null)
      */
     default void onSelectionArbre(TreeItem<String> item) { }
+
+    /**
+     * Gère les événements clavier au niveau du contexte actif.
+     *
+     * @param e l'événement clavier
+     */
+    default void gererToucheClavier(KeyEvent e) { }
+
+
 }
