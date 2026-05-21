@@ -135,8 +135,10 @@ public class GeometrieUtils {
                     break;
                 }
                 if (correspondA(candidat.getPoint2(), dernierPoint)) {
-                    Mur inverse = new Mur(candidat.getPoint2(), candidat.getPoint1());
-                    inverse.setOriginal(candidat); // Link to original wall
+                    Mur inverse = new Mur(candidat.getPoint2(), candidat.getPoint1(), candidat.getHauteur());
+                    inverse.setTypeMur(candidat.getTypeMur()); // On copie le type pour préserver le Rouge/Violet
+                    inverse.setOriginal(candidat);             // Link to original wall
+
                     courant = inverse;
                     ordonne.add(courant);
                     restants.remove(i);
@@ -238,7 +240,12 @@ public class GeometrieUtils {
                 double[] b = pointsSurSegment.get(i + 1);
                 Point pa = new Point(a[0], a[1]);
                 Point pb = new Point(b[0], b[1]);
-                ajouterSegmentSiAbsent(sources, pa, pb, new Mur(pa, pb));
+                
+                Mur sousMur = new Mur(pa, pb, ss.mur.getHauteur());
+                sousMur.setTypeMur(ss.mur.getTypeMur());   // On propage le type (ADJ_COULOIR, EXTERIEUR, etc.)
+                sousMur.setOriginal(ss.mur.getOriginal()); // On conserve le lien d'origine
+
+                ajouterSegmentSiAbsent(sources, pa, pb, sousMur);
             }
         }
         return sources;

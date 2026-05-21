@@ -74,7 +74,7 @@ public class Mur extends ElementDeConstruction implements Dessin {
         return switch (type) {
             case NORMAL      -> Color.web("#1a1a1a");       // noir
             case EXTERIEUR   -> Color.web("#7733b8");       // violet très foncé
-            case ADJ_COULOIR -> Color.web("#4e0a0a");       // rouge très foncé
+            case ADJ_COULOIR -> Color.web("#E65757");       // rouge très foncé
         };
     }
 

@@ -50,7 +50,7 @@ public class PieceControleur {
     private final PieceView            vue;
     private final Stage                stage;
     private final GestionnaireSauvegarde gestionnaire;
-
+    private NiveauControleur niveauControleur = null;
     private int etat = ETAT_RIEN;
 
     // Appartement courant et son contour
@@ -638,7 +638,13 @@ public class PieceControleur {
 
             // Définir le type AVANT d'ajouter les ouvertures (pour passer la sécurité de Mur.java)
             boolean exterieur = cotesBatiment.stream().anyMatch(c -> murInclsDansCote(murOriginal, c));
-            copie.setTypeMur(exterieur ? Mur.TypeMur.EXTERIEUR : Mur.TypeMur.NORMAL);
+            if (exterieur) {
+                copie.setTypeMur(Mur.TypeMur.EXTERIEUR);
+            } else if (murOriginal.getTypeMur() == Mur.TypeMur.ADJ_COULOIR) {
+                copie.setTypeMur(Mur.TypeMur.ADJ_COULOIR);
+            } else {
+                copie.setTypeMur(Mur.TypeMur.NORMAL);
+            }
 
             // --- FIX 1 : COPIER LES OUVERTURES SUR LE CLONE ---
             for (Ouverture ouv : murOriginal.getListeOuvertures()) {
@@ -921,5 +927,9 @@ public class PieceControleur {
             }
         }
         vue.redrawAll();
+    }
+    
+    public void setNiveauControleur(NiveauControleur ctrl) {
+        this.niveauControleur = ctrl;
     }
 }

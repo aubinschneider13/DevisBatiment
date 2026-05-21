@@ -348,9 +348,12 @@ public class AppControleur {
 
                 ContextePiece ctx = contextePieces.computeIfAbsent(appart, a ->
                         new ContextePiece(a, appView, this, stage, gestionnaire, item)
+                        
                 );
+                
                 basculerContexte(ctx);
-
+                NiveauControleur niveauCtrl = niveauControleurs.get(i);
+                ctx.getPieceControleur().setNiveauControleur(niveauCtrl);
                 ctx.getPieceControleur().synchroniserOuverturesVersAppartement();
 
                 if (estNouveau && !appart.getPieces().isEmpty()) {

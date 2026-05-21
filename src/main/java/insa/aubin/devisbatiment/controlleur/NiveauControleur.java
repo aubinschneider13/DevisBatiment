@@ -371,6 +371,50 @@ public class NiveauControleur {
                         Math.abs(a.getX() - b.getX()) < tol &&
                         Math.abs(a.getY() - b.getY()) < tol));
     }
+    
+    private void marquerMursAdjacents(Couloir couloir) {
+        double tol = 0.05;
+
+        // Collecter tous les segments du couloir
+        List<double[]> segmentsCouloir = new ArrayList<>();
+        for (List<Mur> zone : couloir.getZonesDelimiteurs()) {
+            List<Point> polygone = new ArrayList<>();
+            for (Mur m : zone) polygone.add(m.getPoint1());
+            int n = polygone.size();
+            for (int i = 0; i < n; i++) {
+                Point a = polygone.get(i);
+                Point b = polygone.get((i + 1) % n);
+                segmentsCouloir.add(new double[]{a.getX(), a.getY(), b.getX(), b.getY()});
+            }
+        }
+
+        // Parcourir tous les murs du canvas pour trouver lesquels touchent le couloir
+        for (Object el : vue.getCanvas().getElements()) {
+            if (!(el instanceof Mur mur)) continue;
+
+            double ax1 = mur.getPoint1().getX(), ay1 = mur.getPoint1().getY();
+            double ax2 = mur.getPoint2().getX(), ay2 = mur.getPoint2().getY();
+
+            for (double[] seg : segmentsCouloir) {
+                boolean memeSegment =
+                    (Math.hypot(ax1 - seg[0], ay1 - seg[1]) < tol &&
+                     Math.hypot(ax2 - seg[2], ay2 - seg[3]) < tol) ||
+                    (Math.hypot(ax1 - seg[2], ay1 - seg[3]) < tol &&
+                     Math.hypot(ax2 - seg[0], ay2 - seg[1]) < tol);
+
+                if (memeSegment) {
+                    // Si le mur touche le couloir, on lui donne le type ADJ_COULOIR
+                    mur.setTypeMur(Mur.TypeMur.ADJ_COULOIR);
+                    
+                    // Si ce morceau appartient à un mur original, on met aussi à jour l'original
+                    if (mur.getOriginal() != null) {
+                        mur.getOriginal().setTypeMur(Mur.TypeMur.ADJ_COULOIR);
+                    }
+                    break;
+                }
+            }
+        }
+    }
 
     // =========================================================================
     // COLLECTE DES SEGMENTS (délègue la subdivision à GeometrieUtils)
@@ -430,6 +474,31 @@ public class NiveauControleur {
         double uy    = cible.getY() - centre.getY();
         double s     = (ux * perpX + uy * perpY) / (perpX * perpX + perpY * perpY);
         return new Point(centre.getX() + s * perpX, centre.getY() + s * perpY);
+    }
+    
+    public boolean estAdjacentsAuCouloir(Mur mur) {
+        double tol = 0.05;
+        double ax1 = mur.getPoint1().getX(), ay1 = mur.getPoint1().getY();
+        double ax2 = mur.getPoint2().getX(), ay2 = mur.getPoint2().getY();
+
+        for (Couloir couloir : couloirs) {
+            for (List<Mur> zone : couloir.getZonesDelimiteurs()) {
+                List<Point> polygone = new ArrayList<>();
+                for (Mur m : zone) polygone.add(m.getPoint1());
+                int n = polygone.size();
+                for (int i = 0; i < n; i++) {
+                    Point b1 = polygone.get(i);
+                    Point b2 = polygone.get((i + 1) % n);
+                    boolean match =
+                        (Math.hypot(ax1 - b1.getX(), ay1 - b1.getY()) < tol &&
+                         Math.hypot(ax2 - b2.getX(), ay2 - b2.getY()) < tol) ||
+                        (Math.hypot(ax1 - b2.getX(), ay1 - b2.getY()) < tol &&
+                         Math.hypot(ax2 - b1.getX(), ay2 - b1.getY()) < tol);
+                    if (match) return true;
+                }
+            }
+        }
+        return false;
     }
 
     // =========================================================================
