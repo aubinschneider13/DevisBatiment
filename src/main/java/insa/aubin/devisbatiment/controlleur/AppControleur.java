@@ -386,6 +386,11 @@ public class AppControleur {
 
             basculerContexte(ctx);
 
+            NiveauControleur niveauCtrl = trouverNiveauControleurPourPiece(item);
+            if (niveauCtrl != null) {
+                ctx.getPieceControleur().setNiveauControleur(niveauCtrl);
+            }
+
             ctx.getPieceControleur().synchroniserOuverturesVersPiece();
 
             double totalDevis = piece.calculerDevis();
@@ -393,6 +398,18 @@ public class AppControleur {
             nav.afficherProprietesPiece(piece);
             return;
         }
+    }
+
+    private NiveauControleur trouverNiveauControleurPourPiece(TreeItem<String> itemPiece) {
+        TreeItem<String> itemAppart = mapPieceVersAppart.get(itemPiece);
+        if (itemAppart == null) return null;
+
+        for (NiveauControleur ctrl : niveauControleurs) {
+            if (ctrl.getMapItemAppartement().containsKey(itemAppart)) {
+                return ctrl;
+            }
+        }
+        return null;
     }
 
     // =========================================================================
@@ -464,6 +481,7 @@ public class AppControleur {
             TreeItem<String> itemCouloir = appView.getNavigateurView().ajouterItemCouloir(itemNiveau, nomCouloir);
             itemsCouloirDuNiveau.put(itemCouloir, couloir);
             mapItemCouloir.put(itemCouloir, couloir);
+            gestionnaire.sauvegarderCouloirs(niveau, immeuble);
             return itemCouloir;
         });
 
@@ -625,6 +643,21 @@ public class AppControleur {
                 gestionnaire.sauvegarderAppartement(appart, niveauFinal, immeuble);
                 return itemAppart;
             });
+
+            Map<TreeItem<String>, Couloir> itemsCouloirDuNiveau = new HashMap<>();
+            ctrl.setOnCouloirCree(couloir -> {
+                itemNiveau.getChildren().removeAll(itemsCouloirDuNiveau.keySet());
+                itemsCouloirDuNiveau.clear();
+
+                String nomCouloir = "Couloir du " + itemNiveau.getValue();
+                TreeItem<String> itemCouloir = appView.getNavigateurView().ajouterItemCouloir(itemNiveau, nomCouloir);
+                itemsCouloirDuNiveau.put(itemCouloir, couloir);
+                mapItemCouloir.put(itemCouloir, couloir);
+                gestionnaire.sauvegarderCouloirs(niveauFinal, immeuble);
+                return itemCouloir;
+            });
+
+            ctrl.rechargerCouloirs(niveau.getCouloirs());
 
             niveauControleurs.add(ctrl);
         }

@@ -63,6 +63,8 @@ public class PieceControleur {
     private final Map<TreeItem<String>, Piece> mapItemPiece  = new HashMap<>();
     // ✅ Ajouté : Pour relier les clones graphiques translatés aux vrais murs du modèle
     private final Map<Mur, Mur> mapCopieVersOriginal = new HashMap<>();
+    private boolean afficherAdjacenceCouloir = true;
+    private List<double[]> cotesBatimentAffichage = new ArrayList<>();
 
     // Callback notifiant AppControleur lors de la création d'une pièce
     private Function<Piece, TreeItem<String>> onPieceCree = null;
@@ -629,6 +631,7 @@ public class PieceControleur {
 
         List<Mur> mursAffichage = new ArrayList<>();
         List<double[]> cotesBatiment = extraireCotesBatiment(aire);
+        this.cotesBatimentAffichage = cotesBatiment;
 
         for (Mur murOriginal : mursDelimiteurs) {
             Mur copie = new Mur(
@@ -637,14 +640,7 @@ public class PieceControleur {
             );
 
             // Définir le type AVANT d'ajouter les ouvertures (pour passer la sécurité de Mur.java)
-            boolean exterieur = cotesBatiment.stream().anyMatch(c -> murInclsDansCote(murOriginal, c));
-            if (exterieur) {
-                copie.setTypeMur(Mur.TypeMur.EXTERIEUR);
-            } else if (murOriginal.getTypeMur() == Mur.TypeMur.ADJ_COULOIR) {
-                copie.setTypeMur(Mur.TypeMur.ADJ_COULOIR);
-            } else {
-                copie.setTypeMur(Mur.TypeMur.NORMAL);
-            }
+            appliquerTypeMurAffichage(copie, murOriginal, cotesBatiment);
 
             // --- FIX 1 : COPIER LES OUVERTURES SUR LE CLONE ---
             for (Ouverture ouv : murOriginal.getListeOuvertures()) {
@@ -705,6 +701,10 @@ public class PieceControleur {
         cotes.add(new double[]{q3.getX(), q3.getY(), q4.getX(), q4.getY()});
         cotes.add(new double[]{q4.getX(), q4.getY(), q1.getX(), q1.getY()});
         return cotes;
+    }
+
+    public void setAfficherAdjacenceCouloir(boolean afficherAdjacenceCouloir) {
+        this.afficherAdjacenceCouloir = afficherAdjacenceCouloir;
     }
 
     public void rechargerPieces(List<Piece> piecesChargees) {
@@ -931,5 +931,33 @@ public class PieceControleur {
     
     public void setNiveauControleur(NiveauControleur ctrl) {
         this.niveauControleur = ctrl;
+        rafraichirTypesMursAffichage();
+    }
+
+    private void rafraichirTypesMursAffichage() {
+        if (mapCopieVersOriginal.isEmpty()) return;
+
+        for (Map.Entry<Mur, Mur> entry : mapCopieVersOriginal.entrySet()) {
+            appliquerTypeMurAffichage(entry.getKey(), entry.getValue(), cotesBatimentAffichage);
+        }
+        vue.redrawAll();
+    }
+
+    private void appliquerTypeMurAffichage(Mur copie, Mur murOriginal, List<double[]> cotesBatiment) {
+        boolean exterieur = cotesBatiment.stream().anyMatch(c -> murInclsDansCote(murOriginal, c))
+                || murOriginal.getTypeMur() == Mur.TypeMur.EXTERIEUR;
+
+        if (exterieur) {
+            copie.setTypeMur(Mur.TypeMur.EXTERIEUR);
+        } else if (afficherAdjacenceCouloir && estMurAdjacentCouloir(murOriginal)) {
+            copie.setTypeMur(Mur.TypeMur.ADJ_COULOIR);
+        } else {
+            copie.setTypeMur(Mur.TypeMur.NORMAL);
+        }
+    }
+
+    private boolean estMurAdjacentCouloir(Mur mur) {
+        return mur.getTypeMur() == Mur.TypeMur.ADJ_COULOIR
+                || (niveauControleur != null && niveauControleur.estAdjacentsAuCouloir(mur));
     }
 }

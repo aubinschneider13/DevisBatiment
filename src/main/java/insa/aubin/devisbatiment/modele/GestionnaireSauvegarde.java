@@ -56,7 +56,7 @@ public class GestionnaireSauvegarde {
     } catch (IOException e) {
         System.err.println("Erreur sauvegarde config : " + e.getMessage());
     }
-}
+    }
 
     public void chargerConfig() {
         File f = new File(FICHIER_CONFIG);
@@ -129,6 +129,16 @@ public class GestionnaireSauvegarde {
 
     public String getCheminAppartement(Appartement a, Niveau n, Batiment b) {
         return getCheminNiveau(n, b) + "/" + a.getId();
+    }
+
+    public void sauvegarderCouloirs(Niveau n, Batiment b) {
+        if (!sauvegardeActive) return;
+        String cheminParent = getCheminNiveau(n, b);
+        new File(cheminParent).mkdirs();
+        List<String> lignes = n.getCouloirs().stream()
+                .map(Couloir::toCSV)
+                .toList();
+        ecrireLignes(cheminParent + "/couloirs.txt", lignes);
     }
 
     // ────────────────────────────────────────────
@@ -212,6 +222,7 @@ public class GestionnaireSauvegarde {
 
                 // Charger les appartements de ce niveau
                 chargerAppartements(niveau, immeuble, nomBatiment, id);
+                chargerCouloirs(niveau, nomBatiment, id);
             }
         } catch (Exception e) {
             System.err.println("Erreur chargement niveaux : " + e.getMessage());
@@ -260,6 +271,59 @@ public class GestionnaireSauvegarde {
             }
         } catch (Exception e) {
             System.err.println("Erreur chargement appartements : " + e.getMessage());
+        }
+    }
+
+    private void chargerCouloirs(Niveau niveau, String nomBatiment, String idNiveau) {
+        File fichier = new File(cheminRacine + "/" + nomBatiment + "/" + idNiveau + "/couloirs.txt");
+        if (!fichier.exists()) return;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(fichier))) {
+            String ligne;
+            while ((ligne = br.readLine()) != null) {
+                ligne = ligne.trim();
+                if (ligne.isEmpty()) continue;
+                String[] parts = ligne.split(";");
+                if (parts.length < 6 || !parts[0].equals("COULOIR")) continue;
+
+                String id = parts[1];
+                double hauteurPlafond = Double.parseDouble(parts[3]);
+                int nbZones = Integer.parseInt(parts[4]);
+                int index = 5;
+
+                Couloir couloir = new Couloir(hauteurPlafond);
+                couloir.setId(id);
+
+                for (int z = 0; z < nbZones && index < parts.length; z++) {
+                    int nbPoints = Integer.parseInt(parts[index++]);
+                    List<Point> points = new ArrayList<>();
+
+                    for (int i = 0; i < nbPoints && index + 1 < parts.length; i++) {
+                        points.add(new Point(
+                            Double.parseDouble(parts[index++]),
+                            Double.parseDouble(parts[index++])
+                        ));
+                    }
+
+                    if (points.size() >= 3) {
+                        List<Mur> mursZone = new ArrayList<>();
+                        for (int i = 0; i < points.size(); i++) {
+                            mursZone.add(new Mur(
+                                points.get(i),
+                                points.get((i + 1) % points.size()),
+                                hauteurPlafond
+                            ));
+                        }
+                        couloir.ajouterZone(mursZone);
+                    }
+                }
+
+                if (!couloir.getPolygones().isEmpty()) {
+                    niveau.ajouterCouloir(couloir);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur chargement couloirs : " + e.getMessage());
         }
     }
 
@@ -358,6 +422,16 @@ public class GestionnaireSauvegarde {
             pw.println(contenu);
         } catch (IOException e) {
             System.err.println("Erreur écriture " + cheminFichier + " : " + e.getMessage());
+        }
+    }
+
+    private void ecrireLignes(String cheminFichier, List<String> contenus) {
+        try (PrintWriter pw = new PrintWriter(new FileWriter(cheminFichier, false))) {
+            for (String contenu : contenus) {
+                pw.println(contenu);
+            }
+        } catch (IOException e) {
+            System.err.println("Erreur ecriture " + cheminFichier + " : " + e.getMessage());
         }
     }
 }

@@ -67,6 +67,7 @@ public class PieceView extends StackPane {
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
                     Couloir couloir, AireImmeuble aire) {
        this(stage, gestionnaire, (Appartement) null, (AireImmeuble) null);
+       this.controleur.setAfficherAdjacenceCouloir(false);
 
        if (couloir != null && !couloir.getPolygones().isEmpty()) {
            // On initialise avec chaque zone du couloir

@@ -49,9 +49,13 @@ public class Couloir extends ElementDeConstruction {
     public String toCSV() {
         StringBuilder sb = new StringBuilder();
         sb.append(String.format(java.util.Locale.US,
-            "COULOIR;%s;%d;%.2f", getId(), numero, hauteurPlafond));
-        for (Point p : getPolygone()) {
-            sb.append(String.format(java.util.Locale.US, ";%.2f;%.2f", p.getX(), p.getY()));
+            "COULOIR;%s;%d;%.2f;%d", getId(), numero, hauteurPlafond, zonesDelimiteurs.size()));
+        for (List<Mur> zone : zonesDelimiteurs) {
+            sb.append(";").append(zone.size());
+            for (Mur m : zone) {
+                Point p = m.getPoint1();
+                sb.append(String.format(java.util.Locale.US, ";%.2f;%.2f", p.getX(), p.getY()));
+            }
         }
         return sb.toString();
     }

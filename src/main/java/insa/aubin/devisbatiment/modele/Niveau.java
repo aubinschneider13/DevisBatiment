@@ -67,6 +67,16 @@ public class Niveau extends ElementDeConstruction {
         this.couloirs.add(c);
         return c;
     }
+
+    public void ajouterCouloir(Couloir c) {
+        if (c != null && !this.couloirs.contains(c)) {
+            this.couloirs.add(c);
+        }
+    }
+
+    public void viderCouloirs() {
+        this.couloirs.clear();
+    }
         
     // =========================================================================
     // GETTERS ET SETTERS
