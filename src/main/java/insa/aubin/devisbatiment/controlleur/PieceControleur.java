@@ -132,7 +132,7 @@ public class PieceControleur {
 
     public void changerEtat(int nouvelEtat) {
         // ✅ Provenant de origin/master : Nettoyer le fantôme d'ouverture en quittant le mode
-        if (this.state == ETAT_PORTE || this.state == ETAT_FENETRE) {
+        if (this.etat == ETAT_PORTE || this.etat == ETAT_FENETRE) {
             murSurvole = null;
             vue.getCanvas().setFantome(null, 0, 0, 0, false);
         }
