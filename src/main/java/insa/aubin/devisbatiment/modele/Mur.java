@@ -333,7 +333,25 @@ public class Mur extends ElementDeConstruction implements Dessin {
         String idDroit = (coteDroit.getRevetements() != null && !coteDroit.getRevetements().isEmpty()) 
                 ? coteDroit.getRevetements().get(0).getId() : "VIDE";
 
-        return base + ";" + idGauche + ";" + idDroit;
+        StringBuilder ouverturesCsv = new StringBuilder();
+        int nbOuvertures = listeOuvertures != null ? listeOuvertures.size() : 0;
+        ouverturesCsv.append(";OUVERTURES;").append(nbOuvertures);
+        if (listeOuvertures != null) {
+            for (Ouverture o : listeOuvertures) {
+                if (o instanceof Porte p) {
+                    ouverturesCsv.append(String.format(java.util.Locale.US,
+                            ";PORTE;%.4f;%d",
+                            p.getPositionSurMur(),
+                            p.isOuvertureInversee() ? 1 : 0));
+                } else if (o instanceof Fenetre) {
+                    ouverturesCsv.append(String.format(java.util.Locale.US,
+                            ";FENETRE;%.4f;0",
+                            o.getPositionSurMur()));
+                }
+            }
+        }
+
+        return base + ";" + idGauche + ";" + idDroit + ouverturesCsv;
     }
 
     @Override

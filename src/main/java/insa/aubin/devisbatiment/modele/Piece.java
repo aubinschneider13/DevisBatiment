@@ -7,6 +7,7 @@ public class Piece extends ElementDeConstruction {
 
     private double hauteurPlafond;
     private List<Point> points;
+    private List<Mur> murs;
     private List<CoteMur> cotesMurs;
     private List<Usage> usages;
     private Sol sol;
@@ -27,6 +28,7 @@ public class Piece extends ElementDeConstruction {
         compteur++;
         this.numero = compteur;
         this.hauteurPlafond = hauteurPlafond;
+        this.murs = new ArrayList<>(murs);
         this.cotesMurs = new ArrayList<>();
         this.usages         = new ArrayList<>();
 
@@ -120,14 +122,10 @@ public class Piece extends ElementDeConstruction {
     public List<Point> getPoints()                 { return points; }
     
     /**
-     * Retourne les murs parents ordonnés pour compatibilité.
+     * Retourne les murs de contour ordonnés de la pièce.
      */
     public List<Mur> getMurs() {
-        List<Mur> parentMurs = new ArrayList<>();
-        for (CoteMur cm : cotesMurs) {
-            parentMurs.add(cm.getMurParent());
-        }
-        return parentMurs;
+        return murs;
     }
     
     public List<CoteMur> getCotesMurs() {
@@ -138,6 +136,7 @@ public class Piece extends ElementDeConstruction {
     public Sol getSol()                            { return sol; }
     public Plafond getPlafond()                    { return plafond; }
     public static void resetCompteur()             { compteur = 0; }
+    public static void setCompteur(int valeur)      { compteur = Math.max(0, valeur); }
     public int getNumero()                         { return numero; }
 
     // =========================================================================

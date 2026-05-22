@@ -653,7 +653,13 @@ public class PieceControleur {
                             if (tPiece >= -0.05 && tPiece <= 1.05) {
                                 double margePiece = ouv.getLargeur() / (2 * murPiece.calculerLongueur());
                                 tPiece = Math.max(margePiece, Math.min(1.0 - margePiece, tPiece));
-                                murPiece.ajouterOuverture(ouv instanceof Porte ? new Porte(tPiece) : new Fenetre(tPiece));
+                                if (ouv instanceof Porte porte) {
+                                    Porte copiePorte = new Porte(tPiece);
+                                    copiePorte.setOrientation(porte.getOrientation());
+                                    murPiece.ajouterOuverture(copiePorte);
+                                } else {
+                                    murPiece.ajouterOuverture(new Fenetre(tPiece));
+                                }
                             }
                         }
                     }
@@ -731,12 +737,7 @@ public class PieceControleur {
         // 2. Si on est dans la vue d'une pièce, on sécurise l'ajout dans le vrai mur en mémoire
         Mur vraiMur = retrouverVraiMurModele(cible);
         if (vraiMur != null && vraiMur != cible) {
-            Porte p2 = null;
-            if (estPorte) {
-                p2 = new Porte(t);
-                p2.setOuvertureInversee(inversee);
-            }
-            vraiMur.ajouterOuverture(estPorte ? p2 : new Fenetre(t));
+            vraiMur.ajouterOuverture(copierOuverturePourMur(estPorte ? p1 : new Fenetre(t), cible, vraiMur));
         }
 
         // 3. Si on est dans la vue Appartement, on propage la découpe aux sous-murs des pièces
@@ -748,12 +749,8 @@ public class PieceControleur {
                     if (tPiece >= -0.05 && tPiece <= 1.05) {
                         double margePiece = largeur / (2 * murPiece.calculerLongueur());
                         tPiece = Math.max(margePiece, Math.min(1.0 - margePiece, tPiece));
-                        Porte pPiece = null;
-                        if (estPorte) {
-                            pPiece = new Porte(tPiece);
-                            pPiece.setOuvertureInversee(inversee);
-                        }
-                        murPiece.ajouterOuverture(estPorte ? pPiece : new Fenetre(tPiece));
+                        Ouverture ouvertureSource = estPorte ? p1 : new Fenetre(t);
+                        murPiece.ajouterOuverture(copierOuverturePourMur(ouvertureSource, cible, murPiece));
                     }
                 }
             }
@@ -822,12 +819,12 @@ public class PieceControleur {
 
             // --- FIX 1 : COPIER LES OUVERTURES SUR LE CLONE ---
             for (Ouverture ouv : murOriginal.getListeOuvertures()) {
-                if (ouv instanceof Porte pOuv) {
-                    Porte pClone = new Porte(ouv.getPositionSurMur());
-                    pClone.setOuvertureInversee(pOuv.isOuvertureInversee());
-                    copie.ajouterOuverture(pClone);
-                } else if (ouv instanceof Fenetre) {
-                    copie.ajouterOuverture(new Fenetre(ouv.getPositionSurMur()));
+                    if (ouv instanceof Porte pOuv) {
+                        Porte pClone = new Porte(ouv.getPositionSurMur());
+                        pClone.setOrientation(pOuv.getOrientation());
+                        copie.ajouterOuverture(pClone);
+                    } else if (ouv instanceof Fenetre) {
+                        copie.ajouterOuverture(new Fenetre(ouv.getPositionSurMur()));
                 }
             }
 
@@ -894,7 +891,7 @@ public class PieceControleur {
 
             // Ajouter les murs de la pièce au canvas
             for (Mur mur : piece.getMurs()) {
-                if (!vue.getCanvas().getElements().contains(mur)) {
+                if (!contientMurIdentiqueCanvas(mur)) {
                     vue.getCanvas().getElements().add(mur);
                 }
             }
@@ -1059,13 +1056,71 @@ public class PieceControleur {
         return true;
     }
 
+    private Ouverture copierOuverture(Ouverture ouverture, double positionSurMur) {
+        if (ouverture instanceof Porte porte) {
+            Porte copie = new Porte(positionSurMur);
+            copie.setOrientation(porte.getOrientation());
+            return copie;
+        }
+        return new Fenetre(positionSurMur);
+    }
+
     /** Remonte les portes/fenêtres des pièces vers la grande vue Appartement */
+    private boolean contientMurIdentiqueCanvas(Mur mur) {
+        for (Dessin d : vue.getCanvas().getElements()) {
+            if (d instanceof Mur existant && sontMursIdentiques(existant, mur)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean memeSens(Mur a, Mur b) {
+        double dxA = a.getPoint2().getX() - a.getPoint1().getX();
+        double dyA = a.getPoint2().getY() - a.getPoint1().getY();
+        double dxB = b.getPoint2().getX() - b.getPoint1().getX();
+        double dyB = b.getPoint2().getY() - b.getPoint1().getY();
+        return dxA * dxB + dyA * dyB >= 0;
+    }
+
+    private Ouverture copierOuverturePourMur(Ouverture ouverture, Mur murSource, Mur murDestination) {
+        Point position = murSource.getPointSurMur(ouverture.getPositionSurMur());
+        double tDestination = murDestination.calculerPositionSurMur(position);
+        tDestination = Math.max(0.0, Math.min(1.0, tDestination));
+
+        Ouverture copie = copierOuverture(ouverture, tDestination);
+        if (copie instanceof Porte porteCopie && ouverture instanceof Porte porteSource
+                && !memeSens(murSource, murDestination)) {
+            porteCopie.setOrientation(-porteSource.getOrientation());
+        }
+        return copie;
+    }
+
+    private boolean estMurModelePiece(Mur mur) {
+        for (Piece piece : appartement.getPieces()) {
+            for (Mur murPiece : piece.getMurs()) {
+                if (mur == murPiece) return true;
+            }
+        }
+        return false;
+    }
+
     public void synchroniserOuverturesVersAppartement() {
         if (appartement == null) return;
-
         for (Dessin d : vue.getCanvas().getElements()) {
             if (d instanceof Mur murCanvas) {
+                if (estMurModelePiece(murCanvas)) continue;
                 murCanvas.getListeOuvertures().clear(); // Nettoyage pour éviter les doublons
+
+                Mur murOriginal = mapCopieVersOriginal.get(murCanvas);
+                if (murOriginal == null) {
+                    murOriginal = retrouverVraiMurModele(murCanvas);
+                }
+                if (murOriginal != null) {
+                    for (Ouverture ouverture : murOriginal.getListeOuvertures()) {
+                        murCanvas.ajouterOuverture(copierOuverture(ouverture, ouverture.getPositionSurMur()));
+                    }
+                }
 
                 for (Piece piece : appartement.getPieces()) {
                     for (Mur murPiece : piece.getMurs()) {
@@ -1087,13 +1142,7 @@ public class PieceControleur {
                                     }
 
                                     if (!existe) {
-                                        if (ouv instanceof Porte pOuv) {
-                                            Porte pNew = new Porte(tCanvas);
-                                            pNew.setOuvertureInversee(pOuv.isOuvertureInversee());
-                                            murCanvas.ajouterOuverture(pNew);
-                                        } else {
-                                            murCanvas.ajouterOuverture(new Fenetre(tCanvas));
-                                        }
+                                        murCanvas.ajouterOuverture(copierOuverturePourMur(ouv, murPiece, murCanvas));
                                     }
                                 }
                             }
@@ -1117,7 +1166,7 @@ public class PieceControleur {
             for (Ouverture ouv : original.getListeOuvertures()) {
                 if (ouv instanceof Porte pOuv) {
                     Porte pClone = new Porte(ouv.getPositionSurMur());
-                    pClone.setOuvertureInversee(pOuv.isOuvertureInversee());
+                    pClone.setOrientation(pOuv.getOrientation());
                     clone.ajouterOuverture(pClone);
                 } else {
                     clone.ajouterOuverture(new Fenetre(ouv.getPositionSurMur()));
@@ -1354,7 +1403,10 @@ public class PieceControleur {
             // 1. Supprimer toutes les pièces dépendantes de ce mur
             List<Piece> piecesToDelete = new ArrayList<>();
             for (Piece piece : pieces) {
-                if (piece.getMurs().stream().anyMatch(m -> sontMursIdentiques(m, deletedWall))) {
+                if (piece.getMurs().stream().anyMatch(m ->
+                        sontMursIdentiques(m, deletedWall)
+                                || sontMursSuperposes(deletedWall, m)
+                                || sontMursSuperposes(m, deletedWall))) {
                     piecesToDelete.add(piece);
                 }
             }

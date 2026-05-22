@@ -143,6 +143,7 @@ public class GestionnaireSauvegarde {
         String cheminDossier = getCheminAppartement(a, n, b);
         new File(cheminDossier).mkdirs();
         ecrireLigne(cheminParent + "/appartements.txt", a.toCSV());
+        sauvegarderDetailsAppartement(a, n, b);
     }
 
     public String getCheminAppartement(Appartement a, Niveau n, Batiment b) {
@@ -178,13 +179,30 @@ public class GestionnaireSauvegarde {
         String cheminFichier = cheminParent + "/" + p.getId() + ".txt";
 
         ecrireLigne(cheminParent + "/pieces.txt", p.toCSV());
+        sauvegarderDetailsPiece(p, a, n, b);
+    }
 
+    public void sauvegarderDetailsAppartement(Appartement a, Niveau n, Batiment b) {
+        if (!sauvegardeActive) return;
+
+        String cheminDossier = getCheminAppartement(a, n, b);
+        new File(cheminDossier).mkdirs();
+        ecrireLignes(cheminDossier + "/murs_appartement.txt",
+                a.getMursDelimiteurs().stream().map(Mur::toCSV).toList());
+    }
+
+    public void sauvegarderDetailsPiece(Piece p, Appartement a, Niveau n, Batiment b) {
+        if (!sauvegardeActive) return;
+
+        String cheminParent = getCheminAppartement(a, n, b);
+        String cheminFichier = cheminParent + "/" + p.getId() + ".txt";
+        List<String> lignes = new ArrayList<>();
         for (Mur m : p.getMurs()) {
-            ecrireLigne(cheminFichier, m.toCSV());
+            lignes.add(m.toCSV());
         }
-
-        ecrireLigne(cheminFichier, p.getSol().toCSV());
-        ecrireLigne(cheminFichier, p.getPlafond().toCSV());
+        lignes.add(p.getSol().toCSV());
+        lignes.add(p.getPlafond().toCSV());
+        ecrireLignes(cheminFichier, lignes);
     }
 
     // ────────────────────────────────────────────
@@ -220,6 +238,9 @@ public class GestionnaireSauvegarde {
                 Point p2 = new Point(Double.parseDouble(parts[6]), Double.parseDouble(parts[7]));
                 Point p3 = new Point(Double.parseDouble(parts[8]), Double.parseDouble(parts[9]));
                 Point p4 = new Point(Double.parseDouble(parts[10]), Double.parseDouble(parts[11]));
+
+                Appartement.resetCompteur();
+                Piece.resetCompteur();
 
                 AireImmeuble aire = new AireImmeuble(p1);
                 aire.setP2(p2);
@@ -309,6 +330,10 @@ public class GestionnaireSauvegarde {
 
                 Appartement appart = niveau.ajouterAppartement(mursAppart);
                 appart.setId(id);
+                chargerOuverturesMurs(
+                        appart.getMursDelimiteurs(),
+                        new File(cheminRacine + "/" + nomBatiment + "/" + idNiveau
+                                + "/" + id + "/murs_appartement.txt"));
 
                 chargerPieces(appart, nomBatiment, idNiveau, id);
             }
@@ -414,6 +439,10 @@ public class GestionnaireSauvegarde {
 
                 Piece piece = appart.ajouterPiece(mursPiece);
                 piece.setId(id);
+                chargerOuverturesMurs(
+                        mursPiece,
+                        new File(cheminRacine + "/" + nomBatiment + "/"
+                                + idNiveau + "/" + idAppart + "/" + id + ".txt"));
             }
         } catch (Exception e) {
             System.err.println("Erreur chargement pièces : " + e.getMessage());
@@ -423,6 +452,76 @@ public class GestionnaireSauvegarde {
     // ────────────────────────────────────────────
     // Supprimer un bâtiment
     // ────────────────────────────────────────────
+
+    private void chargerOuverturesMurs(List<Mur> murs, File fichier) {
+        if (murs == null || fichier == null || !fichier.exists()) return;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(fichier))) {
+            String ligne;
+            while ((ligne = br.readLine()) != null) {
+                ligne = ligne.trim();
+                if (ligne.isEmpty()) continue;
+                String[] parts = ligne.split(";");
+                if (parts.length < 9 || !parts[0].equals("MUR")) continue;
+
+                Mur mur = trouverMurParCoordonnees(murs,
+                        Double.parseDouble(parts[2]),
+                        Double.parseDouble(parts[3]),
+                        Double.parseDouble(parts[4]),
+                        Double.parseDouble(parts[5]));
+                if (mur == null) continue;
+
+                int indexOuvertures = -1;
+                for (int i = 9; i < parts.length; i++) {
+                    if ("OUVERTURES".equals(parts[i])) {
+                        indexOuvertures = i;
+                        break;
+                    }
+                }
+                if (indexOuvertures < 0 || indexOuvertures + 1 >= parts.length) continue;
+
+                List<Ouverture> ouvertures = new ArrayList<>();
+                int nbOuvertures = Integer.parseInt(parts[indexOuvertures + 1]);
+                int index = indexOuvertures + 2;
+                for (int i = 0; i < nbOuvertures && index + 2 < parts.length; i++) {
+                    String type = parts[index++];
+                    double position = Double.parseDouble(parts[index++]);
+                    boolean inversee = "1".equals(parts[index++]);
+
+                    if ("PORTE".equals(type)) {
+                        Porte porte = new Porte(position);
+                        porte.setOrientation(inversee ? 1 : -1);
+                        ouvertures.add(porte);
+                    } else if ("FENETRE".equals(type)) {
+                        ouvertures.add(new Fenetre(position));
+                    }
+                }
+                mur.setListeOuvertures(ouvertures);
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur chargement ouvertures : " + e.getMessage());
+        }
+    }
+
+    private Mur trouverMurParCoordonnees(List<Mur> murs, double x1, double y1, double x2, double y2) {
+        double tol = 0.02;
+        for (Mur mur : murs) {
+            boolean sensDirect =
+                    Math.abs(mur.getPoint1().getX() - x1) < tol &&
+                    Math.abs(mur.getPoint1().getY() - y1) < tol &&
+                    Math.abs(mur.getPoint2().getX() - x2) < tol &&
+                    Math.abs(mur.getPoint2().getY() - y2) < tol;
+            boolean sensInverse =
+                    Math.abs(mur.getPoint1().getX() - x2) < tol &&
+                    Math.abs(mur.getPoint1().getY() - y2) < tol &&
+                    Math.abs(mur.getPoint2().getX() - x1) < tol &&
+                    Math.abs(mur.getPoint2().getY() - y1) < tol;
+            if (sensDirect || sensInverse) {
+                return mur;
+            }
+        }
+        return null;
+    }
 
     public void supprimerBatiment(Immeuble immeuble) {
         if (!sauvegardeActive) return;

@@ -82,6 +82,9 @@ public class AppControleur {
 
         brancherClavier();
 
+        Appartement.resetCompteur();
+        Piece.resetCompteur();
+
         immeubleControleur = new ImmeubleControleur(
                 appView.getCanvasAire(), appView, gestionnaire
         );
@@ -117,6 +120,7 @@ public class AppControleur {
         immeubleControleur.setAireImmeuble(aire);
 
         this.immeuble = immeubleExistant;
+        recalibrerCompteursBatiment(immeubleExistant);
 
         // Mettre à jour le navigateur
         appView.getNavigateurView().setNomImmeuble(immeubleExistant.getNomBatiment());
@@ -264,6 +268,17 @@ public class AppControleur {
                 alert.showAndWait();
                 return;
             }
+            List<String> appartementsInvalides = appartementsSansPorteCouloir();
+            if (!appartementsInvalides.isEmpty()) {
+                Alert alert = new Alert(Alert.AlertType.WARNING,
+                        "Chaque appartement doit avoir au moins une porte sur un mur adjacent au couloir.\n\n"
+                        + "Appartement(s) a corriger :\n- "
+                        + String.join("\n- ", appartementsInvalides));
+                alert.setHeaderText("Export impossible");
+                alert.showAndWait();
+                return;
+            }
+
             javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
             fileChooser.setTitle("Exporter le devis");
             fileChooser.setInitialFileName("devis_" + immeuble.getNomBatiment() + ".txt");
@@ -283,6 +298,36 @@ public class AppControleur {
                 }
             }
         });
+    }
+
+    private List<String> appartementsSansPorteCouloir() {
+        List<String> invalides = new ArrayList<>();
+        if (immeuble == null) return invalides;
+
+        for (int i = 0; i < niveauControleurs.size(); i++) {
+            NiveauControleur ctrl = niveauControleurs.get(i);
+            Niveau niveau = i < immeuble.getNiveaux().size() ? immeuble.getNiveaux().get(i) : null;
+            if (niveau == null) continue;
+
+            for (Appartement appartement : niveau.getAppartements()) {
+                if (!appartementAPorteSurCouloir(appartement, ctrl)) {
+                    invalides.add(appartement.toString());
+                }
+            }
+        }
+        return invalides;
+    }
+
+    private boolean appartementAPorteSurCouloir(Appartement appartement, NiveauControleur ctrl) {
+        if (appartement == null || ctrl == null) return false;
+
+        for (Mur mur : appartement.getMurs()) {
+            if (!ctrl.estAdjacentsAuCouloir(mur)) continue;
+            if (mur.getListeOuvertures().stream().anyMatch(o -> o instanceof Porte)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void brancherNavigateur() {
@@ -644,6 +689,23 @@ public class AppControleur {
         }
     }
 
+    public void sauvegarderDetailsOuvertures() {
+        if (immeuble == null || gestionnaire == null || !gestionnaire.isSauvegardeActive()) return;
+
+        for (int i = 0; i < niveauControleurs.size(); i++) {
+            NiveauControleur ctrl = niveauControleurs.get(i);
+            Niveau niveau = i < immeuble.getNiveaux().size() ? immeuble.getNiveaux().get(i) : null;
+            if (niveau == null) continue;
+
+            for (Appartement appart : niveau.getAppartements()) {
+                gestionnaire.sauvegarderDetailsAppartement(appart, niveau, immeuble);
+                for (Piece piece : appart.getPieces()) {
+                    gestionnaire.sauvegarderDetailsPiece(piece, appart, niveau, immeuble);
+                }
+            }
+        }
+    }
+
     private void rechargerNiveaux(Immeuble immeuble) {
         for (Niveau niveau : immeuble.getNiveaux()) {
             String nomNiveau = niveauControleurs.isEmpty()
@@ -706,5 +768,25 @@ public class AppControleur {
 
             niveauControleurs.add(ctrl);
         }
+    }
+
+    private void recalibrerCompteursBatiment(Immeuble immeuble) {
+        int maxAppartement = 0;
+        int maxPiece = 0;
+
+        if (immeuble != null) {
+            for (Niveau niveau : immeuble.getNiveaux()) {
+                for (Appartement appartement : niveau.getAppartements()) {
+                    maxAppartement = Math.max(maxAppartement, appartement.getNumero());
+
+                    for (Piece piece : appartement.getPieces()) {
+                        maxPiece = Math.max(maxPiece, piece.getNumero());
+                    }
+                }
+            }
+        }
+
+        Appartement.setCompteur(maxAppartement);
+        Piece.setCompteur(maxPiece);
     }
 }

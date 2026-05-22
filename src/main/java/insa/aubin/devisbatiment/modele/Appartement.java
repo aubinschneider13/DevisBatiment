@@ -43,6 +43,7 @@ public class Appartement extends ElementDeConstruction implements Dessin {
 
     /** Réinitialise le compteur (utile au chargement d'un projet). */
     public static void resetCompteur() { compteur = 0; }
+    public static void setCompteur(int valeur) { compteur = Math.max(0, valeur); }
 
     // =========================================================================
     // DÉRIVATION DU POLYGONE DEPUIS LES MURS
@@ -165,7 +166,6 @@ public class Appartement extends ElementDeConstruction implements Dessin {
 
     public List<Mur> getMursDelimiteurs()              { return mursDelimiteurs; }
     public void setMursDelimiteurs(List<Mur> murs)     { this.mursDelimiteurs = new ArrayList<>(murs); }
-
     /**
      * Rassemble tous les murs de l'appartement :
      * les murs délimiteurs extérieurs ET toutes les cloisons intérieures des pièces.
@@ -225,6 +225,7 @@ public class Appartement extends ElementDeConstruction implements Dessin {
     public int getNbPieces()                           { return pieces.size(); }
     public double getHauteurPlafond()                  { return hauteurPlafond; }
     public void setHauteurPlafond(double h)            { this.hauteurPlafond = h; }
+    public int getNumero()                             { return numero; }
 
     // =========================================================================
     // SÉRIALISATION
