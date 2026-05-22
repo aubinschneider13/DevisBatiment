@@ -125,14 +125,6 @@ public class PieceView extends StackPane {
         canvas.setOnMouseMoved(e -> this.controleur.mouseMovedDansZoneDessin(e));
 
         canvas.setFocusTraversable(true);
-        canvas.setOnKeyPressed(e -> {
-            this.controleur.gererToucheClavier(e);
-        });
-
-        this.setFocusTraversable(true);
-        this.setOnKeyPressed(e -> {
-            this.controleur.gererToucheClavier(e);
-        });
 
         // ✅ Appelé EN DERNIER, après initialisation du contrôleur
         if (appartement != null && appartement.getPolygone() != null) {
@@ -149,4 +141,8 @@ public class PieceView extends StackPane {
     public DessinCanvas getCanvas() { return canvas; }
     public OptionsMurVue getOptionsMurVue() { return optionsMurVue; }
     public EchelleVue getEchelleVue() { return echelleVue; }
+
+    public Label getLabelInstructions() {
+        return labelInstructions;
+    }
 }

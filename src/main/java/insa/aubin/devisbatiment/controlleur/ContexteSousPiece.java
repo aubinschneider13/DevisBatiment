@@ -63,7 +63,7 @@ public class ContexteSousPiece implements Contexte {
     @Override
     public void desinstaller() {
         if (pieceControleur != null) {
-            pieceControleur.annulerConstruction();
+            pieceControleur.nettoyer();
         }
     }
 

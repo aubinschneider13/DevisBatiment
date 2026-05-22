@@ -62,20 +62,29 @@ public class Mur extends ElementDeConstruction implements Dessin {
     public void ajouterOuverture(Ouverture o) {
         if (o == null) return;
 
-        // Anti-doublon strict basé sur la position (évite le cumul lors des synchronisations)
+        System.out.println(String.format("[DEBUG MUR n°%d] Tentative d'ajout d'une %s à la position t=%.4f", 
+            this.numeroUnique, o.getClass().getSimpleName(), o.getPositionSurMur()));
+
         for (Ouverture existante : this.listeOuvertures) {
-            if (Math.abs(existante.getPositionSurMur() - o.getPositionSurMur()) < 0.02) {
+            double diff = Math.abs(existante.getPositionSurMur() - o.getPositionSurMur());
+            if (diff < 0.02) {
+                System.out.println(String.format("  [REJET] Doublon détecté avec une ouverture existante à t=%.4f (diff=%.4f)", 
+                    existante.getPositionSurMur(), diff));
                 return; // L'ouverture est déjà physiquement là, on ignore l'ajout
             }
         }
 
         if (o instanceof Fenetre && typeMur != TypeMur.EXTERIEUR) {
+            System.out.println("  [REJET] Fenêtre sur un mur non extérieur !");
             return; // fenêtre uniquement sur mur extérieur
         }
         if (o instanceof Porte && typeMur == TypeMur.EXTERIEUR) {
+            System.out.println("  [REJET] Porte sur un mur extérieur !");
             return; // pas de porte sur mur extérieur
         }
         this.listeOuvertures.add(o);
+        System.out.println(String.format("  [SUCCÈS] Ouverture ajoutée. Nouveau total sur ce mur: %d", 
+            this.listeOuvertures.size()));
     }
 
     private Color couleurPourType(TypeMur type) {

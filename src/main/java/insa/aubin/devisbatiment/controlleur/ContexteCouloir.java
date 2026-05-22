@@ -49,7 +49,7 @@ public class ContexteCouloir implements Contexte {
     @Override
     public void desinstaller() {
         if (pieceControleur != null) {
-            pieceControleur.annulerConstruction();
+            pieceControleur.nettoyer();
         }
     }
 

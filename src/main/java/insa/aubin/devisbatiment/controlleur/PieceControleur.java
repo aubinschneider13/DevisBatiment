@@ -350,7 +350,8 @@ public class PieceControleur {
         }
 
         CoteMur coteElu = null;
-        double distMin = 0.10; // Sensibilité maximale : 10 cm par rapport aux lignes des faces réelles
+        double zoom = vue.getCanvas().getZoomFactor();
+        double distMin = Math.max(0.10, 15.0 / zoom); // Assure une tolérance d'au moins 15 pixels ou 10 cm réels
 
         for (Dessin d : vue.getCanvas().getElements()) {
             if (d instanceof Mur m) {
@@ -576,6 +577,14 @@ public class PieceControleur {
         porteEnCours = null;
         vue.getCanvas().setFantome(null, 0, 0, 0, false);
         vue.redrawAll();
+    }
+
+    public void nettoyer() {
+        annulerConstruction();
+        if (listenerEchelle != null && vue != null && vue.getEchelleVue() != null && vue.getEchelleVue().getGroupeEchelle() != null) {
+            vue.getEchelleVue().getGroupeEchelle().selectedToggleProperty().removeListener(listenerEchelle);
+            listenerEchelle = null;
+        }
     }
 
     public void gererToucheClavier(javafx.scene.input.KeyEvent e) {
@@ -907,10 +916,12 @@ public class PieceControleur {
         for (Piece piece : piecesChargees) {
             pieces.add(piece);
 
-            // Ajouter les murs de la pièce au canvas
+            // Ajouter les cloisons (murs intérieurs) de la pièce au canvas
             for (Mur mur : piece.getMurs()) {
-                if (!vue.getCanvas().getElements().contains(mur)) {
-                    vue.getCanvas().getElements().add(mur);
+                if (mur.getTypeMur() != Mur.TypeMur.EXTERIEUR) {
+                    if (!vue.getCanvas().getElements().contains(mur)) {
+                        vue.getCanvas().getElements().add(mur);
+                    }
                 }
             }
 
@@ -970,7 +981,11 @@ public class PieceControleur {
         double perpX = -dy, perpY = dx;
         double ux    = cible.getX() - centre.getX();
         double uy    = cible.getY() - centre.getY();
-        double s     = (ux * perpX + uy * perpY) / (perpX * perpX + perpY * perpY);
+        double denom = perpX * perpX + perpY * perpY;
+        if (Math.abs(denom) < 1e-6) {
+            return new Point(centre.getX(), centre.getY()); // Retour de secours sécurisé
+        }
+        double s     = (ux * perpX + uy * perpY) / denom;
         return new Point(centre.getX() + s * perpX, centre.getY() + s * perpY);
     }
 
@@ -1078,14 +1093,25 @@ public class PieceControleur {
     public void synchroniserOuverturesVersAppartement() {
         if (appartement == null) return;
 
+        System.out.println("\n--- [DEBUG SYNC CORRIGÉ] DEBUT SYNCHRONISATION ---");
+
         for (Dessin d : vue.getCanvas().getElements()) {
             if (d instanceof Mur murCanvas) {
-                murCanvas.getListeOuvertures().clear(); // Nettoyage pour éviter les doublons
+                // Étape 1 : Nettoyage complet du canvas et de son modèle métier associé
+                murCanvas.getListeOuvertures().clear();
+                Mur vraiMur = retrouverVraiMurModele(murCanvas);
+                if (vraiMur != null && vraiMur != murCanvas) {
+                    vraiMur.getListeOuvertures().clear();
+                }
+
+                // Liste locale pour suivre géométriquement les ouvertures déjà acceptées pour CE mur
+                List<Point> positionsAbsoluesTraitees = new ArrayList<>();
 
                 for (Piece piece : appartement.getPieces()) {
                     for (Mur murPiece : piece.getMurs()) {
                         if (sontMursSuperposes(murCanvas, murPiece)) {
                             for (Ouverture ouv : murPiece.getListeOuvertures()) {
+                                // Conversion en coordonnées absolues (la vérité mathématique)
                                 Point posAbsolue = murPiece.getPointSurMur(ouv.getPositionSurMur());
                                 double tCanvas = murCanvas.calculerPositionSurMur(posAbsolue);
 
@@ -1093,22 +1119,38 @@ public class PieceControleur {
                                     double marge = ouv.getLargeur() / (2 * murCanvas.calculerLongueur());
                                     tCanvas = Math.max(marge, Math.min(1.0 - marge, tCanvas));
 
-                                    // Anti-doublons (si le mur est partagé par deux pièces)
-                                    boolean existe = false;
-                                    for(Ouverture oExist : murCanvas.getListeOuvertures()) {
-                                        if (Math.abs(oExist.getPositionSurMur() - tCanvas) < 0.01) {
-                                            existe = true; break;
+                                    // ✅ FILTRAGE SPATIAL ABSOLU : Comparaison en mètres (X,Y) et non plus en ratio t
+                                    boolean doubleComptageSspatial = false;
+                                    for (Point pExist : positionsAbsoluesTraitees) {
+                                        double distancePure = Math.hypot(pExist.getX() - posAbsolue.getX(), pExist.getY() - posAbsolue.getY());
+                                        if (distancePure < 0.15) { // Tolérance de 15 cm pour absorber les micro-dérives de conversion
+                                            doubleComptageSspatial = true;
+                                            break;
                                         }
                                     }
 
-                                    if (!existe) {
+                                    if (!doubleComptageSspatial) {
+                                        positionsAbsoluesTraitees.add(posAbsolue);
+
                                         if (ouv instanceof Porte pOuv) {
-                                            Porte pNew = new Porte(tCanvas);
-                                            pNew.setOuvertureInversee(pOuv.isOuvertureInversee());
-                                            murCanvas.ajouterOuverture(pNew);
+                                            Porte pNewCanvas = new Porte(tCanvas);
+                                            pNewCanvas.setOuvertureInversee(pOuv.isOuvertureInversee());
+                                            murCanvas.ajouterOuverture(pNewCanvas);
+
+                                            if (vraiMur != null && vraiMur != murCanvas) {
+                                                Porte pNewVrai = new Porte(tCanvas);
+                                                pNewVrai.setOuvertureInversee(pOuv.isOuvertureInversee());
+                                                vraiMur.ajouterOuverture(pNewVrai);
+                                            }
                                         } else {
                                             murCanvas.ajouterOuverture(new Fenetre(tCanvas));
+                                            if (vraiMur != null && vraiMur != murCanvas) {
+                                                vraiMur.ajouterOuverture(new Fenetre(tCanvas));
+                                            }
                                         }
+                                    } else {
+                                        System.out.println(String.format("  [ANTI-DUPLICATION] Rejet de la %s à (%.2f, %.2f) car déjà présente géométriquement sur ce mur.",
+                                                ouv.getClass().getSimpleName(), posAbsolue.getX(), posAbsolue.getY()));
                                     }
                                 }
                             }
@@ -1117,6 +1159,7 @@ public class PieceControleur {
                 }
             }
         }
+        System.out.println("--- [DEBUG SYNC CORRIGÉ] FIN SYNCHRONISATION ---\n");
         vue.redrawAll();
     }
 

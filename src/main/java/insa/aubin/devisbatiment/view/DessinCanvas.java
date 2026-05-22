@@ -402,4 +402,8 @@ public class DessinCanvas extends Canvas {
         this.elementSelectionne = element;
         redrawAll();
     }
+
+    public double getZoomFactor() {
+        return zoomFactor;
+    }
 }
