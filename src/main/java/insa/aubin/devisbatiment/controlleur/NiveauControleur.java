@@ -80,6 +80,34 @@ public class NiveauControleur {
         brancherListeners();
     }
 
+    private boolean segmentsSeRecouvrent(double ax1, double ay1, double ax2, double ay2,
+                                         double bx1, double by1, double bx2, double by2,
+                                         double tol) {
+        double adx = ax2 - ax1;
+        double ady = ay2 - ay1;
+        double bdx = bx2 - bx1;
+        double bdy = by2 - by1;
+        double lenA = Math.hypot(adx, ady);
+        double lenB = Math.hypot(bdx, bdy);
+        if (lenA < tol || lenB < tol) return false;
+
+        double crossDirs = Math.abs(adx * bdy - ady * bdx);
+        if (crossDirs > tol * lenA * lenB) return false;
+
+        double crossB1 = Math.abs((bx1 - ax1) * ady - (by1 - ay1) * adx);
+        double crossB2 = Math.abs((bx2 - ax1) * ady - (by2 - ay1) * adx);
+        if (crossB1 > tol * lenA || crossB2 > tol * lenA) return false;
+
+        double ux = adx / lenA;
+        double uy = ady / lenA;
+        double b1 = (bx1 - ax1) * ux + (by1 - ay1) * uy;
+        double b2 = (bx2 - ax1) * ux + (by2 - ay1) * uy;
+        double debut = Math.max(0, Math.min(b1, b2));
+        double fin = Math.min(lenA, Math.max(b1, b2));
+
+        return fin - debut > tol;
+    }
+
     // =========================================================================
     // CALLBACK — enregistrement par AppControleur après construction
     // =========================================================================
@@ -298,6 +326,7 @@ public class NiveauControleur {
         for (Couloir c : couloirs) vue.getCanvas().getElements().remove(c);
         couloirs.clear();
         mapItemCouloir.clear();
+        niveau.viderCouloirs();
 
         if (aireImmeuble == null || !aireImmeuble.isComplete()) return;
 
@@ -352,7 +381,7 @@ public class NiveauControleur {
 
         if (!couloir.getPolygones().isEmpty()) {
             couloirs.add(couloir);
-            niveau.ajouterCouloir(); 
+            niveau.ajouterCouloir(couloir);
 
             if (onCouloirCree != null) {
                 TreeItem<String> itemCouloir = onCouloirCree.apply(couloir);
@@ -374,6 +403,7 @@ public class NiveauControleur {
     
     private void marquerMursAdjacents(Couloir couloir) {
         double tol = 0.05;
+        List<Mur> mursDelimiteurs = niveau.getMursDelimiteurs();
 
         // Collecter tous les segments du couloir
         List<double[]> segmentsCouloir = new ArrayList<>();
@@ -391,24 +421,21 @@ public class NiveauControleur {
         // Parcourir tous les murs du canvas pour trouver lesquels touchent le couloir
         for (Object el : vue.getCanvas().getElements()) {
             if (!(el instanceof Mur mur)) continue;
+            if (mursDelimiteurs.contains(mur)) continue;
+            if (mur.getTypeMur() == Mur.TypeMur.EXTERIEUR) continue;
 
             double ax1 = mur.getPoint1().getX(), ay1 = mur.getPoint1().getY();
             double ax2 = mur.getPoint2().getX(), ay2 = mur.getPoint2().getY();
 
             for (double[] seg : segmentsCouloir) {
-                boolean memeSegment =
-                    (Math.hypot(ax1 - seg[0], ay1 - seg[1]) < tol &&
-                     Math.hypot(ax2 - seg[2], ay2 - seg[3]) < tol) ||
-                    (Math.hypot(ax1 - seg[2], ay1 - seg[3]) < tol &&
-                     Math.hypot(ax2 - seg[0], ay2 - seg[1]) < tol);
-
-                if (memeSegment) {
+                if (segmentsSeRecouvrent(ax1, ay1, ax2, ay2,
+                                          seg[0], seg[1], seg[2], seg[3], tol)) {
                     // Si le mur touche le couloir, on lui donne le type ADJ_COULOIR
-                    mur.setTypeMur(Mur.TypeMur.ADJ_COULOIR);
+                    // Ancien marquage direct volontairement neutralise.
                     
                     // Si ce morceau appartient à un mur original, on met aussi à jour l'original
                     if (mur.getOriginal() != null) {
-                        mur.getOriginal().setTypeMur(Mur.TypeMur.ADJ_COULOIR);
+                        // Ancien marquage direct volontairement neutralise.
                     }
                     break;
                 }
@@ -477,24 +504,56 @@ public class NiveauControleur {
     }
     
     public boolean estAdjacentsAuCouloir(Mur mur) {
+        double x1 = mur.getPoint1().getX(), y1 = mur.getPoint1().getY();
+        double x2 = mur.getPoint2().getX(), y2 = mur.getPoint2().getY();
+        double dx = x2 - x1, dy = y2 - y1;
+        double len = Math.hypot(dx, dy);
+        if (len < 1e-6) return false;
+
+        if (estSurBordCouloir(mur)) return true;
+
+        double nx = -dy / len;
+        double ny = dx / len;
+        double decalage = 0.10;
+        double[] positions = {0.10, 0.25, 0.50, 0.75, 0.90};
+
+        for (double t : positions) {
+            double mx = x1 + t * dx;
+            double my = y1 + t * dy;
+            if (pointDansUnCouloir(mx + decalage * nx, my + decalage * ny)
+                    || pointDansUnCouloir(mx - decalage * nx, my - decalage * ny)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean estSurBordCouloir(Mur mur) {
         double tol = 0.05;
         double ax1 = mur.getPoint1().getX(), ay1 = mur.getPoint1().getY();
         double ax2 = mur.getPoint2().getX(), ay2 = mur.getPoint2().getY();
 
         for (Couloir couloir : couloirs) {
-            for (List<Mur> zone : couloir.getZonesDelimiteurs()) {
-                List<Point> polygone = new ArrayList<>();
-                for (Mur m : zone) polygone.add(m.getPoint1());
+            for (List<Point> polygone : couloir.getPolygones()) {
                 int n = polygone.size();
                 for (int i = 0; i < n; i++) {
                     Point b1 = polygone.get(i);
                     Point b2 = polygone.get((i + 1) % n);
-                    boolean match =
-                        (Math.hypot(ax1 - b1.getX(), ay1 - b1.getY()) < tol &&
-                         Math.hypot(ax2 - b2.getX(), ay2 - b2.getY()) < tol) ||
-                        (Math.hypot(ax1 - b2.getX(), ay1 - b2.getY()) < tol &&
-                         Math.hypot(ax2 - b1.getX(), ay2 - b1.getY()) < tol);
-                    if (match) return true;
+                    if (segmentsSeRecouvrent(ax1, ay1, ax2, ay2,
+                            b1.getX(), b1.getY(), b2.getX(), b2.getY(), tol)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean pointDansUnCouloir(double x, double y) {
+        for (Couloir couloir : couloirs) {
+            for (List<Point> polygone : couloir.getPolygones()) {
+                if (GeometrieUtils.pointDansPolygone(x, y, polygone)) {
+                    return true;
                 }
             }
         }
@@ -569,6 +628,7 @@ public class NiveauControleur {
                 "Navigation — molette pour zoomer, clic droit pour déplacer");
     }
 
+
     public void activerModeSelection() {
         annulerMurEnCours();
         mode = "SELECTION";
@@ -602,6 +662,21 @@ public class NiveauControleur {
 
            // Ajouter le polygone coloré de l'appartement
            vue.getCanvas().getElements().add(appart);
+       }
+       vue.getCanvas().redrawAll();
+   }
+
+   public void rechargerCouloirs(List<Couloir> couloirsCharges) {
+       if (couloirsCharges == null) return;
+
+       for (Couloir couloir : couloirsCharges) {
+           if (couloir == null) continue;
+           couloirs.add(couloir);
+
+           if (onCouloirCree != null) {
+               TreeItem<String> itemCouloir = onCouloirCree.apply(couloir);
+               if (itemCouloir != null) mapItemCouloir.put(itemCouloir, couloir);
+           }
        }
        vue.getCanvas().redrawAll();
    }

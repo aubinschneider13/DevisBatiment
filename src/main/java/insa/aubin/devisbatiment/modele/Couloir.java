@@ -1,16 +1,13 @@
 package insa.aubin.devisbatiment.modele;
 
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class Couloir extends ElementDeConstruction {
-    
-    private List<List<Mur>> zonesDelimiteurs;
-    private double hauteurPlafond;
+
+    private final List<List<Mur>> zonesDelimiteurs;
+    private final double hauteurPlafond;
     private static int compteur = 0;
     private final int numero;
 
@@ -28,34 +25,57 @@ public class Couloir extends ElementDeConstruction {
 
     public List<List<Point>> getPolygones() {
         List<List<Point>> polygones = new ArrayList<>();
+
         for (List<Mur> zone : zonesDelimiteurs) {
             List<Point> polygone = new ArrayList<>();
-            for (Mur m : zone) polygone.add(m.getPoint1());
+            for (Mur mur : zone) {
+                polygone.add(mur.getPoint1());
+            }
             polygones.add(polygone);
         }
+
         return polygones;
     }
 
     public List<Point> getPolygone() {
-        if (zonesDelimiteurs.isEmpty()) return new ArrayList<>();
+        if (zonesDelimiteurs.isEmpty()) {
+            return new ArrayList<>();
+        }
         return getPolygones().get(0);
     }
 
-    public List<List<Mur>> getZonesDelimiteurs() { return zonesDelimiteurs; }
+    public List<List<Mur>> getZonesDelimiteurs() {
+        return zonesDelimiteurs;
+    }
 
-    public double getHauteurPlafond() { return hauteurPlafond; }
+    public double getHauteurPlafond() {
+        return hauteurPlafond;
+    }
 
     @Override
     public String toCSV() {
         StringBuilder sb = new StringBuilder();
-        sb.append(String.format(java.util.Locale.US,
-            "COULOIR;%s;%d;%.2f", getId(), numero, hauteurPlafond));
-        for (Point p : getPolygone()) {
-            sb.append(String.format(java.util.Locale.US, ";%.2f;%.2f", p.getX(), p.getY()));
+
+        sb.append(String.format(Locale.US,
+                "COULOIR;%s;%d;%.2f;%d",
+                getId(), numero, hauteurPlafond, zonesDelimiteurs.size()));
+
+        for (List<Mur> zone : zonesDelimiteurs) {
+            sb.append(";").append(zone.size());
+
+            for (Mur mur : zone) {
+                Point p = mur.getPoint1();
+                sb.append(String.format(Locale.US,
+                        ";%.2f;%.2f",
+                        p.getX(), p.getY()));
+            }
         }
+
         return sb.toString();
     }
 
     @Override
-    public String toString() { return "Couloir " + numero; }
+    public String toString() {
+        return "Couloir " + numero;
+    }
 }

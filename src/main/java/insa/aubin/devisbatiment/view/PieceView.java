@@ -8,33 +8,30 @@ import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
 import insa.aubin.devisbatiment.modele.Mur;
 import insa.aubin.devisbatiment.modele.Piece;
 import insa.aubin.devisbatiment.modele.Point;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
+import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 /**
  * Vue de la pièce (aménagement intérieur d'un appartement).
  *
- * ✅ SIMPLIFIÉE par rapport à l'ancienne version :
- *   - Ne contient plus sa propre toolbar (TabPane + boutons) — c'est désormais
- *     la ToolBarView commune d'AppView qui pilote PieceControleur via ContextePiece.
- *   - Ne contient plus son propre TreeView — c'est NavigateurView d'AppView.
- *   - Ne connaît plus le Stage directement pour changer de scène — c'est
- *     AppControleur.retourDashboard() qui s'en charge.
- *   - Se réduit à un StackPane : canvas de dessin + OptionsMurVue + EchelleVue
- *     + label d'instructions.
+ * Simplifiée par rapport à l'ancienne version :
+ * - Ne contient plus sa propre toolbar : la ToolBarView commune d'AppView pilote
+ *   PieceControleur via ContextePiece.
+ * - Ne contient plus son propre TreeView : c'est NavigateurView d'AppView.
+ * - Ne connaît plus le Stage directement pour changer de scène :
+ *   AppControleur.retourDashboard() s'en charge.
+ * - Se réduit à un StackPane : canvas de dessin + OptionsMurVue + EchelleVue
+ *   + label d'instructions.
  *
- * ✅ AJOUT :
- *   - Expose getControleur() pour que ContextePiece puisse déléguer les
- *     événements toolbar à PieceControleur.
- *
- * La PieceView est insérée dans la zone centrale d'AppView par
- * AppView.afficherPiece(). Sa taille est liée à celle de la zone centrale
- * par AppView (bind sur widthProperty/heightProperty).
+ * Expose getControleur() pour que ContextePiece puisse déléguer les événements
+ * toolbar à PieceControleur.
  */
 public class PieceView extends StackPane {
 
@@ -49,39 +46,48 @@ public class PieceView extends StackPane {
         this(stage, gestionnaire, (Appartement) null, (AireImmeuble) null);
     }
 
-    // Constructeur avec appartement sans aire
+    // Constructeur avec pièce
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
-                 Piece piece, AireImmeuble aire) {
+                     Piece piece, AireImmeuble aire) {
         this(stage, gestionnaire, (Appartement) null, (AireImmeuble) null);
 
         if (piece != null && piece.getPoints() != null) {
             this.controleur.initialiserAvecContourAppartement(
-                piece.getPoints(),
-                piece.getMurs(),
-                aire,
-                null
+                    piece.getPoints(),
+                    piece.getMurs(),
+                    aire,
+                    null
             );
         }
     }
-    //Constructeur Couloir
-    public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
-                    Couloir couloir, AireImmeuble aire) {
-       this(stage, gestionnaire, (Appartement) null, (AireImmeuble) null);
 
-       if (couloir != null && !couloir.getPolygones().isEmpty()) {
-           // On initialise avec chaque zone du couloir
-           for (List<Mur> zone : couloir.getZonesDelimiteurs()) {
-               List<Point> polygone = new ArrayList<>();
-               for (Mur m : zone) polygone.add(m.getPoint1());
-               this.controleur.initialiserAvecContourAppartement(
-                   polygone,
-                   zone,
-                   aire,
-                   null
-               );
-           }
-       }
-   }   
+    // Constructeur avec couloir
+    public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
+                     Couloir couloir, AireImmeuble aire) {
+        this(stage, gestionnaire, (Appartement) null, (AireImmeuble) null);
+
+        // Dans la vue couloir, on évite de réafficher les murs comme adjacents au couloir.
+        this.controleur.setAfficherAdjacenceCouloir(false);
+
+        if (couloir != null && !couloir.getPolygones().isEmpty()) {
+            // On initialise avec chaque zone du couloir.
+            for (List<Mur> zone : couloir.getZonesDelimiteurs()) {
+                List<Point> polygone = new ArrayList<>();
+
+                for (Mur mur : zone) {
+                    polygone.add(mur.getPoint1());
+                }
+
+                this.controleur.initialiserAvecContourAppartement(
+                        polygone,
+                        zone,
+                        aire,
+                        null
+                );
+            }
+        }
+    }
+
     // Constructeur principal
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
                      Appartement appartement, AireImmeuble aire) {
@@ -103,12 +109,12 @@ public class PieceView extends StackPane {
 
         labelInstructions = new Label("Sélectionnez un outil pour commencer");
         labelInstructions.setStyle(
-            "-fx-background-color: rgba(240,240,240,0.9);" +
-            "-fx-padding: 6 12 6 12;" +
-            "-fx-border-radius: 4;" +
-            "-fx-background-radius: 4;" +
-            "-fx-text-fill: #2c3e50;" +
-            "-fx-font-size: 13px;"
+                "-fx-background-color: rgba(240,240,240,0.9);" +
+                "-fx-padding: 6 12 6 12;" +
+                "-fx-border-radius: 4;" +
+                "-fx-background-radius: 4;" +
+                "-fx-text-fill: #2c3e50;" +
+                "-fx-font-size: 13px;"
         );
         StackPane.setAlignment(labelInstructions, Pos.BOTTOM_CENTER);
         StackPane.setMargin(labelInstructions, new Insets(0, 0, 15, 0));
@@ -116,37 +122,50 @@ public class PieceView extends StackPane {
         this.getChildren().addAll(canvas, optionsMurVue, echelleVue, labelInstructions);
         this.setStyle("-fx-background-color: #fffefe;");
 
-        // ✅ Contrôleur initialisé AVANT initialiserAvecContourAppartement
+        // Contrôleur initialisé avant initialiserAvecContourAppartement.
         this.controleur = new PieceControleur(this, stage, gestionnaire);
 
-        canvas.setOnMouseClicked(e -> {
-            this.controleur.clicDansZoneDeDessin(e);
-        });
+        canvas.setOnMouseClicked(e -> this.controleur.clicDansZoneDeDessin(e));
         canvas.setOnMouseMoved(e -> this.controleur.mouseMovedDansZoneDessin(e));
 
         canvas.setFocusTraversable(true);
-        canvas.setOnKeyPressed(e -> {
-            this.controleur.gererToucheClavier(e);
-        });
+        canvas.setOnKeyPressed(e -> this.controleur.gererToucheClavier(e));
 
         this.setFocusTraversable(true);
-        this.setOnKeyPressed(e -> {
-            this.controleur.gererToucheClavier(e);
-        });
+        this.setOnKeyPressed(e -> this.controleur.gererToucheClavier(e));
 
-        // ✅ Appelé EN DERNIER, après initialisation du contrôleur
+        // Appelé en dernier, après initialisation du contrôleur.
         if (appartement != null && appartement.getPolygone() != null) {
             this.controleur.initialiserAvecContourAppartement(
-                appartement.getPolygone(),
-                appartement.getMursDelimiteurs(),
-                aire,appartement );
+                    appartement.getPolygone(),
+                    appartement.getMursDelimiteurs(),
+                    aire,
+                    appartement
+            );
         }
     }
 
-    public void setInstructions(String texte) { labelInstructions.setText(texte); }
-    public void redrawAll() { canvas.redrawAll(); }
-    public PieceControleur getControleur() { return controleur; }
-    public DessinCanvas getCanvas() { return canvas; }
-    public OptionsMurVue getOptionsMurVue() { return optionsMurVue; }
-    public EchelleVue getEchelleVue() { return echelleVue; }
+    public void setInstructions(String texte) {
+        labelInstructions.setText(texte);
+    }
+
+    public void redrawAll() {
+        canvas.redrawAll();
+    }
+
+    public PieceControleur getControleur() {
+        return controleur;
+    }
+
+    public DessinCanvas getCanvas() {
+        return canvas;
+    }
+
+    public OptionsMurVue getOptionsMurVue() {
+        return optionsMurVue;
+    }
+
+    public EchelleVue getEchelleVue() {
+        return echelleVue;
+    }
 }

@@ -80,11 +80,7 @@ public class AppControleur {
         brancherToolBarDevis();
         brancherNavigateur();
 
-        appView.setOnKeyPressed(e -> {
-            if (contexteActif != null) {
-                contexteActif.gererToucheClavier(e);
-            }
-        });
+        brancherClavier();
 
         immeubleControleur = new ImmeubleControleur(
                 appView.getCanvasAire(), appView, gestionnaire
@@ -108,11 +104,7 @@ public class AppControleur {
         brancherToolBarDevis();
         brancherNavigateur();
 
-        appView.setOnKeyPressed(e -> {
-            if (contexteActif != null) {
-                contexteActif.gererToucheClavier(e);
-            }
-        });
+        brancherClavier();
 
         immeubleControleur = new ImmeubleControleur(
                 appView.getCanvasAire(), appView, gestionnaire);
@@ -140,6 +132,24 @@ public class AppControleur {
     // =========================================================================
     // BRANCHEMENT LISTENERS
     // =========================================================================
+
+    /**
+     * Fusion master + modifications :
+     * - ECHAP lance l'annulation propre selon le contexte actif ;
+     * - les autres touches restent transmises au contexte, comme dans le master.
+     */
+    private void brancherClavier() {
+        appView.setOnKeyPressed(e -> {
+            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+                onEchap();
+                return;
+            }
+
+            if (contexteActif != null) {
+                contexteActif.gererToucheClavier(e);
+            }
+        });
+    }
 
     private void brancherToolBar() {
         ToolBarView tb = appView.getToolBarView();
@@ -389,6 +399,11 @@ public class AppControleur {
 
             basculerContexte(ctx);
 
+            NiveauControleur niveauCtrl = trouverNiveauControleurPourPiece(item);
+            if (niveauCtrl != null) {
+                ctx.getPieceControleur().setNiveauControleur(niveauCtrl);
+            }
+
             ctx.getPieceControleur().synchroniserOuverturesVersPiece();
 
             double totalDevis = piece.calculerDevis();
@@ -396,6 +411,18 @@ public class AppControleur {
             nav.afficherProprietesPiece(piece);
             return;
         }
+    }
+
+    private NiveauControleur trouverNiveauControleurPourPiece(TreeItem<String> itemPiece) {
+        TreeItem<String> itemAppart = mapPieceVersAppart.get(itemPiece);
+        if (itemAppart == null) return null;
+
+        for (NiveauControleur ctrl : niveauControleurs) {
+            if (ctrl.getMapItemAppartement().containsKey(itemAppart)) {
+                return ctrl;
+            }
+        }
+        return null;
     }
 
     /**
@@ -499,6 +526,7 @@ public class AppControleur {
             TreeItem<String> itemCouloir = appView.getNavigateurView().ajouterItemCouloir(itemNiveau, nomCouloir);
             itemsCouloirDuNiveau.put(itemCouloir, couloir);
             mapItemCouloir.put(itemCouloir, couloir);
+            gestionnaire.sauvegarderCouloirs(niveau, immeuble);
             return itemCouloir;
         });
 
@@ -533,7 +561,18 @@ public class AppControleur {
         }
     }
 
-
+    private void onEchap() {
+        if (contexteActif instanceof ContexteNiveau ctx) {
+            ctx.getNiveauControleur().annulerMurEnCours();
+        } else if (contexteActif instanceof ContexteAire) {
+            immeubleControleur.annulerAire();
+        } else if (contexteActif instanceof ContexteSousPiece ctx) {
+            ctx.onEchap();
+        } else if (contexteActif instanceof ContextePiece ctx) {
+            ctx.getPieceControleur().annulerConstruction();
+            ctx.getPieceControleur().changerEtat(PieceControleur.ETAT_RIEN);
+        }
+    }
 
     public void retourDashboard() {
         Appartement.resetCompteur();
@@ -649,6 +688,21 @@ public class AppControleur {
                 gestionnaire.sauvegarderAppartement(appart, niveauFinal, immeuble);
                 return itemAppart;
             });
+
+            Map<TreeItem<String>, Couloir> itemsCouloirDuNiveau = new HashMap<>();
+            ctrl.setOnCouloirCree(couloir -> {
+                itemNiveau.getChildren().removeAll(itemsCouloirDuNiveau.keySet());
+                itemsCouloirDuNiveau.clear();
+
+                String nomCouloir = "Couloir du " + itemNiveau.getValue();
+                TreeItem<String> itemCouloir = appView.getNavigateurView().ajouterItemCouloir(itemNiveau, nomCouloir);
+                itemsCouloirDuNiveau.put(itemCouloir, couloir);
+                mapItemCouloir.put(itemCouloir, couloir);
+                gestionnaire.sauvegarderCouloirs(niveauFinal, immeuble);
+                return itemCouloir;
+            });
+
+            ctrl.rechargerCouloirs(niveau.getCouloirs());
 
             niveauControleurs.add(ctrl);
         }
