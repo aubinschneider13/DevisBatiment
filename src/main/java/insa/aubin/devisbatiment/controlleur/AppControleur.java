@@ -400,9 +400,8 @@ public class AppControleur {
             if (appart == null) appart = mapItemAppartement.get(item); // Fallback pour les rechargements
 
             if (appart != null) {
+                sauvegarderDetailsOuvertures();
                 itemNiveauActif = itemsNiveau.get(i);
-
-                boolean estNouveau = !contextePieces.containsKey(appart);
 
                 ContextePiece ctx = contextePieces.computeIfAbsent(appart, a ->
                         new ContextePiece(a, appView, this, stage, gestionnaire, item)
@@ -412,11 +411,9 @@ public class AppControleur {
                 basculerContexte(ctx);
                 NiveauControleur niveauCtrl = niveauControleurs.get(i);
                 ctx.getPieceControleur().setNiveauControleur(niveauCtrl);
-                ctx.getPieceControleur().synchroniserOuverturesVersAppartement();
-
-                if (estNouveau && !appart.getPieces().isEmpty()) {
-                    ctx.getPieceControleur().rechargerPieces(appart.getPieces());
-                }
+                Niveau niveau = i < immeuble.getNiveaux().size() ? immeuble.getNiveaux().get(i) : null;
+                ctx.getPieceControleur().setContexteSauvegarde(appart, niveau, immeuble);
+                ctx.getPieceControleur().rechargerVueAppartementDepuisDisque();
 
                 double totalDevis = appart.calculerDevis();
                 tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
@@ -428,8 +425,8 @@ public class AppControleur {
         // --- Clic sur un couloir ---
         Couloir couloir = mapItemCouloir.get(item);
         if (couloir != null) {
-            ContexteCouloir ctx = contexteCouloirs.computeIfAbsent(couloir, c ->
-                    new ContexteCouloir(c, appView, this, stage, gestionnaire));
+            ContexteCouloir ctx = new ContexteCouloir(couloir, appView, this, stage, gestionnaire);
+            contexteCouloirs.put(couloir, ctx);
             basculerContexte(ctx);
             tbDevis.getLabelTotalDevis().setText("Total estimé : -- €");
             return;
@@ -438,6 +435,7 @@ public class AppControleur {
         // --- Clic sur une pièce ---
         Piece piece = mapItemPiece.get(item);
         if (piece != null) {
+            sauvegarderDetailsOuvertures();
             ContexteSousPiece ctx = contexteSousPieces.computeIfAbsent(piece, p ->
                     new ContexteSousPiece(p, appView, this, stage, gestionnaire)
             );
@@ -449,7 +447,15 @@ public class AppControleur {
                 ctx.getPieceControleur().setNiveauControleur(niveauCtrl);
             }
 
-            ctx.getPieceControleur().synchroniserOuverturesVersPiece();
+            Appartement appartParent = trouverAppartementPourPiece(item);
+            if (appartParent != null && niveauCtrl != null) {
+                int idx = niveauControleurs.indexOf(niveauCtrl);
+                Niveau niveau = idx >= 0 && idx < immeuble.getNiveaux().size()
+                        ? immeuble.getNiveaux().get(idx)
+                        : null;
+                ctx.getPieceControleur().setContexteSauvegarde(appartParent, niveau, immeuble);
+            }
+            ctx.getPieceControleur().rechargerVuePieceDepuisDisque(piece);
 
             double totalDevis = piece.calculerDevis();
             tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
@@ -466,6 +472,18 @@ public class AppControleur {
             if (ctrl.getMapItemAppartement().containsKey(itemAppart)) {
                 return ctrl;
             }
+        }
+        return null;
+    }
+
+    private Appartement trouverAppartementPourPiece(TreeItem<String> itemPiece) {
+        TreeItem<String> itemAppart = mapPieceVersAppart.get(itemPiece);
+        if (itemAppart == null) return null;
+        Appartement appart = mapItemAppartement.get(itemAppart);
+        if (appart != null) return appart;
+        for (NiveauControleur ctrl : niveauControleurs) {
+            appart = ctrl.getMapItemAppartement().get(itemAppart);
+            if (appart != null) return appart;
         }
         return null;
     }
@@ -522,8 +540,6 @@ public class AppControleur {
         if (immeuble == null) return;
 
         Niveau niveau = immeuble.ajouterNiveau(2.5);
-
-        // Sauvegarde du niveau (Code collègue)
         gestionnaire.sauvegarderNiveau(niveau, immeuble);
 
         String nomNiveau = niveauControleurs.isEmpty()
@@ -533,7 +549,7 @@ public class AppControleur {
         TreeItem<String> itemNiveau =
                 appView.getNavigateurView().ajouterItemNiveau(nomNiveau);
         itemsNiveau.add(itemNiveau);
-        mapItemNiveau.put(itemNiveau, niveau); // Pour vos propriétés
+        mapItemNiveau.put(itemNiveau, niveau);
 
         NiveauView niveauView = new NiveauView();
 
@@ -548,31 +564,33 @@ public class AppControleur {
             TreeItem<String> itemAppart = appView.getNavigateurView()
                     .ajouterItemAppartement(itemNiveau, appart.toString());
             mapItemAppartement.put(itemAppart, appart);
-
-            // Sauvegarde de l'appartement (Code collègue)
             gestionnaire.sauvegarderAppartement(appart, niveau, immeuble);
-
-            // Rafraîchir le panneau (Votre code)
             Niveau niveauCourant = mapItemNiveau.get(itemNiveau);
             if (niveauCourant != null) {
                 appView.getNavigateurView().afficherProprietesNiveau(niveauCourant);
             }
-
             return itemAppart;
         });
 
         Map<TreeItem<String>, Couloir> itemsCouloirDuNiveau = new HashMap<>();
         ctrl.setOnCouloirCree(couloir -> {
-            // Vider les anciens items couloir de ce niveau dans le navigateur
             itemNiveau.getChildren().removeAll(itemsCouloirDuNiveau.keySet());
             itemsCouloirDuNiveau.clear();
-
             String nomCouloir = "Couloir du " + itemNiveau.getValue();
             TreeItem<String> itemCouloir = appView.getNavigateurView().ajouterItemCouloir(itemNiveau, nomCouloir);
             itemsCouloirDuNiveau.put(itemCouloir, couloir);
             mapItemCouloir.put(itemCouloir, couloir);
             gestionnaire.sauvegarderCouloirs(niveau, immeuble);
             return itemCouloir;
+        });
+
+        // Notifie TOUS les ContextePiece ouverts pour ce niveau
+        ctrl.setOnCouloirsRecalcules(() -> {
+            for (ContextePiece ctx : contextePieces.values()) {
+                if (ctx.getPieceControleur() != null) {
+                    ctx.getPieceControleur().rafraichirTypesMursAffichage();
+                }
+            }
         });
 
         niveauControleurs.add(ctrl);
@@ -755,7 +773,6 @@ public class AppControleur {
             ctrl.setOnCouloirCree(couloir -> {
                 itemNiveau.getChildren().removeAll(itemsCouloirDuNiveau.keySet());
                 itemsCouloirDuNiveau.clear();
-
                 String nomCouloir = "Couloir du " + itemNiveau.getValue();
                 TreeItem<String> itemCouloir = appView.getNavigateurView().ajouterItemCouloir(itemNiveau, nomCouloir);
                 itemsCouloirDuNiveau.put(itemCouloir, couloir);
@@ -764,8 +781,16 @@ public class AppControleur {
                 return itemCouloir;
             });
 
-            ctrl.rechargerCouloirs(niveau.getCouloirs());
+            // Notifie TOUS les ContextePiece ouverts pour ce niveau
+            ctrl.setOnCouloirsRecalcules(() -> {
+                for (ContextePiece ctx : contextePieces.values()) {
+                    if (ctx.getPieceControleur() != null) {
+                        ctx.getPieceControleur().rafraichirTypesMursAffichage();
+                    }
+                }
+            });
 
+            ctrl.rechargerCouloirs(niveau.getCouloirs());
             niveauControleurs.add(ctrl);
         }
     }

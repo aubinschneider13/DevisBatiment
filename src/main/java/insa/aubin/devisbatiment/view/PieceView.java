@@ -63,31 +63,29 @@ public class PieceView extends StackPane {
 
     // Constructeur avec couloir
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
-                     Couloir couloir, AireImmeuble aire) {
-        this(stage, gestionnaire, (Appartement) null, (AireImmeuble) null);
+                    Couloir couloir, AireImmeuble aire) {
+       this(stage, gestionnaire, (Appartement) null, (AireImmeuble) null);
+       this.controleur.setAfficherAdjacenceCouloir(false);
 
-        // Dans la vue couloir, on évite de réafficher les murs comme adjacents au couloir.
-        this.controleur.setAfficherAdjacenceCouloir(false);
-
-        if (couloir != null && !couloir.getPolygones().isEmpty()) {
-            // On initialise avec chaque zone du couloir.
-            for (List<Mur> zone : couloir.getZonesDelimiteurs()) {
-                List<Point> polygone = new ArrayList<>();
-
-                for (Mur mur : zone) {
-                    polygone.add(mur.getPoint1());
-                }
-
-                this.controleur.initialiserAvecContourAppartement(
-                        polygone,
-                        zone,
-                        aire,
-                        null
-                );
-            }
-        }
-    }
-
+       if (couloir != null && !couloir.getZonesDelimiteurs().isEmpty()) {
+           // On prend tous les murs de toutes les zones
+           List<Mur> tousMurs = new ArrayList<>();
+           List<Point> tousPoints = new ArrayList<>();
+           for (List<Mur> zone : couloir.getZonesDelimiteurs()) {
+               for (Mur mur : zone) {
+                   tousMurs.add(mur);
+                   tousPoints.add(mur.getPoint1());
+               }
+           }
+           // Un seul appel avec tous les points et murs fusionnés
+           this.controleur.initialiserAvecContourAppartement(
+                   tousPoints,
+                   tousMurs,
+                   aire,
+                   null
+           );
+       }
+   }
     // Constructeur principal
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
                      Appartement appartement, AireImmeuble aire) {

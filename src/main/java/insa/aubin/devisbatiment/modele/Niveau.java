@@ -1,6 +1,7 @@
 package insa.aubin.devisbatiment.modele;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
@@ -62,10 +63,28 @@ public class Niveau extends ElementDeConstruction {
     // GESTION DES APPARTEMENTS
     // =========================================================================
 
-    public Appartement ajouterAppartement(List<Mur> mursAppartement) {
+    public Appartement ajouterAppartement(Collection<Mur> mursAppartement) {
         Appartement appartement = new Appartement(mursAppartement, this.hauteurPlafond);
         this.appartements.add(appartement);
         return appartement;
+    }
+
+   public Appartement ajouterAppartement(List<GeometrieUtils.MurOriente> mursAppartement) {
+        Appartement appartement = new Appartement(mursAppartement, this.hauteurPlafond);
+        this.appartements.add(appartement);
+        // NE PAS ajouter dans mursDelimiteurs — ce sont des cloisons intérieures
+        // mursDelimiteurs ne contient que les 4 murs du périmètre du bâtiment
+        return appartement;
+    }
+
+    private boolean contientMurGeometriquement(List<Mur> murs, Mur mur) {
+        if (murs.contains(mur)) return true;
+        for (Mur existant : murs) {
+            if (GeometrieUtils.mursIdentiques(existant, mur)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // =========================================================================

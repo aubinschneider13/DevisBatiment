@@ -2,6 +2,7 @@ package insa.aubin.devisbatiment.controlleur;
 
 import insa.aubin.devisbatiment.modele.*;
 import insa.aubin.devisbatiment.modele.GeometrieUtils.SegmentSource;
+import insa.aubin.devisbatiment.modele.GeometrieUtils.MurOriente;
 import insa.aubin.devisbatiment.view.NiveauView;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.GraphicsContext;
@@ -55,6 +56,7 @@ public class NiveauControleur {
     // Callback notifiant AppControleur lors de la création d'un appartement
     private Function<Appartement, TreeItem<String>> onAppartementCree = null;
     private Function<Couloir, TreeItem<String>> onCouloirCree = null;
+    private Runnable onCouloirsRecalcules = null;
     private final List<Couloir> couloirs = new ArrayList<>();
     private final Map<TreeItem<String>, Couloir> mapItemCouloir = new HashMap<>();
 
@@ -125,6 +127,10 @@ public class NiveauControleur {
     
     public void setOnCouloirCree(Function<Couloir, TreeItem<String>> callback) {
         this.onCouloirCree = callback;
+    }
+
+    public void setOnCouloirsRecalcules(Runnable callback) {
+        this.onCouloirsRecalcules = callback;
     }
 
     // =========================================================================
@@ -295,15 +301,15 @@ public class NiveauControleur {
         }
 
         // Construire et ordonner les murs délimiteurs de l'appartement
-        List<Mur> mursDelimiteurs = new ArrayList<>();
+        List<Mur> mursBruts = new ArrayList<>();
         for (SegmentSource ss : cycle) {
-            mursDelimiteurs.add(ss.mur);
+            mursBruts.add(ss.mur);
         }
-        mursDelimiteurs = GeometrieUtils.ordonnerMurs(mursDelimiteurs);
+        List<MurOriente> mursOrientes = GeometrieUtils.ordonnerMurs(mursBruts);
 
         // Créer l'appartement et l'ajouter au canvas
         compteurAppartements++;
-        Appartement appart = niveau.ajouterAppartement(mursDelimiteurs);
+        Appartement appart = niveau.ajouterAppartement(mursOrientes);
         appartements.add(appart);
         vue.getCanvas().ajouterElement(appart);
 
@@ -365,17 +371,21 @@ public class NiveauControleur {
 
                 List<Mur> mursZone = new ArrayList<>();
                 for (SegmentSource ss : cycle) mursZone.add(ss.mur);
-                mursZone = GeometrieUtils.ordonnerMurs(mursZone);
+                List<MurOriente> mursZoneOrientes = GeometrieUtils.ordonnerMurs(mursZone);
+                mursZone = new ArrayList<>();
+                for (MurOriente murOriente : mursZoneOrientes) {
+                    mursZone.add(murOriente.mur());
+                }
 
                 List<Point> polygone = new ArrayList<>();
-                for (Mur m : mursZone) polygone.add(m.getPoint1());
+                for (MurOriente m : mursZoneOrientes) polygone.add(m.getPoint1());
 
                 boolean estAppart = appartements.stream().anyMatch(a ->
                         polygonesSontEquivalents(polygone, a.getPolygone()));
                 if (estAppart) continue;
 
                 zonesDejaDetectees.add(polygone);
-                couloir.ajouterZone(mursZone); // ajouter au couloir unique
+                couloir.ajouterZoneOriente(mursZoneOrientes); // ajouter au couloir unique
             }
         }
 
@@ -390,6 +400,9 @@ public class NiveauControleur {
         }
 
         vue.getCanvas().redrawAll();
+        if (onCouloirsRecalcules != null) {
+            onCouloirsRecalcules.run();
+        }
     }
 
     private boolean polygonesSontEquivalents(List<Point> p1, List<Point> p2) {
@@ -690,4 +703,5 @@ public class NiveauControleur {
 
     public Map<TreeItem<String>, Appartement> getMapItemAppartement() { return mapItemAppartement; }
     public Map<TreeItem<String>, Couloir> getMapItemCouloir() { return mapItemCouloir; }
+    public List<Couloir> getCouloirs() { return couloirs; }
 }

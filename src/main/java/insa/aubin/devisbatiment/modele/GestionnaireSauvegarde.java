@@ -188,7 +188,13 @@ public class GestionnaireSauvegarde {
         String cheminDossier = getCheminAppartement(a, n, b);
         new File(cheminDossier).mkdirs();
         ecrireLignes(cheminDossier + "/murs_appartement.txt",
-                a.getMursDelimiteurs().stream().map(Mur::toCSV).toList());
+                a.getMurs().stream().map(Mur::toCSV).toList());
+    }
+
+    public void rechargerOuverturesAppartement(Appartement a, Niveau n, Batiment b) {
+        if (a == null || n == null || b == null || !sauvegardeActive) return;
+        chargerOuverturesMurs(a.getMurs(),
+                new File(getCheminAppartement(a, n, b) + "/murs_appartement.txt"));
     }
 
     public void sauvegarderDetailsPiece(Piece p, Appartement a, Niveau n, Batiment b) {
@@ -336,6 +342,10 @@ public class GestionnaireSauvegarde {
                                 + "/" + id + "/murs_appartement.txt"));
 
                 chargerPieces(appart, nomBatiment, idNiveau, id);
+                chargerOuverturesMurs(
+                        appart.getMurs(),
+                        new File(cheminRacine + "/" + nomBatiment + "/" + idNiveau
+                                + "/" + id + "/murs_appartement.txt"));
             }
         } catch (Exception e) {
             System.err.println("Erreur chargement appartements : " + e.getMessage());
@@ -431,18 +441,20 @@ public class GestionnaireSauvegarde {
 
                 List<Mur> mursPiece = new ArrayList<>();
                 for (int i = 0; i < pointsPiece.size(); i++) {
-                    mursPiece.add(new Mur(
+                    Mur murCsv = new Mur(
                             pointsPiece.get(i),
                             pointsPiece.get((i + 1) % pointsPiece.size())
-                    ));
+                    );
+                    Mur murExistant = trouverMurParCoordonnees(appart.getMurs(),
+                            murCsv.getPoint1().getX(),
+                            murCsv.getPoint1().getY(),
+                            murCsv.getPoint2().getX(),
+                            murCsv.getPoint2().getY());
+                    mursPiece.add(murExistant != null ? murExistant : murCsv);
                 }
 
                 Piece piece = appart.ajouterPiece(mursPiece);
                 piece.setId(id);
-                chargerOuverturesMurs(
-                        mursPiece,
-                        new File(cheminRacine + "/" + nomBatiment + "/"
-                                + idNiveau + "/" + idAppart + "/" + id + ".txt"));
             }
         } catch (Exception e) {
             System.err.println("Erreur chargement pièces : " + e.getMessage());
@@ -487,7 +499,6 @@ public class GestionnaireSauvegarde {
                     String type = parts[index++];
                     double position = Double.parseDouble(parts[index++]);
                     boolean inversee = "1".equals(parts[index++]);
-
                     if ("PORTE".equals(type)) {
                         Porte porte = new Porte(position);
                         porte.setOrientation(inversee ? 1 : -1);

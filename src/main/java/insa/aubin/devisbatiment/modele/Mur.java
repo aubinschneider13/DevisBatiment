@@ -17,6 +17,8 @@ public class Mur extends ElementDeConstruction implements Dessin {
     private Color color;
     private static int compteurMurs = 0;
     private int numeroUnique;
+    private boolean estDelimiteur = false;
+    
 
     // Gestion des deux faces du mur
     private final CoteMur coteGauche;
@@ -62,19 +64,25 @@ public class Mur extends ElementDeConstruction implements Dessin {
     public void ajouterOuverture(Ouverture o) {
         if (o == null) return;
 
-        // Anti-doublon strict basé sur la position (évite le cumul lors des synchronisations)
+        // Anti-doublon strict basé sur la position
         for (Ouverture existante : this.listeOuvertures) {
             if (Math.abs(existante.getPositionSurMur() - o.getPositionSurMur()) < 0.02) {
-                return; // L'ouverture est déjà physiquement là, on ignore l'ajout
+                return;
             }
         }
 
         if (o instanceof Fenetre && typeMur != TypeMur.EXTERIEUR) {
             return; // fenêtre uniquement sur mur extérieur
         }
+
         if (o instanceof Porte && typeMur == TypeMur.EXTERIEUR) {
             return; // pas de porte sur mur extérieur
         }
+
+        if (o instanceof Porte && estDelimiteur && typeMur != TypeMur.ADJ_COULOIR) {
+            return; // pas de porte sur mur délimiteur non adjacent au couloir
+        }
+
         this.listeOuvertures.add(o);
     }
 
@@ -358,4 +366,7 @@ public class Mur extends ElementDeConstruction implements Dessin {
     public String toString() {
         return String.format("Mur n°%d (%.2f m)", numeroUnique, calculerLongueur());
     }
+    
+    public boolean isEstDelimiteur() { return estDelimiteur; }
+    public void setEstDelimiteur(boolean estDelimiteur) { this.estDelimiteur = estDelimiteur; }
 }
