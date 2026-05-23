@@ -666,30 +666,6 @@ public class PieceControleur {
             if (itemPiece != null) mapItemPiece.put(itemPiece, piece);
         }
 
-        // --- NOUVEAU : Absorber les ouvertures existantes sur le canevas ---
-        for (Dessin d : vue.getCanvas().getElements()) {
-            if (d instanceof Mur murCanvas && !murCanvas.getListeOuvertures().isEmpty()) {
-                for (Mur murPiece : piece.getMurs()) {
-                    if (sontMursSuperposes(murCanvas, murPiece)) {
-
-                        murPiece.setTypeMur(murCanvas.getTypeMur()); // On copie le type
-
-                        for (Ouverture ouv : murCanvas.getListeOuvertures()) {
-                            // On retrouve les vraies coordonnées XY de la porte/fenêtre
-                            Point posAbsolue = murCanvas.getPointSurMur(ouv.getPositionSurMur());
-                            double tPiece = murPiece.calculerPositionSurMur(posAbsolue);
-
-                            if (tPiece >= -0.05 && tPiece <= 1.05) {
-                                double margePiece = ouv.getLargeur() / (2 * murPiece.calculerLongueur());
-                                tPiece = Math.max(margePiece, Math.min(1.0 - margePiece, tPiece));
-                                murPiece.ajouterOuverture(ouv instanceof Porte ? new Porte(tPiece) : new Fenetre(tPiece));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // -------------------------------------------------------------------
 
         vue.getCanvas().ajouterElement(creerDessinPiece(piece));
         vue.setInstructions("Pièce créée — cliquez dans une autre zone pour en ajouter une.");
@@ -749,44 +725,33 @@ public class PieceControleur {
             inversee = porteEnCours.isOuvertureInversee();
         }
 
-        // 1. Ajout visuel sur le canvas
-        Porte p1 = null;
+        // 1. Ajout visuel sur le canvas (UN SEUL APPEL)
         if (estPorte) {
-            p1 = new Porte(t);
+            Porte p1 = new Porte(t);
             p1.setOuvertureInversee(inversee);
+            cible.ajouterOuverture(p1);
+        } else {
+            Fenetre f1 = new Fenetre(t);
+            System.out.println("[DEBUG FENETRE] Création fenetre t=" + t + " sur mur " + cible);
+            cible.ajouterOuverture(f1);  // ← Un seul appel ici
+            System.out.println("[DEBUG FENETRE] Ouvertures après ajout : " + cible.getListeOuvertures().size());
         }
-        cible.ajouterOuverture(estPorte ? p1 : new Fenetre(t));
 
-        // 2. Si on est dans la vue d'une pièce, on sécurise l'ajout dans le vrai mur en mémoire
+        // 2. Synchronisation vers le vrai mur (modèle métier)
         Mur vraiMur = retrouverVraiMurModele(cible);
         if (vraiMur != null && vraiMur != cible) {
-            Porte p2 = null;
-            if (estPorte) {
-                p2 = new Porte(t);
-                p2.setOuvertureInversee(inversee);
+            if (!estPorte) {
+                System.out.println("[DEBUG FENETRE] Copie vers vraiMur : " + vraiMur + " (type=" + vraiMur.getTypeMur() + ")");
             }
-            vraiMur.ajouterOuverture(estPorte ? p2 : new Fenetre(t));
+            if (estPorte) {
+                Porte p2 = new Porte(t);
+                p2.setOuvertureInversee(inversee);
+                vraiMur.ajouterOuverture(p2);
+            } else {
+                vraiMur.ajouterOuverture(new Fenetre(t));
+            }
         }
 
-        // 3. Si on est dans la vue Appartement, on propage la découpe aux sous-murs des pièces
-        for (Piece piece : pieces) {
-            for (Mur murPiece : piece.getMurs()) {
-                if (sontMursSuperposes(cible, murPiece)) {
-                    murPiece.setTypeMur(cible.getTypeMur());
-                    double tPiece = murPiece.calculerPositionSurMur(pClic);
-                    if (tPiece >= -0.05 && tPiece <= 1.05) {
-                        double margePiece = largeur / (2 * murPiece.calculerLongueur());
-                        tPiece = Math.max(margePiece, Math.min(1.0 - margePiece, tPiece));
-                        Porte pPiece = null;
-                        if (estPorte) {
-                            pPiece = new Porte(tPiece);
-                            pPiece.setOuvertureInversee(inversee);
-                        }
-                        murPiece.ajouterOuverture(estPorte ? pPiece : new Fenetre(tPiece));
-                    }
-                }
-            }
-        }
         vue.redrawAll();
         if (onModification != null) {
             onModification.run();
@@ -833,7 +798,6 @@ public class PieceControleur {
         this.appartement = appartement;
         if (polygone == null || polygone.size() < 3) return;
 
-        // On conserve la logique de non-translation directe ou de polygone de origin/master
         this.polygoneAppartement = new ArrayList<>(polygone);
 
         List<Mur> mursAffichage = new ArrayList<>();
@@ -845,11 +809,19 @@ public class PieceControleur {
                     new Point(murOriginal.getPoint2().getX(), murOriginal.getPoint2().getY())
             );
 
-            // Définir le type AVANT d'ajouter les ouvertures (pour passer la sécurité de Mur.java)
+            // Définir le type AVANT d'ajouter les ouvertures
             boolean exterieur = cotesBatiment.stream().anyMatch(c -> murInclsDansCote(murOriginal, c));
-            copie.setTypeMur(exterieur ? Mur.TypeMur.EXTERIEUR : Mur.TypeMur.NORMAL);
+            Mur.TypeMur typeCible = exterieur ? Mur.TypeMur.EXTERIEUR : Mur.TypeMur.NORMAL;
 
-            // --- FIX 1 : COPIER LES OUVERTURES SUR LE CLONE ---
+            // Appliquer au clone
+            copie.setTypeMur(typeCible);
+
+            // ✅ FIX CRITIQUE : Synchroniser le type sur l'original pour permettre l'ajout de fenêtres
+            if (murOriginal.getTypeMur() != typeCible) {
+                murOriginal.setTypeMur(typeCible);
+            }
+
+            // Copier les ouvertures sur le clone
             for (Ouverture ouv : murOriginal.getListeOuvertures()) {
                 if (ouv instanceof Porte pOuv) {
                     Porte pClone = new Porte(ouv.getPositionSurMur());
@@ -860,7 +832,7 @@ public class PieceControleur {
                 }
             }
 
-            // --- FIX 2 : COPIER LES REVÊTEMENTS SUR LE CLONE (biface de master) ---
+            // Copier les revêtements sur le clone (biface)
             if (murOriginal.getCoteGauche().getRevetements() != null) {
                 for (Revetement r : murOriginal.getCoteGauche().getRevetements()) {
                     copie.getCoteGauche().ajouterRevetement(r);
@@ -872,7 +844,7 @@ public class PieceControleur {
                 }
             }
 
-            // --- FIX 3 : GARDER LE LIEN VERS L'ORIGINAL ---
+            // Garder le lien vers l'original
             mapCopieVersOriginal.put(copie, murOriginal);
             mursAffichage.add(copie);
         }
@@ -1089,77 +1061,43 @@ public class PieceControleur {
         return true;
     }
 
-    /** Remonte les portes/fenêtres des pièces vers la grande vue Appartement */
+    /**
+     * Reconstruit les ouvertures des clones canvas DEPUIS les murs modèle originaux (source A).
+     * Ne lit plus les murs des pièces (qui sont des références partagées vers le canvas).
+     */
     public void synchroniserOuverturesVersAppartement() {
-        if (appartement == null) return;
-
-        System.out.println("\n--- [DEBUG SYNC CORRIGÉ] DEBUT SYNCHRONISATION ---");
+        if (appartement == null) {
+            System.out.println("[DEBUG SYNC] appartement est null, abandon.");
+            return;
+        }
+        System.out.println("\n--- [DEBUG SYNC] DEBUT SYNCHRONISATION VERS APPARTEMENT (Source A → Canvas B) ---");
 
         for (Dessin d : vue.getCanvas().getElements()) {
-            if (d instanceof Mur murCanvas) {
-                // Étape 1 : Nettoyage complet du canvas et de son modèle métier associé
-                murCanvas.getListeOuvertures().clear();
-                Mur vraiMur = retrouverVraiMurModele(murCanvas);
-                if (vraiMur != null && vraiMur != murCanvas) {
-                    vraiMur.getListeOuvertures().clear();
-                }
+            if (!(d instanceof Mur murCanvas)) continue;
 
-                // Liste locale pour suivre géométriquement les ouvertures déjà acceptées pour CE mur
-                List<Point> positionsAbsoluesTraitees = new ArrayList<>();
+            // Trouver le mur modèle original (couche A) via mapCopieVersOriginal
+            Mur vraiMur = retrouverVraiMurModele(murCanvas);
 
-                for (Piece piece : appartement.getPieces()) {
-                    for (Mur murPiece : piece.getMurs()) {
-                        if (sontMursSuperposes(murCanvas, murPiece)) {
-                            for (Ouverture ouv : murPiece.getListeOuvertures()) {
-                                // Conversion en coordonnées absolues (la vérité mathématique)
-                                Point posAbsolue = murPiece.getPointSurMur(ouv.getPositionSurMur());
-                                double tCanvas = murCanvas.calculerPositionSurMur(posAbsolue);
+            // Si vraiMur == murCanvas, c'est une cloison intérieure (sa propre source de vérité) → rien à synchroniser
+            if (vraiMur == null || vraiMur == murCanvas) continue;
 
-                                if (tCanvas >= -0.05 && tCanvas <= 1.05) {
-                                    double marge = ouv.getLargeur() / (2 * murCanvas.calculerLongueur());
-                                    tCanvas = Math.max(marge, Math.min(1.0 - marge, tCanvas));
+            System.out.println(String.format("[DEBUG SYNC] murCanvas %s (ouv avant: %d) <- vraiMur %s (%d ouvertures)",
+                murCanvas, murCanvas.getListeOuvertures().size(), vraiMur, vraiMur.getListeOuvertures().size()));
 
-                                    // ✅ FILTRAGE SPATIAL ABSOLU : Comparaison en mètres (X,Y) et non plus en ratio t
-                                    boolean doubleComptageSspatial = false;
-                                    for (Point pExist : positionsAbsoluesTraitees) {
-                                        double distancePure = Math.hypot(pExist.getX() - posAbsolue.getX(), pExist.getY() - posAbsolue.getY());
-                                        if (distancePure < 0.15) { // Tolérance de 15 cm pour absorber les micro-dérives de conversion
-                                            doubleComptageSspatial = true;
-                                            break;
-                                        }
-                                    }
-
-                                    if (!doubleComptageSspatial) {
-                                        positionsAbsoluesTraitees.add(posAbsolue);
-
-                                        if (ouv instanceof Porte pOuv) {
-                                            Porte pNewCanvas = new Porte(tCanvas);
-                                            pNewCanvas.setOuvertureInversee(pOuv.isOuvertureInversee());
-                                            murCanvas.ajouterOuverture(pNewCanvas);
-
-                                            if (vraiMur != null && vraiMur != murCanvas) {
-                                                Porte pNewVrai = new Porte(tCanvas);
-                                                pNewVrai.setOuvertureInversee(pOuv.isOuvertureInversee());
-                                                vraiMur.ajouterOuverture(pNewVrai);
-                                            }
-                                        } else {
-                                            murCanvas.ajouterOuverture(new Fenetre(tCanvas));
-                                            if (vraiMur != null && vraiMur != murCanvas) {
-                                                vraiMur.ajouterOuverture(new Fenetre(tCanvas));
-                                            }
-                                        }
-                                    } else {
-                                        System.out.println(String.format("  [ANTI-DUPLICATION] Rejet de la %s à (%.2f, %.2f) car déjà présente géométriquement sur ce mur.",
-                                                ouv.getClass().getSimpleName(), posAbsolue.getX(), posAbsolue.getY()));
-                                    }
-                                }
-                            }
-                        }
-                    }
+            // Reconstruire les ouvertures du clone canvas DEPUIS la source de vérité (vraiMur A)
+            murCanvas.getListeOuvertures().clear();
+            for (Ouverture ouv : vraiMur.getListeOuvertures()) {
+                if (ouv instanceof Porte pOuv) {
+                    Porte pNew = new Porte(ouv.getPositionSurMur());
+                    pNew.setOuvertureInversee(pOuv.isOuvertureInversee());
+                    murCanvas.ajouterOuverture(pNew);
+                } else if (ouv instanceof Fenetre fOuv) {
+                    System.out.println("[DEBUG SYNC] Copie fenetre t=" + fOuv.getPositionSurMur());
+                    murCanvas.ajouterOuverture(new Fenetre(fOuv.getPositionSurMur()));
                 }
             }
         }
-        System.out.println("--- [DEBUG SYNC CORRIGÉ] FIN SYNCHRONISATION ---\n");
+        System.out.println("--- [DEBUG SYNC] FIN SYNCHRONISATION ---\n");
         vue.redrawAll();
     }
 
