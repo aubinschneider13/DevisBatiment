@@ -155,6 +155,37 @@ public class Piece extends ElementDeConstruction {
     public List<CoteMur> getCotesMurs() {
         return cotesMurs;
     }
+    
+    public List<Mur> construireMursAffichage() {
+        List<Point> pts = getPoints();
+        if (pts == null || pts.size() < 3) return getMurs();
+        List<Mur> result = new ArrayList<>();
+        for (int i = 0; i < pts.size(); i++) {
+            Point p1 = pts.get(i);
+            Point p2 = pts.get((i + 1) % pts.size());
+            Mur original = getMurs().stream()
+                .filter(m -> GeometrieUtils.mursOntUnSupportCommun(m, new Mur(p1, p2, getHauteurPlafond())))
+                .findFirst().orElse(null);
+
+            // Si l'arête du polygone va en sens inverse de l'original,
+            // on la retourne pour que copierPourMur ne flippe pas l'orientation
+            Point mp1 = p1, mp2 = p2;
+            if (original != null && !GeometrieUtils.memeSens(original, new Mur(p1, p2, getHauteurPlafond()))) {
+                mp1 = p2;
+                mp2 = p1;
+            }
+
+            Mur murAffichage = new Mur(mp1, mp2, original != null ? original.getHauteur() : getHauteurPlafond());
+            if (original != null) {
+                murAffichage.setOriginal(original);
+                murAffichage.setTypeMur(original.getTypeMur());
+                original.getListeOuvertures().forEach(o ->
+                    OuvertureUtils.ajouterCopieSiAbsente(murAffichage, o, original));
+            }
+            result.add(murAffichage);
+        }
+        return result;
+    }
 
     public List<Usage> getUsages()                 { return usages; }
     public Sol getSol()                            { return sol; }

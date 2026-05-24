@@ -688,35 +688,18 @@ public class PieceControleur {
 
     public void rechargerVuePieceDepuisDisque(Piece piece) {
         if (piece == null) return;
-        if (appartement != null) {
+        if (appartement != null)
             gestionnaire.rechargerOuverturesAppartement(appartement, niveauSauvegarde, batimentSauvegarde);
-        }
+
+        List<Mur> sources = OuvertureUtils.collecterSourcesMurs(appartement, vue.getCanvas().getElements());
         this.polygoneAppartement = new ArrayList<>(piece.getPoints());
         vue.getCanvas().getElements().clear();
         vue.getCanvas().getElements().add(creerFondAppartement(this.polygoneAppartement));
 
-        for (Mur murPiece : piece.getMurs()) {
+        for (Mur murPiece : piece.construireMursAffichage()) {
             murPiece.setTypeMur(Mur.TypeMur.NORMAL);
-            appliquerTypeMurAffichage(murPiece, murPiece, cotesBatimentAffichage);
-
-            // Chercher les ouvertures dans les murs de l'appartement
-            // géométriquement superposés à ce mur de pièce
-            if (appartement != null) {
-                for (Mur murAppart : appartement.getMurs()) {
-                    if (GeometrieUtils.mursSuperposes(murAppart, murPiece) 
-                            || GeometrieUtils.mursSuperposes(murPiece, murAppart)
-                            || GeometrieUtils.mursIdentiques(murAppart, murPiece)) {
-                        for (Ouverture ouv : murAppart.getListeOuvertures()) {
-                            Point posAbsolue = murAppart.getPointSurMur(ouv.getPositionSurMur());
-                            // Vérifier que la position absolue est GÉOMÉTRIQUEMENT dans murPiece
-                            if (GeometrieUtils.pointSurSegmentAvecTolerance(posAbsolue, murPiece, 0.05)) {
-                                OuvertureUtils.ajouterCopieSiAbsente(murPiece, ouv, murAppart);
-                            }
-                        }
-                    }
-                }
-            }
-
+            appliquerTypeMurAffichage(murPiece, murPiece.getOriginal(), cotesBatimentAffichage);
+            OuvertureUtils.propagerOuverturesSurMur(murPiece, sources);
             vue.getCanvas().getElements().add(murPiece);
         }
 

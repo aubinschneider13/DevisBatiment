@@ -467,4 +467,18 @@ public class GeometrieUtils {
             this.mur = mur;
         }
     }
+    
+    // GeometrieUtils.java
+    public static boolean mursOntUnSupportCommun(Mur a, Mur b) {
+        return mursIdentiques(a, b) || mursSuperposes(a, b) || mursSuperposes(b, a);
+    }
+    
+    // GeometrieUtils.java
+    public static boolean memeSens(Mur a, Mur b) {
+        double dxA = a.getPoint2().getX() - a.getPoint1().getX();
+        double dyA = a.getPoint2().getY() - a.getPoint1().getY();
+        double dxB = b.getPoint2().getX() - b.getPoint1().getX();
+        double dyB = b.getPoint2().getY() - b.getPoint1().getY();
+        return dxA * dxB + dyA * dyB >= 0;
+    }
 }

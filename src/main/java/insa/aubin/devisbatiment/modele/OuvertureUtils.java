@@ -1,5 +1,8 @@
 package insa.aubin.devisbatiment.modele;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public final class OuvertureUtils {
 
     private static final double TOLERANCE_POSITION = 0.02;
@@ -59,8 +62,39 @@ public final class OuvertureUtils {
     }
     
     public static boolean positionSurMur(Mur mur, Point positionAbsolue) {
-        double t = mur.calculerPositionSurMur(positionAbsolue);
+        double x1 = mur.getPoint1().getX(), y1 = mur.getPoint1().getY();
+        double x2 = mur.getPoint2().getX(), y2 = mur.getPoint2().getY();
+        double dx = x2 - x1, dy = y2 - y1;
+        double len2 = dx * dx + dy * dy;
+        if (len2 < 1e-10) return false;
+        double t = ((positionAbsolue.getX() - x1) * dx + (positionAbsolue.getY() - y1) * dy) / len2;
         return t >= -0.01 && t <= 1.01;
+    }
+    
+    public static List<Mur> collecterSourcesMurs(Appartement appartement, List<Dessin> elements) {
+        List<Mur> sources = new ArrayList<>();
+        if (appartement != null) {
+            for (Mur m : appartement.getMurs()) ajouterSiAbsent(sources, m);
+        }
+        for (Dessin d : elements) {
+            if (d instanceof Mur m) ajouterSiAbsent(sources, m);
+        }
+        return sources;
+    }
+
+    private static void ajouterSiAbsent(List<Mur> sources, Mur mur) {
+        if (mur != null && sources.stream().noneMatch(e -> e == mur)) sources.add(mur);
+    }
+
+    public static void propagerOuverturesSurMur(Mur cible, List<Mur> sources) {
+        for (Mur source : sources) {
+            if (source == cible) continue;
+            if (GeometrieUtils.mursOntUnSupportCommun(source, cible)) {
+                for (Ouverture ouv : source.getListeOuvertures()) {
+                    ajouterCopieSiAbsente(cible, ouv, source);
+                }
+            }
+        }
     }
 
 }
