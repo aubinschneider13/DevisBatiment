@@ -104,6 +104,7 @@ public class ContextePiece implements Contexte {
             });
             pieceControleur.setOnModification(() -> {
                 appControleur.rafraichirDevisEtProprietes();
+                appControleur.sauvegarderDetailsOuvertures();
             });
             callbackBranche = true;
         }

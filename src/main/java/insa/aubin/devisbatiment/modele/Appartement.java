@@ -5,6 +5,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class Appartement extends ElementDeConstruction implements Dessin {
@@ -12,6 +13,7 @@ public class Appartement extends ElementDeConstruction implements Dessin {
     // --- Modèle métier ---
     private List<Mur> mursDelimiteurs; // Murs qui ferment le périmètre de l'appartement
     private List<Piece> pieces;        // Pièces à l'intérieur de l'appartement
+    private List<GeometrieUtils.MurOriente> mursOrientes;
     private double hauteurPlafond;
 
     // --- Champs visuels ---
@@ -29,9 +31,29 @@ public class Appartement extends ElementDeConstruction implements Dessin {
      * @param mursDelimiteurs murs formant le périmètre fermé de l'appartement
      * @param hauteurPlafond  hauteur sous plafond en mètres
      */
-    public Appartement(List<Mur> mursDelimiteurs, double hauteurPlafond) {
+    public Appartement(Collection<Mur> mursDelimiteurs, double hauteurPlafond) {
         super("Appartement");
         this.mursDelimiteurs = new ArrayList<>(mursDelimiteurs);
+        this.mursOrientes = new ArrayList<>();
+        for (Mur mur : this.mursDelimiteurs) {
+            this.mursOrientes.add(new GeometrieUtils.MurOriente(mur, false));
+        }
+        this.hauteurPlafond  = hauteurPlafond;
+        this.pieces          = new ArrayList<>();
+
+        compteur++;
+        this.numero = compteur;
+        this.couleurFond    = PaletteVisuelle.fondAppartement(numero);
+        this.couleurContour = PaletteVisuelle.contourAppartement(numero);
+    }
+
+    public Appartement(List<GeometrieUtils.MurOriente> mursOrientes, double hauteurPlafond) {
+        super("Appartement");
+        this.mursOrientes = new ArrayList<>(mursOrientes);
+        this.mursDelimiteurs = new ArrayList<>();
+        for (GeometrieUtils.MurOriente murOriente : this.mursOrientes) {
+            this.mursDelimiteurs.add(murOriente.mur());
+        }
         this.hauteurPlafond  = hauteurPlafond;
         this.pieces          = new ArrayList<>();
 
@@ -43,6 +65,7 @@ public class Appartement extends ElementDeConstruction implements Dessin {
 
     /** Réinitialise le compteur (utile au chargement d'un projet). */
     public static void resetCompteur() { compteur = 0; }
+    public static void setCompteur(int valeur) { compteur = Math.max(0, valeur); }
 
     // =========================================================================
     // DÉRIVATION DU POLYGONE DEPUIS LES MURS
@@ -58,8 +81,8 @@ public class Appartement extends ElementDeConstruction implements Dessin {
      */
     public List<Point> getPolygone() {
         List<Point> polygone = new ArrayList<>();
-        for (Mur m : mursDelimiteurs) {
-            polygone.add(m.getPoint1());
+        for (GeometrieUtils.MurOriente murOriente : mursOrientes) {
+            polygone.add(murOriente.getPoint1());
         }
         return polygone;
     }
@@ -194,8 +217,13 @@ public class Appartement extends ElementDeConstruction implements Dessin {
     // =========================================================================
 
     public List<Mur> getMursDelimiteurs()              { return mursDelimiteurs; }
-    public void setMursDelimiteurs(List<Mur> murs)     { this.mursDelimiteurs = new ArrayList<>(murs); }
-
+    public void setMursDelimiteurs(List<Mur> murs)     {
+        this.mursDelimiteurs = new ArrayList<>(murs);
+        this.mursOrientes = new ArrayList<>();
+        for (Mur mur : this.mursDelimiteurs) {
+            this.mursOrientes.add(new GeometrieUtils.MurOriente(mur, false));
+        }
+    }
     /**
      * Rassemble tous les murs de l'appartement :
      * les murs délimiteurs extérieurs ET toutes les cloisons intérieures des pièces.
@@ -276,6 +304,7 @@ public class Appartement extends ElementDeConstruction implements Dessin {
     public int getNbPieces()                           { return pieces.size(); }
     public double getHauteurPlafond()                  { return hauteurPlafond; }
     public void setHauteurPlafond(double h)            { this.hauteurPlafond = h; }
+    public int getNumero()                             { return numero; }
 
     // =========================================================================
     // SÉRIALISATION

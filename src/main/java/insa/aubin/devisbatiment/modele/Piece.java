@@ -2,11 +2,14 @@ package insa.aubin.devisbatiment.modele;
 
 import java.util.ArrayList;
 import java.util.List;
+import insa.aubin.devisbatiment.modele.GeometrieUtils.MurOriente;
 
 public class Piece extends ElementDeConstruction {
 
     private double hauteurPlafond;
     private List<Point> points;
+    private List<Mur> murs;
+    private List<MurOriente> mursOrientes;
     private List<CoteMur> cotesMurs;
     private List<Usage> usages;
     private Sol sol;
@@ -27,25 +30,31 @@ public class Piece extends ElementDeConstruction {
         compteur++;
         this.numero = compteur;
         this.hauteurPlafond = hauteurPlafond;
+        this.mursOrientes = new ArrayList<>(GeometrieUtils.ordonnerMurs(murs));
+        this.murs = new ArrayList<>();
+        for (MurOriente murOriente : this.mursOrientes) {
+            this.murs.add(murOriente.mur());
+        }
         this.cotesMurs = new ArrayList<>();
         this.usages         = new ArrayList<>();
 
         // Dériver les points depuis les murs ordonnés
         this.points = new ArrayList<>();
-        for (Mur m : murs) {
+        for (MurOriente m : this.mursOrientes) {
             this.points.add(m.getPoint1());
         }
 
         // Pour chaque mur ordonné, déterminer quel côté (coteGauche ou coteDroit) fait face à la pièce
-        for (Mur m : murs) {
+        for (MurOriente murOriente : this.mursOrientes) {
+            Mur m = murOriente.mur();
             // Le mur 'm' est ordonné dans le sens du contour de la pièce.
             // On regarde si son côté gauche fait face à l'intérieur du polygone de la pièce.
-            boolean gaucheInterieur = GeometrieUtils.estCoteGaucheDansPiece(m, this.points);
+            boolean gaucheInterieur = estCoteGaucheDansPiece(murOriente, this.points);
             
             // Le vrai mur d'origine sur le canevas (pour ne pas perdre les références)
-            Mur vraiMur = m.getOriginal();
+            Mur vraiMur = m;
             
-            if (m != vraiMur) {
+            if (murOriente.inverse()) {
                 // 'm' est inversé par ordonnerMurs.
                 // Donc le côté gauche de 'm' correspond au côté droit de 'vraiMur', et inversement.
                 if (gaucheInterieur) {
@@ -120,14 +129,27 @@ public class Piece extends ElementDeConstruction {
     public List<Point> getPoints()                 { return points; }
     
     /**
-     * Retourne les murs parents ordonnés pour compatibilité.
+     * Retourne les murs de contour ordonnés de la pièce.
      */
     public List<Mur> getMurs() {
-        List<Mur> parentMurs = new ArrayList<>();
-        for (CoteMur cm : cotesMurs) {
-            parentMurs.add(cm.getMurParent());
-        }
-        return parentMurs;
+        return murs;
+    }
+
+    public List<MurOriente> getMursOrientes() {
+        return mursOrientes;
+    }
+
+    private boolean estCoteGaucheDansPiece(MurOriente mur, List<Point> pointsPiece) {
+        if (pointsPiece == null || pointsPiece.size() < 3) return true;
+        double mx = (mur.getPoint1().getX() + mur.getPoint2().getX()) / 2.0;
+        double my = (mur.getPoint1().getY() + mur.getPoint2().getY()) / 2.0;
+        double dx = mur.getPoint2().getX() - mur.getPoint1().getX();
+        double dy = mur.getPoint2().getY() - mur.getPoint1().getY();
+        double len = Math.hypot(dx, dy);
+        if (len < 1e-6) return true;
+        double tx = mx + 0.01 * (-dy / len);
+        double ty = my + 0.01 * (dx / len);
+        return GeometrieUtils.pointDansPolygone(tx, ty, pointsPiece);
     }
     
     public List<CoteMur> getCotesMurs() {
@@ -138,6 +160,7 @@ public class Piece extends ElementDeConstruction {
     public Sol getSol()                            { return sol; }
     public Plafond getPlafond()                    { return plafond; }
     public static void resetCompteur()             { compteur = 0; }
+    public static void setCompteur(int valeur)      { compteur = Math.max(0, valeur); }
     public int getNumero()                         { return numero; }
 
     // =========================================================================

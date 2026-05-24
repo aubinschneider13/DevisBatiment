@@ -79,6 +79,46 @@ public class GeometrieUtils {
             && Math.abs(p1.getY() - p2.getY()) < TOL;
     }
 
+    public static boolean mursIdentiques(Mur m1, Mur m2) {
+        double tol = 1e-4;
+        boolean sensNormal =
+                Math.abs(m1.getPoint1().getX() - m2.getPoint1().getX()) < tol &&
+                Math.abs(m1.getPoint1().getY() - m2.getPoint1().getY()) < tol &&
+                Math.abs(m1.getPoint2().getX() - m2.getPoint2().getX()) < tol &&
+                Math.abs(m1.getPoint2().getY() - m2.getPoint2().getY()) < tol;
+
+        boolean sensInverse =
+                Math.abs(m1.getPoint1().getX() - m2.getPoint2().getX()) < tol &&
+                Math.abs(m1.getPoint1().getY() - m2.getPoint2().getY()) < tol &&
+                Math.abs(m1.getPoint2().getX() - m2.getPoint1().getX()) < tol &&
+                Math.abs(m1.getPoint2().getY() - m2.getPoint1().getY()) < tol;
+
+        return sensNormal || sensInverse;
+    }
+
+    public static boolean mursSuperposes(Mur murParent, Mur sousMur) {
+        return pointSurSegmentAvecTolerance(sousMur.getPoint1(), murParent, 0.05)
+            && pointSurSegmentAvecTolerance(sousMur.getPoint2(), murParent, 0.05);
+    }
+
+    public static boolean pointSurSegmentAvecTolerance(Point p, Mur m, double tolerance) {
+        double x1 = m.getPoint1().getX(), y1 = m.getPoint1().getY();
+        double x2 = m.getPoint2().getX(), y2 = m.getPoint2().getY();
+        double px = p.getX(), py = p.getY();
+
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double len2 = dx * dx + dy * dy;
+        if (len2 < TOL) return false;
+
+        double cross = (px - x1) * dy - (py - y1) * dx;
+        double dist = Math.abs(cross) / Math.sqrt(len2);
+        if (dist > tolerance) return false;
+
+        double dot = (px - x1) * dx + (py - y1) * dy;
+        return dot >= -tolerance && dot <= len2 + tolerance;
+    }
+
     // =========================================================================
     // NŒUDS
     // =========================================================================
@@ -114,12 +154,21 @@ public class GeometrieUtils {
         return aire / 2.0;
     }
 
-    public static List<Mur> ordonnerMurs(List<Mur> murs) {
+    public static record MurOriente(Mur mur, boolean inverse) {
+        public Point getPoint1() {
+            return inverse ? mur.getPoint2() : mur.getPoint1();
+        }
+
+        public Point getPoint2() {
+            return inverse ? mur.getPoint1() : mur.getPoint2();
+        }
+    }
+
+    public static List<MurOriente> ordonnerMurs(List<Mur> murs) {
         if (murs == null || murs.isEmpty()) return new ArrayList<>();
-        if (murs.size() <= 1) return murs;
-        List<Mur> ordonne  = new ArrayList<>();
+        List<MurOriente> ordonne  = new ArrayList<>();
         List<Mur> restants = new ArrayList<>(murs);
-        Mur courant = restants.remove(0);
+        MurOriente courant = new MurOriente(restants.remove(0), false);
         ordonne.add(courant);
         while (!restants.isEmpty()) {
             Point dernierPoint = courant.getPoint2();
@@ -128,15 +177,14 @@ public class GeometrieUtils {
                 Mur candidat = restants.get(i);
                 if (candidat == null) continue;
                 if (correspondA(candidat.getPoint1(), dernierPoint)) {
-                    courant = candidat;
+                    courant = new MurOriente(candidat, false);
                     ordonne.add(courant);
                     restants.remove(i);
                     trouve = true;
                     break;
                 }
                 if (correspondA(candidat.getPoint2(), dernierPoint)) {
-                    Mur inverse = new Mur(candidat.getPoint2(), candidat.getPoint1());
-                    inverse.setOriginal(candidat); // Link to original wall
+                    MurOriente inverse = new MurOriente(candidat, true);
                     courant = inverse;
                     ordonne.add(courant);
                     restants.remove(i);
@@ -238,7 +286,12 @@ public class GeometrieUtils {
                 double[] b = pointsSurSegment.get(i + 1);
                 Point pa = new Point(a[0], a[1]);
                 Point pb = new Point(b[0], b[1]);
-                ajouterSegmentSiAbsent(sources, pa, pb, new Mur(pa, pb));
+                
+                Mur sousMur = new Mur(pa, pb, ss.mur.getHauteur());
+                sousMur.setTypeMur(ss.mur.getTypeMur());   // On propage le type (ADJ_COULOIR, EXTERIEUR, etc.)
+                sousMur.setOriginal(ss.mur.getOriginal()); // On conserve le lien d'origine
+
+                ajouterSegmentSiAbsent(sources, pa, pb, sousMur);
             }
         }
         return sources;

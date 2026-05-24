@@ -7,14 +7,22 @@ public class Porte extends Ouverture implements Fantome {
     public static final double LARGEUR_PORTE = 0.90;
     public static final double HAUTEUR_PORTE = 2.10;
 
-    private boolean ouvertureInversee = false;
+    private int orientation = -1;
 
     public boolean isOuvertureInversee() {
-        return ouvertureInversee;
+        return orientation > 0;
     }
 
     public void setOuvertureInversee(boolean ouvertureInversee) {
-        this.ouvertureInversee = ouvertureInversee;
+        this.orientation = ouvertureInversee ? 1 : -1;
+    }
+
+    public int getOrientation() {
+        return orientation;
+    }
+
+    public void setOrientation(int orientation) {
+        this.orientation = orientation >= 0 ? 1 : -1;
     }
 
     public Porte(double positionSurMur) {
@@ -27,7 +35,7 @@ public class Porte extends Ouverture implements Fantome {
 
     @Override
     public String toCSV() {
-        return "PORTE;" + getId() + ";" + LARGEUR_PORTE + ";" + HAUTEUR_PORTE + ";" + (ouvertureInversee ? "1" : "0");
+        return "PORTE;" + getId() + ";" + LARGEUR_PORTE + ";" + HAUTEUR_PORTE + ";" + (isOuvertureInversee() ? "1" : "0");
     }
 
     @Override
@@ -70,7 +78,7 @@ public class Porte extends Ouverture implements Fantome {
 
         // 3. Vantail & Arc de débattement (sensibles à l'inversion)
         gc.save();
-        if (ouvertureInversee) {
+        if (orientation > 0) {
             gc.scale(1, -1);
         }
 

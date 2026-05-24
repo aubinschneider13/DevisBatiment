@@ -31,6 +31,7 @@ public class ContexteSousPiece implements Contexte {
 
     private PieceView pieceView;
     private PieceControleur pieceControleur;
+    private boolean callbackBranche = false;
 
     //private boolean modeSelectionActif = false;
     //private final List<SurfaceAvecRevetement> surfacesSelectionnees = new ArrayList<>();
@@ -53,6 +54,13 @@ public class ContexteSousPiece implements Contexte {
             pieceView = new PieceView(stage, gestionnaire, piece,
                                       appControleur.getAireImmeuble());
             pieceControleur = pieceView.getControleur();
+        }
+        if (!callbackBranche) {
+            pieceControleur.setOnModification(() -> {
+                appControleur.rafraichirDevisEtProprietes();
+                appControleur.sauvegarderDetailsOuvertures();
+            });
+            callbackBranche = true;
         }
         appView.afficherPiece(pieceView);
         appView.setInstructions(
