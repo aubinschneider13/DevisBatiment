@@ -132,6 +132,7 @@ public class AppView extends BorderPane {
     public void afficherCanvasAire() {
         remplacerCanvasCentral(canvasAire);
         voileValidation.setVisible(voileActif);
+        labelInstructions.setVisible(true);
     }
 
     /**
@@ -155,6 +156,7 @@ public class AppView extends BorderPane {
         // Insère sous les overlays
         zoneDessin.getChildren().add(0, niveauView);
         voileValidation.setVisible(false);
+        labelInstructions.setVisible(false);
     }
 
     /**
@@ -175,6 +177,7 @@ public class AppView extends BorderPane {
 
         zoneDessin.getChildren().add(0, pieceView);
         voileValidation.setVisible(false);
+        labelInstructions.setVisible(false);
     }
 
     // =========================================================================
@@ -202,6 +205,16 @@ public class AppView extends BorderPane {
      */
     public void setInstructions(String texte) {
         labelInstructions.setText(texte);
+
+        // ✅ Synchronisation automatique avec la sous-vue active si présente
+        if (!zoneDessin.getChildren().isEmpty()) {
+            var activeView = zoneDessin.getChildren().get(0);
+            if (activeView instanceof PieceView pv) {
+                pv.setInstructions(texte);
+            } else if (activeView instanceof NiveauView nv) {
+                nv.setInstructions(texte);
+            }
+        }
     }
 
     // =========================================================================

@@ -45,6 +45,11 @@ public class Point implements Dessin {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
+    public double distanceA(Point autre) {
+        if (autre == null) return Double.MAX_VALUE;
+        return Math.hypot(this.x - autre.getX(), this.y - autre.getY());
+    }
+
     @Override
     public void dessiner(GraphicsContext gc) {
         gc.setFill(this.getColor());

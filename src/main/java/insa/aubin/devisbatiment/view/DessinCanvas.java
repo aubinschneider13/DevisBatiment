@@ -1,5 +1,6 @@
 package insa.aubin.devisbatiment.view;
 
+import insa.aubin.devisbatiment.controlleur.PieceControleur;
 import insa.aubin.devisbatiment.modele.*;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
@@ -182,9 +183,38 @@ public class DessinCanvas extends Canvas {
         if (selection != null) {
             for (SurfaceAvecRevetement surface : selection) {
                 if (surface instanceof CoteMur cm) {
+
+                    // Valeurs par défaut : coordonnées du mur parent de l'appartement
                     Mur m = cm.getMurParent();
                     double x1 = m.getPoint1().getX(), y1 = m.getPoint1().getY();
                     double x2 = m.getPoint2().getX(), y2 = m.getPoint2().getY();
+
+                    // On cherche si la pièce active est actuellement dessinée sur le canvas
+                    boolean coordTrouvees = false;
+                    for (Dessin d : this.elements) {
+                        if (d instanceof PieceControleur.DessinPiece dp) {
+                            Piece pieceActive = dp.getPiece();
+
+                            // Cherche un mur de pièce dont le CoteMur correspond
+                            // (par identité directe ou par murParent commun)
+                            List<CoteMur> cotesPiece = pieceActive.getCotesMurs();
+                            List<Mur> mursPiece = pieceActive.getMurs();
+                            for (int i = 0; i < cotesPiece.size(); i++) {
+                                if (cotesPiece.get(i) == cm
+                                        || cotesPiece.get(i).getMurParent() == cm.getMurParent()) {
+                                    Mur murPiece = mursPiece.get(i);
+                                    x1 = murPiece.getPoint1().getX();
+                                    y1 = murPiece.getPoint1().getY();
+                                    x2 = murPiece.getPoint2().getX();
+                                    y2 = murPiece.getPoint2().getY();
+                                    coordTrouvees = true;
+                                    break;
+                                }
+                            }
+                            if (coordTrouvees) break;
+                        }
+                    }
+
                     double dx = x2 - x1;
                     double dy = y2 - y1;
                     double len = Math.hypot(dx, dy);
@@ -192,12 +222,16 @@ public class DessinCanvas extends Canvas {
                         double nx = -dy / len;
                         double ny = dx / len;
                         double offset = 0.08;
-                        if (cm == m.getCoteDroit()) {
+
+                        if (cm == cm.getMurParent().getCoteDroit()) {
                             offset = -offset;
                         }
-                        gc.setStroke(Color.web("#00E5FF", 0.7));
+
+                        gc.save();
+                        gc.setStroke(Color.web("#00E5FF", 0.7)); // Ligne cyan ajustée
                         gc.setLineWidth(0.08);
                         gc.strokeLine(x1 + offset * nx, y1 + offset * ny, x2 + offset * nx, y2 + offset * ny);
+                        gc.restore();
                     }
                 } else if (surface instanceof Sol sol) {
                     List<Point> poly = sol.getPolygonePiece();
@@ -401,5 +435,9 @@ public class DessinCanvas extends Canvas {
     public void setElementSelectionne(Object element) {
         this.elementSelectionne = element;
         redrawAll();
+    }
+
+    public double getZoomFactor() {
+        return zoomFactor;
     }
 }

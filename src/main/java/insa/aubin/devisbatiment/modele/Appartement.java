@@ -105,17 +105,47 @@ public class Appartement extends ElementDeConstruction implements Dessin {
 
     /**
      * Calcule le devis total de l'appartement :
-     * somme des devis de toutes ses pièces plus le prix des menuiseries portées par ses murs.
+     * somme des devis de toutes ses pièces plus le prix des menuiseries portées par ses murs (filtrées géométriquement).
      */
     public double calculerDevis() {
         double total = 0;
         for (Piece p : pieces) {
             total += p.calculerDevis();
         }
+
+        // Filtrage spatial absolu des ouvertures (Anti-doublons complet)
+        List<Point> positionsOuverturesFacturees = new ArrayList<>();
+        double prixMenuiseries = 0;
+
         for (Mur m : getMurs()) {
-            total += m.calculerPrixMenuiseries();
+            if (m.getListeOuvertures() != null) {
+                for (Ouverture o : m.getListeOuvertures()) {
+                    // Calcul des coordonnées XY absolues de l'ouverture
+                    Point posAbsolue = m.getPointSurMur(o.getPositionSurMur());
+                    boolean dejaComptabilisee = false;
+
+                    // On utilise Math.hypot pour calculer la distance euclidienne pure entre les coordonnées
+                    for (Point pFacture : positionsOuverturesFacturees) {
+                        double distance = Math.hypot(
+                                pFacture.getX() - posAbsolue.getX(),
+                                pFacture.getY() - posAbsolue.getY()
+                        );
+
+                        // Tolérance de 10 cm pour absorber les micro-arrondis des double
+                        if (distance < 0.10) {
+                            dejaComptabilisee = true;
+                            break;
+                        }
+                    }
+
+                    if (!dejaComptabilisee) {
+                        positionsOuverturesFacturees.add(posAbsolue);
+                        prixMenuiseries += o.getPrixForfaitaire();
+                    }
+                }
+            }
         }
-        return total;
+        return total + prixMenuiseries;
     }
 
     // =========================================================================
@@ -199,48 +229,69 @@ public class Appartement extends ElementDeConstruction implements Dessin {
      * les murs délimiteurs extérieurs ET toutes les cloisons intérieures des pièces.
      * Utile pour la détection et la sélection globale des revêtements.
      */
+    private boolean estPointSurSegment(Point p, Mur m) {
+        double x1 = m.getPoint1().getX(), y1 = m.getPoint1().getY();
+        double x2 = m.getPoint2().getX(), y2 = m.getPoint2().getY();
+        double px = p.getX(), py = p.getY();
+
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double len2 = dx * dx + dy * dy;
+        if (len2 < 1e-6) return false;
+
+        // Distance du point à la droite (tolérance 5 cm)
+        double cross = (px - x1) * dy - (py - y1) * dx;
+        double dist = Math.abs(cross) / Math.sqrt(len2);
+        if (dist > 0.05) return false;
+
+        // Le point doit être situé entre les extrémités (tolérance 5 cm)
+        double dot = (px - x1) * dx + (py - y1) * dy;
+        if (dot < -0.05 || dot > len2 + 0.05) return false;
+
+        return true;
+    }
+
+    private boolean sontMursSuperposes(Mur m1, Mur m2) {
+        // Deux murs sont superposés si l'un est contenu dans l'autre (collinéaires et chevauchants)
+        return (estPointSurSegment(m1.getPoint1(), m2) && estPointSurSegment(m1.getPoint2(), m2)) ||
+               (estPointSurSegment(m2.getPoint1(), m1) && estPointSurSegment(m2.getPoint2(), m1));
+    }
+
     private boolean estMurDejaPresent(List<Mur> liste, Mur murTest) {
         if (murTest == null) return false;
-        double x1 = murTest.getPoint1().getX();
-        double y1 = murTest.getPoint1().getY();
-        double x2 = murTest.getPoint2().getX();
-        double y2 = murTest.getPoint2().getY();
-        
         for (Mur m : liste) {
-            if (m == null) continue;
-            double mx1 = m.getPoint1().getX();
-            double my1 = m.getPoint1().getY();
-            double mx2 = m.getPoint2().getX();
-            double my2 = m.getPoint2().getY();
-            
-            // Sens 1: p1 -> p1 et p2 -> p2
-            boolean sens1 = Math.abs(x1 - mx1) < 1e-2 && Math.abs(y1 - my1) < 1e-2 &&
-                            Math.abs(x2 - mx2) < 1e-2 && Math.abs(y2 - my2) < 1e-2;
-            // Sens 2: p1 -> p2 et p2 -> p1
-            boolean sens2 = Math.abs(x1 - mx2) < 1e-2 && Math.abs(y1 - my2) < 1e-2 &&
-                            Math.abs(x2 - mx1) < 1e-2 && Math.abs(y2 - my1) < 1e-2;
-            
-            if (sens1 || sens2) {
+            if (m != null && sontMursSuperposes(m, murTest)) {
                 return true;
             }
         }
         return false;
     }
 
+    private boolean estMemeLigne(Mur m1, Mur m2) {
+        double tol = 1e-3;
+        boolean sens1 = m1.getPoint1().distanceA(m2.getPoint1()) < tol && m1.getPoint2().distanceA(m2.getPoint2()) < tol;
+        boolean sens2 = m1.getPoint1().distanceA(m2.getPoint2()) < tol && m1.getPoint2().distanceA(m2.getPoint1()) < tol;
+        return sens1 || sens2;
+    }
+
     public List<Mur> getMurs() {
         List<Mur> tousLesMurs = new ArrayList<>();
         if (this.mursDelimiteurs != null) {
             for (Mur m : this.mursDelimiteurs) {
-                if (!estMurDejaPresent(tousLesMurs, m)) {
-                    tousLesMurs.add(m);
-                }
+                tousLesMurs.add(m);
             }
         }
         for (Piece p : this.pieces) {
             if (p.getMurs() != null) {
                 for (Mur m : p.getMurs()) {
-                    // Évite les doublons si un mur est partagé
-                    if (!estMurDejaPresent(tousLesMurs, m)) {
+                    boolean doublon = false;
+                    for (Mur existant : tousLesMurs) {
+                        if (estMemeLigne(existant, m)) {
+                            doublon = true;
+                            break;
+                        }
+                    }
+                    if (!doublon) {
                         tousLesMurs.add(m);
                     }
                 }
