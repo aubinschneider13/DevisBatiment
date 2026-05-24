@@ -276,39 +276,39 @@ public class PieceControleur {
             return;
         }
 
-        // Clic Gauche : Sélection biface
-        double distMinMur = 0.15; // On capte le clic si on est à moins de 15cm du mur
+        // Clic Gauche : Sélection du mur
+        double distMinMur = 0.15;
 
         for (Dessin d : vue.getCanvas().getElements()) {
             if (d instanceof Mur m) {
-                Mur ref = m;
+                if (m.distanceA(pClic) < distMinMur) {
 
-                if (ref.distanceA(pClic) < distMinMur) {
-                    // Calcul vectoriel pour savoir de quel côté on a cliqué
-                    double x1 = ref.getPoint1().getX(), y1 = ref.getPoint1().getY();
-                    double x2 = ref.getPoint2().getX(), y2 = ref.getPoint2().getY();
+                    double x1 = m.getPoint1().getX(), y1 = m.getPoint1().getY();
+                    double x2 = m.getPoint2().getX(), y2 = m.getPoint2().getY();
                     double px = pClic.getX(), py = pClic.getY();
 
+                    // Calcul du produit vectoriel par rapport au sens du mur affiché (m)
                     double cross = (x2 - x1) * (py - y1) - (y2 - y1) * (px - x1);
-                    Mur originalRef = ref.getOriginal() != null ? ref.getOriginal() : ref;
+
+                    // Sélection directe sur le mur d'AFFICHAGE (pas l'original).
+                    // Cela garantit que les coordonnées de surbrillance restent
+                    // dans les limites du mur tel qu'il est dessiné sur le canevas.
+                    CoteMur coteSel = (cross > 0) ? m.getCoteGauche() : m.getCoteDroit();
 
                     if (event.isShiftDown()) {
-                        basculerSelection(originalRef.getCoteGauche());
-                        basculerSelection(originalRef.getCoteDroit());
+                        basculerSelection(m.getCoteGauche());
+                        basculerSelection(m.getCoteDroit());
                         vue.setInstructions("Sélection biface : Côté Gauche ET Droit synchronisés.");
                     } else {
-                        if (cross > 0) {
-                            basculerSelection(originalRef.getCoteGauche());
-                        } else {
-                            basculerSelection(originalRef.getCoteDroit());
-                        }
+                        basculerSelection(coteSel);
+                        vue.setInstructions("Face sélectionnée : " + coteSel);
                     }
-                    return; // On a trouvé le mur, on s'arrête là
+                    return;
                 }
             }
         }
 
-        // Si aucun mur n'a été touché, c'est qu'on a cliqué au centre de la pièce (Sol + Plafond)
+        // Clic au centre de la pièce (Sol + Plafond)
         for (Piece piece : pieces) {
             if (GeometrieUtils.pointDansPolygone(pClic.getX(), pClic.getY(), piece.getPoints())) {
                 basculerSelection(piece.getSol());
