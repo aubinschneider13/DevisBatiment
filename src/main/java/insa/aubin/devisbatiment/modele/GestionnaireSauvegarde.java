@@ -168,6 +168,20 @@ public class GestionnaireSauvegarde {
         ecrireLignes(cheminParent + "/couloirs.txt", lignes);
     }
 
+    public void sauvegarderTremies(Niveau n, Batiment b) {
+        if (!sauvegardeActive) return;
+
+        String cheminParent = getCheminNiveau(n, b);
+        new File(cheminParent).mkdirs();
+
+        List<String> lignes = new ArrayList<>();
+        for (Tremie tremie : n.getTremies()) {
+            lignes.add(tremie.toCSV());
+        }
+
+        ecrireLignes(cheminParent + "/tremies.txt", lignes);
+    }
+
     // ────────────────────────────────────────────
     // Piece
     // ────────────────────────────────────────────
@@ -291,6 +305,7 @@ public class GestionnaireSauvegarde {
 
                 chargerAppartements(niveau, immeuble, nomBatiment, id);
                 chargerCouloirs(niveau, nomBatiment, id);
+                chargerTremies(niveau, nomBatiment, id);
             }
         } catch (Exception e) {
             System.err.println("Erreur chargement niveaux : " + e.getMessage());
@@ -406,6 +421,45 @@ public class GestionnaireSauvegarde {
             }
         } catch (Exception e) {
             System.err.println("Erreur chargement couloirs : " + e.getMessage());
+        }
+    }
+
+    private void chargerTremies(Niveau niveau, String nomBatiment, String idNiveau) {
+        File fichier = new File(cheminRacine + "/" + nomBatiment + "/" + idNiveau + "/tremies.txt");
+        if (!fichier.exists()) return;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(fichier))) {
+            String ligne;
+
+            while ((ligne = br.readLine()) != null) {
+                ligne = ligne.trim();
+                if (ligne.isEmpty()) continue;
+
+                String[] parts = ligne.split(";");
+
+                // TREMIE;id;type;x;y;cote
+                if (parts.length < 6 || !parts[0].equals("TREMIE")) continue;
+
+                String id = parts[1];
+                String type = parts[2];
+                Point centre = new Point(
+                        Double.parseDouble(parts[3]),
+                        Double.parseDouble(parts[4])
+                );
+
+                Tremie tremie;
+                if ("ESCALIER".equals(type)) {
+                    tremie = new Escalier(centre);
+                } else if ("ASCENSEUR".equals(type)) {
+                    tremie = new Ascenseur(centre);
+                } else {
+                    continue;
+                }
+                tremie.setId(id);
+                niveau.ajouterTremie(tremie);
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur chargement tremies : " + e.getMessage());
         }
     }
 

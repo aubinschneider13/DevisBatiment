@@ -8,6 +8,7 @@ import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
 import insa.aubin.devisbatiment.modele.Mur;
 import insa.aubin.devisbatiment.modele.Piece;
 import insa.aubin.devisbatiment.modele.Point;
+import insa.aubin.devisbatiment.modele.Tremie;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -64,6 +65,11 @@ public class PieceView extends StackPane {
     // Constructeur avec couloir
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
                     Couloir couloir, AireImmeuble aire) {
+       this(stage, gestionnaire, couloir, aire, List.of());
+   }
+
+    public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
+                    Couloir couloir, AireImmeuble aire, List<Tremie> tremies) {
        this(stage, gestionnaire, (Appartement) null, (AireImmeuble) null);
        this.controleur.setAfficherAdjacenceCouloir(false);
 
@@ -85,7 +91,18 @@ public class PieceView extends StackPane {
                    null
            );
        }
+       afficherTremies(tremies);
    }
+
+    private void afficherTremies(List<Tremie> tremies) {
+        if (tremies == null) return;
+        for (Tremie tremie : tremies) {
+            if (tremie != null && !canvas.getElements().contains(tremie)) {
+                canvas.ajouterElement(tremie);
+            }
+        }
+        canvas.redrawAll();
+    }
     // Constructeur principal
     public PieceView(Stage stage, GestionnaireSauvegarde gestionnaire,
                      Appartement appartement, AireImmeuble aire) {

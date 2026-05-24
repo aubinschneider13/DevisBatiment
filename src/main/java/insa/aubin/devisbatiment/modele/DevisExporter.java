@@ -32,6 +32,16 @@ public class DevisExporter {
             sb.append("--------------------------------------------------------------------------------\n");
             sb.append(String.format("  Hauteur sous plafond : %.2f m\n", niveau.getHauteurPlafond()));
             sb.append(String.format("  Nombre d'appartements : %d\n", niveau.getNbAppartements()));
+            if (niveau.getTremies() != null && !niveau.getTremies().isEmpty()) {
+                int nbEscaliers = 0;
+                int nbAscenseurs = 0;
+                for (Tremie tremie : niveau.getTremies()) {
+                    if (tremie instanceof Escalier) nbEscaliers++;
+                    else if (tremie instanceof Ascenseur) nbAscenseurs++;
+                }
+                sb.append(String.format("  Tr\u00e9mies : %d escalier(s), %d ascenseur(s)\n", nbEscaliers, nbAscenseurs));
+                sb.append(String.format(Locale.US, "  Co\u00fbt total des tr\u00e9mies : %,.2f \u20ac\n", niveau.calculerPrixTremies()));
+            }
             sb.append(String.format(Locale.US, "  Sous-total niveau : %,.2f \u20ac\n", niveau.calculerDevis()));
             sb.append("--------------------------------------------------------------------------------\n\n");
 
@@ -65,9 +75,14 @@ public class DevisExporter {
 
                 sb.append(String.format("    Menuiseries install\u00e9es : %d porte(s), %d fen\u00eatre(s)\n", nbPortes, nbFenêtres));
                 sb.append(String.format(Locale.US, "    Co\u00fbt total des menuiseries : %,.2f \u20ac\n", totalMenuiseries));
+                double totalTremiesAppartement = appart.calculerPrixTremies(niveau.getTremies());
+                if (totalTremiesAppartement > 0) {
+                    sb.append(String.format(Locale.US, "    Co\u00fbt des tr\u00e9mies associ\u00e9es : %,.2f \u20ac\n", totalTremiesAppartement));
+                }
                 // ────────────────────────────────────────────────────────────────────────
 
-                sb.append(String.format(Locale.US, "    Sous-total appartement (Pi\u00e8ces + Menuiseries) : %,.2f \u20ac\n", appart.calculerDevis()));
+                sb.append(String.format(Locale.US, "    Sous-total appartement (Pi\u00e8ces + Menuiseries + Tr\u00e9mies) : %,.2f \u20ac\n",
+                        appart.calculerDevis(niveau.getTremies())));
                 sb.append("    ............................................................................\n");
 
                 if (appart.getPieces() == null || appart.getPieces().isEmpty()) {

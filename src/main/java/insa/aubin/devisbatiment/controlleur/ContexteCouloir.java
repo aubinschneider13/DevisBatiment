@@ -12,12 +12,13 @@ import java.util.List;
 public class ContexteCouloir implements Contexte {
 
     private static final List<String> BOUTONS = List.of(
-            "navigation", "echelle", "mur", "porte", "fenetre"
+            "navigation", "echelle", "mur", "porte", "fenetre", "escalier", "ascenseur"
     );
 
     private final Couloir couloir;
     private final AppView appView;
     private final AppControleur appControleur;
+    private final NiveauControleur niveauControleur;
     private final Stage stage;
     private final GestionnaireSauvegarde gestionnaire;
 
@@ -27,17 +28,27 @@ public class ContexteCouloir implements Contexte {
     public ContexteCouloir(Couloir couloir, AppView appView,
                            AppControleur appControleur, Stage stage,
                            GestionnaireSauvegarde gestionnaire) {
+        this(couloir, appView, appControleur, stage, gestionnaire, null);
+    }
+
+    public ContexteCouloir(Couloir couloir, AppView appView,
+                           AppControleur appControleur, Stage stage,
+                           GestionnaireSauvegarde gestionnaire,
+                           NiveauControleur niveauControleur) {
         this.couloir       = couloir;
         this.appView       = appView;
         this.appControleur = appControleur;
         this.stage         = stage;
         this.gestionnaire  = gestionnaire;
+        this.niveauControleur = niveauControleur;
     }
 
     @Override
     public void installer() {
         if (pieceView == null) {
-            pieceView = new PieceView(stage, gestionnaire, couloir, appControleur.getAireImmeuble());
+            pieceView = new PieceView(stage, gestionnaire, couloir,
+                    appControleur.getAireImmeuble(),
+                    niveauControleur != null ? niveauControleur.getNiveau().getTremies() : List.of());
             pieceControleur = pieceView.getControleur();
         }
         appView.afficherPiece(pieceView);
@@ -75,6 +86,20 @@ public class ContexteCouloir implements Contexte {
     public void onBtnFenetre() {
         if (pieceControleur != null)
             pieceControleur.changerEtat(PieceControleur.ETAT_FENETRE);
+    }
+
+    @Override
+    public void onBtnEscalier() {
+        if (niveauControleur != null) {
+            appControleur.activerPlacementTremieDepuisCouloir(niveauControleur, true);
+        }
+    }
+
+    @Override
+    public void onBtnAscenseur() {
+        if (niveauControleur != null) {
+            appControleur.activerPlacementTremieDepuisCouloir(niveauControleur, false);
+        }
     }
 
     @Override

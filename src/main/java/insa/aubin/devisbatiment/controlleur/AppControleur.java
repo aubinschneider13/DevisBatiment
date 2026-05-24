@@ -163,6 +163,8 @@ public class AppControleur {
         tb.getBtnEchelle()      .setOnAction(e -> contexteActif.onBtnEchelle());
         tb.getBtnMur()          .setOnAction(e -> contexteActif.onBtnMur());
         tb.getBtnAppartement()  .setOnAction(e -> contexteActif.onBtnAppartement());
+        tb.getBtnEscalier()     .setOnAction(e -> contexteActif.onBtnEscalier());
+        tb.getBtnAscenseur()    .setOnAction(e -> contexteActif.onBtnAscenseur());
         tb.getBtnPiece()        .setOnAction(e -> contexteActif.onBtnPiece());
         tb.getBtnPorte()        .setOnAction(e -> contexteActif.onBtnPorte());
         tb.getBtnFenetre()      .setOnAction(e -> contexteActif.onBtnFenetre());
@@ -238,7 +240,7 @@ public class AppControleur {
                     tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
                 } else if (contexteActif instanceof ContextePiece ctx) {
                     ctx.viderSelection();
-                    double totalDevis = ctx.getAppartement().calculerDevis();
+                    double totalDevis = calculerDevisAppartement(ctx.getAppartement());
                     tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
                 }
 
@@ -330,6 +332,19 @@ public class AppControleur {
         return false;
     }
 
+    private double calculerDevisAppartement(Appartement appartement) {
+        if (appartement == null) return 0;
+
+        if (immeuble != null) {
+            for (Niveau niveau : immeuble.getNiveaux()) {
+                if (niveau.getAppartements().contains(appartement)) {
+                    return appartement.calculerDevis(niveau.getTremies());
+                }
+            }
+        }
+        return appartement.calculerDevis();
+    }
+
     private void brancherNavigateur() {
         appView.getNavigateurView()
                 .getTreeView()
@@ -415,7 +430,7 @@ public class AppControleur {
                 ctx.getPieceControleur().setContexteSauvegarde(appart, niveau, immeuble);
                 ctx.getPieceControleur().rechargerVueAppartementDepuisDisque();
 
-                double totalDevis = appart.calculerDevis();
+                double totalDevis = calculerDevisAppartement(appart);
                 tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
                 nav.afficherProprietesAppartement(appart);
                 return;
@@ -425,7 +440,8 @@ public class AppControleur {
         // --- Clic sur un couloir ---
         Couloir couloir = mapItemCouloir.get(item);
         if (couloir != null) {
-            ContexteCouloir ctx = new ContexteCouloir(couloir, appView, this, stage, gestionnaire);
+            NiveauControleur niveauCtrl = trouverNiveauControleurPourCouloir(couloir);
+            ContexteCouloir ctx = new ContexteCouloir(couloir, appView, this, stage, gestionnaire, niveauCtrl);
             contexteCouloirs.put(couloir, ctx);
             basculerContexte(ctx);
             tbDevis.getLabelTotalDevis().setText("Total estimé : -- €");
@@ -488,6 +504,34 @@ public class AppControleur {
         return null;
     }
 
+    private NiveauControleur trouverNiveauControleurPourCouloir(Couloir couloir) {
+        if (couloir == null) return null;
+        for (NiveauControleur ctrl : niveauControleurs) {
+            if (ctrl.getNiveau().getCouloirs().contains(couloir)) {
+                return ctrl;
+            }
+        }
+        return null;
+    }
+
+    public void activerPlacementTremieDepuisCouloir(NiveauControleur niveauControleur,
+                                                    boolean escalier) {
+        if (niveauControleur == null) return;
+
+        int idx = niveauControleurs.indexOf(niveauControleur);
+        if (idx >= 0 && idx < itemsNiveau.size()) {
+            itemNiveauActif = itemsNiveau.get(idx);
+            appView.getNavigateurView().selectionner(itemNiveauActif);
+        }
+
+        basculerContexte(new ContexteNiveau(niveauControleur, appView, this));
+        if (escalier) {
+            niveauControleur.activerModeEscalier();
+        } else {
+            niveauControleur.activerModeAscenseur();
+        }
+    }
+
     /**
      * Recalcule instantanément le devis et met à jour le panneau des propriétés
      * à droite selon l'élément actuellement sélectionné dans l'arbre.
@@ -498,7 +542,7 @@ public class AppControleur {
 
         // 1. Mise à jour du libellé de devis selon le contexte actif
         if (contexteActif instanceof ContextePiece ctx) {
-            double totalDevis = ctx.getAppartement().calculerDevis();
+            double totalDevis = calculerDevisAppartement(ctx.getAppartement());
             tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
         } else if (contexteActif instanceof ContexteSousPiece ctx) {
             double totalDevis = ctx.getPiece().calculerDevis();
@@ -593,7 +637,10 @@ public class AppControleur {
             }
         });
 
+        brancherTremiesGlobales(ctrl);
+
         niveauControleurs.add(ctrl);
+        recopierTremiesExistantesSurNouveauNiveau(ctrl, niveau);
 
         itemNiveauActif = itemNiveau;
         appView.getNavigateurView().selectionner(itemNiveau);
@@ -626,7 +673,7 @@ public class AppControleur {
 
     private void onEchap() {
         if (contexteActif instanceof ContexteNiveau ctx) {
-            ctx.getNiveauControleur().annulerMurEnCours();
+            ctx.getNiveauControleur().revenirEtatNeutre();
         } else if (contexteActif instanceof ContexteAire) {
             immeubleControleur.annulerAire();
         } else if (contexteActif instanceof ContexteSousPiece ctx) {
@@ -791,8 +838,65 @@ public class AppControleur {
             });
 
             ctrl.rechargerCouloirs(niveau.getCouloirs());
+            ctrl.rechargerTremies();
+            brancherTremiesGlobales(ctrl);
             niveauControleurs.add(ctrl);
         }
+    }
+
+    private void brancherTremiesGlobales(NiveauControleur ctrl) {
+        ctrl.setOnTremiePlacee(tremie -> {
+            placerTremieSurTousLesNiveaux(tremie);
+            return true;
+        });
+        ctrl.setOnTremieSupprimee(this::supprimerTremieSurTousLesNiveaux);
+    }
+
+    private void placerTremieSurTousLesNiveaux(Tremie modele) {
+        if (modele == null || immeuble == null) return;
+
+        for (int i = 0; i < niveauControleurs.size(); i++) {
+            NiveauControleur ctrl = niveauControleurs.get(i);
+            Tremie copie = copierTremie(modele);
+            ctrl.ajouterTremieDepuisPropagation(copie);
+
+            Niveau niveau = i < immeuble.getNiveaux().size() ? immeuble.getNiveaux().get(i) : null;
+            if (niveau != null) {
+                gestionnaire.sauvegarderTremies(niveau, immeuble);
+            }
+        }
+    }
+
+    private void supprimerTremieSurTousLesNiveaux(Tremie tremie) {
+        if (tremie == null || immeuble == null) return;
+
+        for (int i = 0; i < niveauControleurs.size(); i++) {
+            NiveauControleur ctrl = niveauControleurs.get(i);
+            ctrl.supprimerTremieDepuisPropagation(tremie.getId());
+
+            Niveau niveau = i < immeuble.getNiveaux().size() ? immeuble.getNiveaux().get(i) : null;
+            if (niveau != null) {
+                gestionnaire.sauvegarderTremies(niveau, immeuble);
+            }
+        }
+    }
+
+    private void recopierTremiesExistantesSurNouveauNiveau(NiveauControleur ctrl, Niveau niveau) {
+        if (ctrl == null || niveau == null || niveauControleurs.isEmpty()) return;
+
+        for (Tremie tremie : niveauControleurs.get(0).getTremies()) {
+            ctrl.ajouterTremieDepuisPropagation(copierTremie(tremie));
+        }
+        if (!niveau.getTremies().isEmpty()) {
+            gestionnaire.sauvegarderTremies(niveau, immeuble);
+        }
+    }
+
+    private Tremie copierTremie(Tremie source) {
+        Point centre = new Point(source.getX(), source.getY());
+        Tremie copie = source instanceof Escalier ? new Escalier(centre) : new Ascenseur(centre);
+        copie.recopierIdDepuis(source);
+        return copie;
     }
 
     private void recalibrerCompteursBatiment(Immeuble immeuble) {

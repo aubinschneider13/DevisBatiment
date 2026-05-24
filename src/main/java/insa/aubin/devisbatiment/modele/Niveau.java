@@ -18,6 +18,7 @@ public class Niveau extends ElementDeConstruction {
     private double hauteurPlafond;
     private final ArrayList<Appartement> appartements;
     private final ArrayList<Couloir> couloirs;
+    private final ArrayList<Tremie> tremies;
 
     /**
      * @param mursDelimiteurs les 4 murs du périmètre construits par Batiment
@@ -29,6 +30,7 @@ public class Niveau extends ElementDeConstruction {
         this.hauteurPlafond = hauteurPlafond;
         this.appartements = new ArrayList<>();
         this.couloirs = new ArrayList<>();
+        this.tremies = new ArrayList<>();
     }
 
     public double calculerDevis() {
@@ -37,7 +39,18 @@ public class Niveau extends ElementDeConstruction {
         for (Appartement appartement : appartements) {
             total += appartement.calculerDevis();
         }
+        for (Tremie tremie : tremies) {
+            total += tremie.getPrixForfaitaire();
+        }
 
+        return total;
+    }
+
+    public double calculerPrixTremies() {
+        double total = 0;
+        for (Tremie tremie : tremies) {
+            total += tremie.getPrixForfaitaire();
+        }
         return total;
     }
 
@@ -108,6 +121,23 @@ public class Niveau extends ElementDeConstruction {
     }
 
     // =========================================================================
+    // GESTION DES TREMIES
+    // =========================================================================
+
+    public void ajouterTremie(Tremie tremie) {
+        if (tremie == null) return;
+        boolean existe = tremies.stream().anyMatch(t -> t.getId().equals(tremie.getId()));
+        if (!existe) {
+            tremies.add(tremie);
+        }
+    }
+
+    public void supprimerTremie(String idTremie) {
+        if (idTremie == null) return;
+        tremies.removeIf(t -> idTremie.equals(t.getId()));
+    }
+
+    // =========================================================================
     // GETTERS ET SETTERS
     // =========================================================================
 
@@ -133,6 +163,10 @@ public class Niveau extends ElementDeConstruction {
 
     public ArrayList<Couloir> getCouloirs() {
         return couloirs;
+    }
+
+    public ArrayList<Tremie> getTremies() {
+        return tremies;
     }
 
     @Override

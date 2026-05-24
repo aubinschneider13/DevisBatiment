@@ -10,6 +10,7 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.paint.Color;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -57,6 +58,8 @@ public class NiveauControleur {
     private Function<Appartement, TreeItem<String>> onAppartementCree = null;
     private Function<Couloir, TreeItem<String>> onCouloirCree = null;
     private Runnable onCouloirsRecalcules = null;
+    private Function<Tremie, Boolean> onTremiePlacee = null;
+    private Consumer<Tremie> onTremieSupprimee = null;
     private final List<Couloir> couloirs = new ArrayList<>();
     private final Map<TreeItem<String>, Couloir> mapItemCouloir = new HashMap<>();
 
@@ -133,6 +136,14 @@ public class NiveauControleur {
         this.onCouloirsRecalcules = callback;
     }
 
+    public void setOnTremiePlacee(Function<Tremie, Boolean> callback) {
+        this.onTremiePlacee = callback;
+    }
+
+    public void setOnTremieSupprimee(Consumer<Tremie> callback) {
+        this.onTremieSupprimee = callback;
+    }
+
     // =========================================================================
     // BRANCHEMENT DES LISTENERS SOURIS / CLAVIER
     // =========================================================================
@@ -150,7 +161,10 @@ public class NiveauControleur {
         vue.getCanvas().setFocusTraversable(true);
         vue.getCanvas().setOnKeyPressed(e -> {
             if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
-                annulerMurEnCours();
+                revenirEtatNeutre();
+            } else if (e.getCode() == javafx.scene.input.KeyCode.DELETE
+                    || e.getCode() == javafx.scene.input.KeyCode.BACK_SPACE) {
+                supprimerTremieSelectionnee();
             }
         });
 
@@ -170,13 +184,26 @@ public class NiveauControleur {
         switch (mode) {
             case "MUR"         -> gererClicMur(snap);
             case "APPARTEMENT" -> gererClicAppartement(snap);
+            case "ESCALIER"    -> gererClicTremie(snap, true);
+            case "ASCENSEUR"   -> gererClicTremie(snap, false);
+            case "SELECTION"   -> gererClicSelection(snap);
         }
     }
 
     private void mouvementCanvas(javafx.scene.input.MouseEvent e) {
-        if (!mode.equals("MUR")) return;
-
         Point2D snap = vue.getCanvas().snapToGrid(e.getX(), e.getY());
+
+        if (mode.equals("ESCALIER") || mode.equals("ASCENSEUR")) {
+            Tremie fantome = mode.equals("ESCALIER")
+                    ? new Escalier(new Point(snap.getX(), snap.getY()))
+                    : new Ascenseur(new Point(snap.getX(), snap.getY()));
+            vue.getCanvas().setFantome(fantome, snap.getX(), snap.getY(), 0,
+                    tremieRentreeDansCouloir(snap.getX(), snap.getY()));
+            vue.getCanvas().redrawAll();
+            return;
+        }
+
+        if (!mode.equals("MUR")) return;
 
         if (vue.getOptionsMurVue().estRectangulaire()) {
             if (etapeRectangle == 1 && mur1Rect != null) {
@@ -189,6 +216,120 @@ public class NiveauControleur {
             if (mur1EnCours != null) {
                 mur1EnCours.setPoint2(new Point(snap.getX(), snap.getY()));
             }
+        }
+        vue.getCanvas().redrawAll();
+    }
+
+    private void gererClicTremie(Point2D snap, boolean escalier) {
+        double x = snap.getX();
+        double y = snap.getY();
+
+        if (!tremieRentreeDansCouloir(x, y)) {
+            vue.setInstructions("Placement impossible : la trémie 2x2 m doit tenir entièrement dans un couloir.");
+            return;
+        }
+
+        if (niveau.getTremies().stream().anyMatch(t -> tremiesSeChevauchent(t, x, y))) {
+            vue.setInstructions("Placement impossible : une trémie existe déjà à cet emplacement.");
+            return;
+        }
+
+        Tremie tremie = escalier ? new Escalier(new Point(x, y)) : new Ascenseur(new Point(x, y));
+        boolean propagee = onTremiePlacee != null && Boolean.TRUE.equals(onTremiePlacee.apply(tremie));
+        if (!propagee) {
+            ajouterTremieDepuisPropagation(tremie);
+        }
+        vue.setInstructions((escalier ? "Escalier" : "Ascenseur")
+                + " placé sur tous les niveaux du bâtiment.");
+    }
+
+    private boolean tremiesSeChevauchent(Tremie tremie, double x, double y) {
+        return Math.abs(tremie.getX() - x) < Tremie.COTE
+                && Math.abs(tremie.getY() - y) < Tremie.COTE;
+    }
+
+    private boolean tremieRentreeDansCouloir(double centreX, double centreY) {
+        if (couloirs.isEmpty()) return false;
+
+        double demi = Tremie.COTE / 2.0;
+        double[][] points = {
+                { centreX, centreY },
+                { centreX - demi, centreY - demi },
+                { centreX + demi, centreY - demi },
+                { centreX + demi, centreY + demi },
+                { centreX - demi, centreY + demi },
+                { centreX, centreY - demi },
+                { centreX + demi, centreY },
+                { centreX, centreY + demi },
+                { centreX - demi, centreY }
+        };
+
+        for (Couloir couloir : couloirs) {
+            for (List<Point> polygone : couloir.getPolygones()) {
+                boolean tousDedans = true;
+                for (double[] point : points) {
+                    if (!GeometrieUtils.estDansZone(point[0], point[1], polygone)) {
+                        tousDedans = false;
+                        break;
+                    }
+                }
+                if (tousDedans) return true;
+            }
+        }
+        return false;
+    }
+
+    private void gererClicSelection(Point2D snap) {
+        Point pClic = new Point(snap.getX(), snap.getY());
+        Tremie selection = trouverTremie(pClic);
+        vue.getCanvas().setElementSelectionne(selection);
+        if (selection != null) {
+            vue.setInstructions("Trémie sélectionnée — Suppr pour la supprimer sur tous les niveaux.");
+        } else {
+            vue.setInstructions("Aucun élément sélectionné.");
+        }
+    }
+
+    private Tremie trouverTremie(Point p) {
+        for (int i = niveau.getTremies().size() - 1; i >= 0; i--) {
+            Tremie tremie = niveau.getTremies().get(i);
+            if (p.getX() >= tremie.getMinX() && p.getX() <= tremie.getMaxX()
+                    && p.getY() >= tremie.getMinY() && p.getY() <= tremie.getMaxY()) {
+                return tremie;
+            }
+        }
+        return null;
+    }
+
+    public void supprimerTremieSelectionnee() {
+        Object selection = vue.getCanvas().getElementSelectionne();
+        if (selection instanceof Tremie tremie) {
+            if (onTremieSupprimee != null) {
+                onTremieSupprimee.accept(tremie);
+            } else {
+                supprimerTremieDepuisPropagation(tremie.getId());
+            }
+        }
+    }
+
+    public void ajouterTremieDepuisPropagation(Tremie tremie) {
+        if (tremie == null) return;
+        niveau.ajouterTremie(tremie);
+        boolean existeCanvas = vue.getCanvas().getElements().stream()
+                .anyMatch(d -> d instanceof Tremie t && t.getId().equals(tremie.getId()));
+        if (!existeCanvas) {
+            vue.getCanvas().ajouterElement(tremie);
+        }
+        vue.getCanvas().redrawAll();
+    }
+
+    public void supprimerTremieDepuisPropagation(String idTremie) {
+        if (idTremie == null) return;
+        niveau.supprimerTremie(idTremie);
+        vue.getCanvas().getElements().removeIf(d -> d instanceof Tremie t && idTremie.equals(t.getId()));
+        Object selection = vue.getCanvas().getElementSelectionne();
+        if (selection instanceof Tremie t && idTremie.equals(t.getId())) {
+            vue.getCanvas().setElementSelectionne(null);
         }
         vue.getCanvas().redrawAll();
     }
@@ -264,7 +405,17 @@ public class NiveauControleur {
             vue.getCanvas().getElements().remove(mur2Rect);
         }
         reinitialiserRectangle();
+        vue.getCanvas().clearFantome();
         vue.getCanvas().redrawAll();
+    }
+
+    public void revenirEtatNeutre() {
+        annulerMurEnCours();
+        vue.getCanvas().setElementSelectionne(null);
+        mode = "AUCUN";
+        vue.getCanvas().setPanActif(true);
+        vue.getOptionsMurVue().setVisible(false);
+        vue.setInstructions("Navigation â€” molette pour zoomer, clic droit pour dÃ©placer");
     }
 
     private void reinitialiserRectangle() {
@@ -306,6 +457,15 @@ public class NiveauControleur {
             mursBruts.add(ss.mur);
         }
         List<MurOriente> mursOrientes = GeometrieUtils.ordonnerMurs(mursBruts);
+        List<Point> polygoneAppartement = new ArrayList<>();
+        for (MurOriente murOriente : mursOrientes) {
+            polygoneAppartement.add(murOriente.getPoint1());
+        }
+
+        if (zoneChevaucheTremie(polygoneAppartement)) {
+            vue.setInstructions("Impossible de créer un appartement sur une trémie.");
+            return;
+        }
 
         // Créer l'appartement et l'ajouter au canvas
         compteurAppartements++;
@@ -328,6 +488,35 @@ public class NiveauControleur {
         recalculerCouloirs();
     }
     
+    private boolean zoneChevaucheTremie(List<Point> polygone) {
+        if (polygone == null || polygone.size() < 3) return false;
+
+        for (Tremie tremie : niveau.getTremies()) {
+            List<Point> carre = List.of(
+                    new Point(tremie.getMinX(), tremie.getMinY()),
+                    new Point(tremie.getMaxX(), tremie.getMinY()),
+                    new Point(tremie.getMaxX(), tremie.getMaxY()),
+                    new Point(tremie.getMinX(), tremie.getMaxY())
+            );
+
+            if (GeometrieUtils.estDansZone(tremie.getX(), tremie.getY(), polygone)) {
+                return true;
+            }
+            for (Point coin : carre) {
+                if (GeometrieUtils.estDansZone(coin.getX(), coin.getY(), polygone)) {
+                    return true;
+                }
+            }
+            for (Point sommet : polygone) {
+                if (sommet.getX() >= tremie.getMinX() && sommet.getX() <= tremie.getMaxX()
+                        && sommet.getY() >= tremie.getMinY() && sommet.getY() <= tremie.getMaxY()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public void recalculerCouloirs() {
         for (Couloir c : couloirs) vue.getCanvas().getElements().remove(c);
         couloirs.clear();
@@ -607,6 +796,7 @@ public class NiveauControleur {
 
     public void activerModeMur() {
         annulerMurEnCours();
+        vue.getCanvas().setElementSelectionne(null);
         mode = "MUR";
         vue.getCanvas().setPanActif(false);
         vue.getOptionsMurVue().setVisible(true);
@@ -625,6 +815,7 @@ public class NiveauControleur {
 
     public void activerModeAppartement() {
         annulerMurEnCours();
+        vue.getCanvas().setElementSelectionne(null);
         mode = "APPARTEMENT";
         vue.getCanvas().setPanActif(false);
         vue.getOptionsMurVue().setVisible(false);
@@ -634,6 +825,7 @@ public class NiveauControleur {
 
     public void activerModeNavigation() {
         annulerMurEnCours();
+        vue.getCanvas().setElementSelectionne(null);
         mode = "AUCUN";
         vue.getCanvas().setPanActif(true);
         vue.getOptionsMurVue().setVisible(false);
@@ -649,6 +841,24 @@ public class NiveauControleur {
         vue.getOptionsMurVue().setVisible(false);
         vue.setInstructions(
                 "Outil Sélection/Édition actif — Sélectionnez un élément pour voir ses propriétés");
+    }
+
+    public void activerModeEscalier() {
+        annulerMurEnCours();
+        vue.getCanvas().setElementSelectionne(null);
+        mode = "ESCALIER";
+        vue.getCanvas().setPanActif(false);
+        vue.getOptionsMurVue().setVisible(false);
+        vue.setInstructions("Cliquez dans un couloir pour placer un escalier 2x2 m sur tous les niveaux");
+    }
+
+    public void activerModeAscenseur() {
+        annulerMurEnCours();
+        vue.getCanvas().setElementSelectionne(null);
+        mode = "ASCENSEUR";
+        vue.getCanvas().setPanActif(false);
+        vue.getOptionsMurVue().setVisible(false);
+        vue.setInstructions("Cliquez dans un couloir pour placer un ascenseur 2x2 m sur tous les niveaux");
     }
 
     private void mettreAJourInstructionsMur() {
@@ -694,6 +904,18 @@ public class NiveauControleur {
        vue.getCanvas().redrawAll();
    }
 
+   public void rechargerTremies() {
+       for (Tremie tremie : niveau.getTremies()) {
+           if (tremie == null) continue;
+           boolean existeCanvas = vue.getCanvas().getElements().stream()
+                   .anyMatch(d -> d instanceof Tremie t && t.getId().equals(tremie.getId()));
+           if (!existeCanvas) {
+               vue.getCanvas().ajouterElement(tremie);
+           }
+       }
+       vue.getCanvas().redrawAll();
+   }
+
     // =========================================================================
     // GETTERS
     // =========================================================================
@@ -704,4 +926,5 @@ public class NiveauControleur {
     public Map<TreeItem<String>, Appartement> getMapItemAppartement() { return mapItemAppartement; }
     public Map<TreeItem<String>, Couloir> getMapItemCouloir() { return mapItemCouloir; }
     public List<Couloir> getCouloirs() { return couloirs; }
+    public List<Tremie> getTremies() { return niveau.getTremies(); }
 }

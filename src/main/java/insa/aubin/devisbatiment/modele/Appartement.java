@@ -148,6 +148,23 @@ public class Appartement extends ElementDeConstruction implements Dessin {
         return total + prixMenuiseries;
     }
 
+    public double calculerDevis(List<Tremie> tremiesNiveau) {
+        return calculerDevis() + calculerPrixTremies(tremiesNiveau);
+    }
+
+    public double calculerPrixTremies(List<Tremie> tremiesNiveau) {
+        if (tremiesNiveau == null || tremiesNiveau.isEmpty()) return 0;
+
+        double total = 0;
+        List<Point> polygone = getPolygone();
+        for (Tremie tremie : tremiesNiveau) {
+            if (tremie != null && GeometrieUtils.estDansZone(tremie.getX(), tremie.getY(), polygone)) {
+                total += tremie.getPrixForfaitaire();
+            }
+        }
+        return total;
+    }
+
     // =========================================================================
     // GESTION DES PIÈCES
     // =========================================================================

@@ -312,6 +312,11 @@ public class DessinCanvas extends Canvas {
                     gc.strokePolygon(xs, ys, poly.size());
                 }
             }
+            else if (elementSelectionne instanceof Tremie t) {
+                gc.setLineWidth(0.08);
+                gc.strokeRect(t.getMinX(), t.getMinY(), Tremie.COTE, Tremie.COTE);
+                gc.fillRect(t.getMinX(), t.getMinY(), Tremie.COTE, Tremie.COTE);
+            }
             gc.restore();
         }
 

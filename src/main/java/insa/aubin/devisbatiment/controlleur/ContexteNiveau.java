@@ -24,7 +24,8 @@ public class ContexteNiveau implements Contexte {
 
     /** Identifiants des boutons affichés dans ce contexte (ordre = ordre toolbar). */
     private static final List<String> BOUTONS = List.of(
-            "navigation", "selection", "echelle", "mur", "appartement", "ajouterNiveau"
+            "navigation", "selection", "echelle", "mur", "appartement",
+            "escalier", "ascenseur", "ajouterNiveau"
     );
 
     // --- Dépendances ---
@@ -92,6 +93,16 @@ public class ContexteNiveau implements Contexte {
     public void onBtnAppartement() {
         niveauControleur.activerModeAppartement();
     }
+
+    @Override
+    public void onBtnEscalier() {
+        niveauControleur.activerModeEscalier();
+    }
+
+    @Override
+    public void onBtnAscenseur() {
+        niveauControleur.activerModeAscenseur();
+    }
   
     /**
      * Bascule le panneau de sélection d'échelle.
@@ -156,7 +167,12 @@ public class ContexteNiveau implements Contexte {
     public void gererToucheClavier(KeyEvent e) {
         if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
             if (niveauControleur != null) {
-                niveauControleur.annulerMurEnCours();
+                niveauControleur.revenirEtatNeutre();
+            }
+        } else if (e.getCode() == javafx.scene.input.KeyCode.DELETE
+                || e.getCode() == javafx.scene.input.KeyCode.BACK_SPACE) {
+            if (niveauControleur != null) {
+                niveauControleur.supprimerTremieSelectionnee();
             }
         }
     }
