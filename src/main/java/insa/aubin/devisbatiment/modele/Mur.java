@@ -135,6 +135,11 @@ public class Mur extends ElementDeConstruction implements Dessin {
         return total;
     }
 
+    public double calculerPrixRevetement() {
+        return (coteGauche != null ? coteGauche.calculerPrixRevetement() : 0.0)
+             + (coteDroit != null ? coteDroit.calculerPrixRevetement() : 0.0);
+    }
+
     /** Calcule la distance la plus courte entre un point et ce segment de mur */
     public double distanceA(Point p) {
         double x1 = point1.getX(), y1 = point1.getY();
@@ -217,7 +222,11 @@ public class Mur extends ElementDeConstruction implements Dessin {
         gc.save();
         boolean aRevG = coteGauche.getRevetements() != null && !coteGauche.getRevetements().isEmpty();
         if (aRevG) {
-            gc.setStroke(Color.web("#2ecc71")); // Vert pour revêtement posé à gauche
+            if (coteGauche.getRevetements().get(0) instanceof Isolant) {
+                gc.setStroke(Color.web("#d35400")); // Orange pour isolant posé à gauche
+            } else {
+                gc.setStroke(Color.web("#2ecc71")); // Vert pour revêtement posé à gauche
+            }
             gc.setLineWidth(0.08);
         } else {
             gc.setStroke(this.color);
@@ -230,7 +239,11 @@ public class Mur extends ElementDeConstruction implements Dessin {
         gc.save();
         boolean aRevD = coteDroit.getRevetements() != null && !coteDroit.getRevetements().isEmpty();
         if (aRevD) {
-            gc.setStroke(Color.web("#3498db")); // Bleu pour revêtement posé à droite
+            if (coteDroit.getRevetements().get(0) instanceof Isolant) {
+                gc.setStroke(Color.web("#d35400")); // Orange pour isolant posé à droite
+            } else {
+                gc.setStroke(Color.web("#3498db")); // Bleu pour revêtement posé à droite
+            }
             gc.setLineWidth(0.08);
         } else {
             gc.setStroke(this.color);
@@ -336,10 +349,17 @@ public class Mur extends ElementDeConstruction implements Dessin {
             point2.getX(), point2.getY(),
             hauteur);
         
-        String idGauche = (coteGauche.getRevetements() != null && !coteGauche.getRevetements().isEmpty()) 
-                ? coteGauche.getRevetements().get(0).getId() : "VIDE";
-        String idDroit = (coteDroit.getRevetements() != null && !coteDroit.getRevetements().isEmpty()) 
-                ? coteDroit.getRevetements().get(0).getId() : "VIDE";
+        String idGauche = "VIDE";
+        if (coteGauche.getRevetements() != null && !coteGauche.getRevetements().isEmpty()) {
+            java.util.List<String> ids = coteGauche.getRevetements().stream().map(Revetement::getId).toList();
+            idGauche = String.join(",", ids);
+        }
+
+        String idDroit = "VIDE";
+        if (coteDroit.getRevetements() != null && !coteDroit.getRevetements().isEmpty()) {
+            java.util.List<String> ids = coteDroit.getRevetements().stream().map(Revetement::getId).toList();
+            idDroit = String.join(",", ids);
+        }
 
         StringBuilder ouverturesCsv = new StringBuilder();
         int nbOuvertures = listeOuvertures != null ? listeOuvertures.size() : 0;

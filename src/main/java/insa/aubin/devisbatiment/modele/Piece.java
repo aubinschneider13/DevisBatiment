@@ -181,6 +181,16 @@ public class Piece extends ElementDeConstruction {
                 murAffichage.setTypeMur(original.getTypeMur());
                 original.getListeOuvertures().forEach(o ->
                     OuvertureUtils.ajouterCopieSiAbsente(murAffichage, o, original));
+                
+                // Copier les revêtements pour l'affichage immédiat
+                if (original.getCoteGauche().getRevetements() != null) {
+                    murAffichage.getCoteGauche().getRevetements().clear();
+                    murAffichage.getCoteGauche().getRevetements().addAll(original.getCoteGauche().getRevetements());
+                }
+                if (original.getCoteDroit().getRevetements() != null) {
+                    murAffichage.getCoteDroit().getRevetements().clear();
+                    murAffichage.getCoteDroit().getRevetements().addAll(original.getCoteDroit().getRevetements());
+                }
             }
             result.add(murAffichage);
         }

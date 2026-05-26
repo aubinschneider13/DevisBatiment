@@ -114,6 +114,7 @@ public class ContextePiece implements Contexte {
         appView.setInstructions(
             "Vue pièce de « " + appartement + " » — dessinez les cloisons intérieures"
         );
+        insa.aubin.devisbatiment.modele.CoteMur.vueIsoleePieceActive = false;
     }
 
     /**

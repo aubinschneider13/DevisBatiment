@@ -334,11 +334,53 @@ public class ProprietesView extends VBox {
                     .map(Revetement::getDesignation)
                     .findFirst().orElse("?");
             infoMurs = nbMursAvecRev + " mur(s) — "
-                    + (nbDistincts == 1 ? premierNom : "Variés");
+                    + (nbDistincts == 1 ? premierNom : "Vari\u00e9s");
         }
         bloc.getChildren().add(
                 creerLigneRevetement("Murs", infoMurs, COULEUR_BADGE_MUR)
         );
+
+        // --- Murs (Détails individuels de chaque face avec revêtement/isolant) ---
+        if (piece.getCotesMurs() != null) {
+            int idx = 1;
+            for (CoteMur cm : piece.getCotesMurs()) {
+                Mur mur = cm.getMurParent();
+                // Face intérieure
+                if (!cm.getRevetements().isEmpty()) {
+                    String sideLabel = (cm == mur.getCoteGauche()) ? "Gauche" : "Droit";
+                    for (Revetement r : cm.getRevetements()) {
+                        String typeStr = (r instanceof Isolant) ? "Isol." : "Rev.";
+                        String details = r.getDesignation();
+                        if (r instanceof Isolant iso) {
+                            details += String.format(java.util.Locale.US, " (%.1f cm)", iso.getEpaisseur());
+                        }
+                        String labelMur = String.format("  \u2514 Mur %d (%s)", idx, sideLabel);
+                        bloc.getChildren().add(
+                                creerLigneRevetement(labelMur, typeStr + " : " + details, COULEUR_BADGE_MUR)
+                        );
+                    }
+                }
+                // Autre face (externe) pour les façades
+                if (mur.getTypeMur() == Mur.TypeMur.EXTERIEUR) {
+                    CoteMur autreCote = (cm == mur.getCoteGauche()) ? mur.getCoteDroit() : mur.getCoteGauche();
+                    if (autreCote.getRevetements() != null && !autreCote.getRevetements().isEmpty()) {
+                        String autreSideLabel = (autreCote == mur.getCoteGauche()) ? "Gauche" : "Droit";
+                        for (Revetement r : autreCote.getRevetements()) {
+                            String typeStr = (r instanceof Isolant) ? "Isol. Ext" : "Rev. Ext";
+                            String details = r.getDesignation();
+                            if (r instanceof Isolant iso) {
+                                details += String.format(java.util.Locale.US, " (%.1f cm)", iso.getEpaisseur());
+                            }
+                            String labelMur = String.format("  \u2514 Mur %d (%s)", idx, autreSideLabel);
+                            bloc.getChildren().add(
+                                    creerLigneRevetement(labelMur, typeStr + " : " + details, COULEUR_BADGE_MUR)
+                            );
+                        }
+                    }
+                }
+                idx++;
+            }
+        }
 
         // --- Sol ---
         // Sol peut avoir plusieurs revêtements — on affiche le premier ou "Variés"

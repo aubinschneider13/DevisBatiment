@@ -79,6 +79,45 @@ public class DevisExporter {
                 if (totalTremiesAppartement > 0) {
                     sb.append(String.format(Locale.US, "    Co\u00fbt des tr\u00e9mies associ\u00e9es : %,.2f \u20ac\n", totalTremiesAppartement));
                 }
+                
+                // --- AJOUT : Détail de l'isolation des murs extérieurs de l'appartement ---
+                if (appart.getMurs() != null) {
+                    boolean aMursExterieurs = false;
+                    for (Mur m : appart.getMurs()) {
+                        if (m.getTypeMur() == Mur.TypeMur.EXTERIEUR) {
+                            if (!aMursExterieurs) {
+                                sb.append("    Murs ext\u00e9rieurs et isolation :\n");
+                                aMursExterieurs = true;
+                            }
+                            double netArea = m.calculerSurfaceNette();
+                            sb.append(String.format(Locale.US, "      - %s (Longueur : %.2f m, Surf. Nette : %.2f m\u00b2)\n",
+                                    m.toString(), m.calculerLongueur(), netArea));
+                            
+                            boolean isole = false;
+                            if (m.getCoteGauche().getRevetements() != null) {
+                                for (Revetement r : m.getCoteGauche().getRevetements()) {
+                                    if (r instanceof Isolant iso) {
+                                        sb.append(String.format(Locale.US, "        > C\u00f4t\u00e9 Gauche : %s (Type : %s, \u00c9paisseur : %.1f cm) - %.2f \u20ac\n",
+                                                iso.getDesignation(), iso.getTypeIsolant().getLibelle(), iso.getEpaisseur(), iso.calculerPrixTotal(netArea)));
+                                        isole = true;
+                                    }
+                                }
+                            }
+                            if (m.getCoteDroit().getRevetements() != null) {
+                                for (Revetement r : m.getCoteDroit().getRevetements()) {
+                                    if (r instanceof Isolant iso) {
+                                        sb.append(String.format(Locale.US, "        > C\u00f4t\u00e9 Droit : %s (Type : %s, \u00c9paisseur : %.1f cm) - %.2f \u20ac\n",
+                                                iso.getDesignation(), iso.getTypeIsolant().getLibelle(), iso.getEpaisseur(), iso.calculerPrixTotal(netArea)));
+                                        isole = true;
+                                    }
+                                }
+                            }
+                            if (!isole) {
+                                sb.append("        > Sans isolation (0,00 \u20ac)\n");
+                            }
+                        }
+                    }
+                }
                 // ────────────────────────────────────────────────────────────────────────
 
                 sb.append(String.format(Locale.US, "    Sous-total appartement (Pi\u00e8ces + Menuiseries + Tr\u00e9mies) : %,.2f \u20ac\n",
@@ -103,7 +142,7 @@ public class DevisExporter {
                         } else {
                             for (Revetement r : sol.getRevetements()) {
                                 sb.append(String.format(Locale.US, "%s (%.2f \u20ac/m\u00b2) - %.2f \u20ac\n",
-                                        r.getDesignation(), r.getPrixUnitaire(), sol.calculerPrixRevetement()));
+                                        r.getDesignation(), r.getPrixUnitaire(), r.calculerPrixTotal(sol.calculerSurface())));
                             }
                         }
                     }
@@ -117,7 +156,7 @@ public class DevisExporter {
                         } else {
                             for (Revetement r : plafond.getRevetements()) {
                                 sb.append(String.format(Locale.US, "%s (%.2f \u20ac/m\u00b2) - %.2f \u20ac\n",
-                                        r.getDesignation(), r.getPrixUnitaire(), plafond.calculerPrixRevetement()));
+                                        r.getDesignation(), r.getPrixUnitaire(), r.calculerPrixTotal(plafond.calculerSurface())));
                             }
                         }
                     }
@@ -147,11 +186,36 @@ public class DevisExporter {
 
                             if (cm.getRevetements() != null && !cm.getRevetements().isEmpty()) {
                                 for (Revetement r : cm.getRevetements()) {
-                                    sb.append(String.format(Locale.US, "          Rev\u00eatement : %s (%.2f \u20ac/m\u00b2) - %.2f \u20ac\n",
-                                            r.getDesignation(), r.getPrixUnitaire(), cm.calculerPrixRevetement()));
+                                    String designation = r.getDesignation();
+                                    if (r instanceof Isolant iso) {
+                                        designation = String.format(Locale.US, "%s (Type : %s, \u00c9paisseur : %.1f cm)",
+                                                designation, iso.getTypeIsolant().getLibelle(), iso.getEpaisseur());
+                                    }
+                                    String label = (r instanceof Isolant) ? "Isolation" : "Rev\u00eatement";
+                                    sb.append(String.format(Locale.US, "          %s : %s (%.2f \u20ac/m\u00b2) - %.2f \u20ac\n",
+                                            label, designation, r.getPrixUnitaire(), r.calculerPrixTotal(netArea)));
                                 }
                             } else {
-                                sb.append("          Rev\u00eatement : Sans rev\u00eatement (0,00 \u20ac)\n");
+                                String labelVide = (mur.getTypeMur() == Mur.TypeMur.EXTERIEUR) ? "Sans isolation" : "Sans rev\u00eatement";
+                                sb.append(String.format("          %s (0,00 \u20ac)\n", labelVide));
+                            }
+
+                            // Affichage de l'autre côté (face extérieure de la façade) si le mur est EXTERIEUR
+                            if (mur.getTypeMur() == Mur.TypeMur.EXTERIEUR) {
+                                CoteMur autreCote = (cm == mur.getCoteGauche()) ? mur.getCoteDroit() : mur.getCoteGauche();
+                                if (autreCote.getRevetements() != null && !autreCote.getRevetements().isEmpty()) {
+                                    String autreSideLabel = (autreCote == mur.getCoteGauche()) ? "Gauche" : "Droit";
+                                    for (Revetement r : autreCote.getRevetements()) {
+                                        String designation = r.getDesignation();
+                                        if (r instanceof Isolant iso) {
+                                            designation = String.format(Locale.US, "%s (Type : %s, \u00c9paisseur : %.1f cm)",
+                                                    designation, iso.getTypeIsolant().getLibelle(), iso.getEpaisseur());
+                                        }
+                                        String label = (r instanceof Isolant) ? "Isolation" : "Rev\u00eatement";
+                                        sb.append(String.format(Locale.US, "          %s (Face %s) : %s (%.2f \u20ac/m\u00b2) - %.2f \u20ac\n",
+                                                label, autreSideLabel, designation, r.getPrixUnitaire(), r.calculerPrixTotal(netArea)));
+                                    }
+                                }
                             }
                             countMur++;
                         }
