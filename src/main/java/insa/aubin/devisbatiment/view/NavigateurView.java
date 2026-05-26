@@ -73,7 +73,11 @@ public class NavigateurView extends VBox {
 
     /** Met à jour le libellé de la racine avec le nom du bâtiment. */
     public void setNomImmeuble(String nomImmeuble) {
-        rootItem.setValue("Immeuble : ( " + nomImmeuble + " )");
+        setNomBatiment("Immeuble", nomImmeuble);
+    }
+
+    public void setNomBatiment(String typeBatiment, String nomBatiment) {
+        rootItem.setValue(typeBatiment + " : ( " + nomBatiment + " )");
     }
 
     /**

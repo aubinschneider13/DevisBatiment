@@ -6,7 +6,7 @@ import java.util.Locale;
 
 public class DevisExporter {
 
-    public static String genererTexteDevis(Immeuble immeuble) {
+    public static String genererTexteDevis(Batiment immeuble) {
         if (immeuble == null) return "Aucun immeuble s\u00e9lectionn\u00e9.";
 
         StringBuilder sb = new StringBuilder();
@@ -171,7 +171,7 @@ public class DevisExporter {
         return sb.toString();
     }
 
-    public static void exporterDevisVersFichier(Immeuble immeuble, File fichier) throws IOException {
+    public static void exporterDevisVersFichier(Batiment immeuble, File fichier) throws IOException {
         String rapport = genererTexteDevis(immeuble);
 
         try (PrintWriter writer = new PrintWriter(

@@ -261,8 +261,8 @@ public class GestionnaireSauvegarde {
     // Charger les données
     // ────────────────────────────────────────────
 
-    public List<Immeuble> chargerTousBatiments() {
-        List<Immeuble> result = new ArrayList<>();
+    public List<Batiment> chargerTousBatiments() {
+        List<Batiment> result = new ArrayList<>();
 
         if (cheminRacine == null || cheminRacine.trim().isEmpty()) {
             return result;
@@ -280,11 +280,12 @@ public class GestionnaireSauvegarde {
 
                 String[] parts = ligne.split(";");
 
-                // IMMEUBLE;id;nom;nbNiveaux;x1;y1;x2;y2;x3;y3;x4;y4
-                if (parts.length < 12 || !parts[0].equals("IMMEUBLE")) continue;
+                // IMMEUBLE/MAISON;id;nom;nbNiveaux;x1;y1;x2;y2;x3;y3;x4;y4
+                if (parts.length < 12 || (!parts[0].equals("IMMEUBLE") && !parts[0].equals("MAISON"))) continue;
 
                 String id = parts[1];
                 String nom = parts[2];
+                String type = parts[0];
 
                 Point p1 = new Point(Double.parseDouble(parts[4]), Double.parseDouble(parts[5]));
                 Point p2 = new Point(Double.parseDouble(parts[6]), Double.parseDouble(parts[7]));
@@ -299,7 +300,9 @@ public class GestionnaireSauvegarde {
                 aire.setP3(p3);
                 aire.valider();
 
-                Immeuble immeuble = new Immeuble(nom, aire);
+                Batiment immeuble = "MAISON".equals(type)
+                        ? new Maison(nom, aire)
+                        : new Immeuble(nom, aire);
                 immeuble.setId(id);
 
                 chargerNiveaux(immeuble, nom);
@@ -313,7 +316,7 @@ public class GestionnaireSauvegarde {
         return result;
     }
 
-    private void chargerNiveaux(Immeuble immeuble, String nomBatiment) {
+    private void chargerNiveaux(Batiment immeuble, String nomBatiment) {
         File fichier = new File(cheminRacine + "/" + nomBatiment + "/niveaux.txt");
         if (!fichier.exists()) return;
 
@@ -344,7 +347,7 @@ public class GestionnaireSauvegarde {
         }
     }
 
-    private void chargerAppartements(Niveau niveau, Immeuble immeuble,
+    private void chargerAppartements(Niveau niveau, Batiment immeuble,
                                      String nomBatiment, String idNiveau) {
         File fichier = new File(cheminRacine + "/" + nomBatiment + "/" + idNiveau + "/appartements.txt");
         if (!fichier.exists()) return;
@@ -637,7 +640,7 @@ public class GestionnaireSauvegarde {
         return null;
     }
 
-    public void supprimerBatiment(Immeuble immeuble) {
+    public void supprimerBatiment(Batiment immeuble) {
         if (!sauvegardeActive) return;
 
         File dossier = new File(cheminRacine + "/" + immeuble.getNomBatiment());

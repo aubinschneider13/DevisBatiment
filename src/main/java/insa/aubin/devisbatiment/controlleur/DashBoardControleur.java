@@ -12,7 +12,8 @@ import javafx.stage.Stage;
 import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
 import insa.aubin.devisbatiment.view.SettingsView;
 import insa.aubin.devisbatiment.controlleur.SettingsControleur;
-import insa.aubin.devisbatiment.modele.Immeuble;
+import insa.aubin.devisbatiment.modele.Batiment;
+import insa.aubin.devisbatiment.modele.Maison;
 import java.util.List;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
@@ -30,6 +31,7 @@ public class DashBoardControleur {
         this.stage = stage;
         this.gestionnaire = gestionnaire;
         creerImmeuble();
+        creerMaison();
         configurerSettings();
         chargerDevisRecents();
     }
@@ -46,6 +48,19 @@ public class DashBoardControleur {
         stage.setScene(immeubleScene);
         stage.setTitle("InsaBuilder - Nouveau devis pour un Immeuble");
         new AppControleur(appView, stage, gestionnaire);
+        mettreFenetrePleinEcran();
+    }
+
+    public void creerMaison(){
+        this.dashBoardView.getMaisonButton().setOnAction(e -> ouvrirMaison());
+    }
+
+    public void ouvrirMaison(){
+        AppView appView = new AppView();
+        Scene maisonScene = new Scene(appView);
+        stage.setScene(maisonScene);
+        stage.setTitle("InsaBuilder - Nouveau devis pour une Maison");
+        new AppControleur(appView, stage, gestionnaire, true);
         mettreFenetrePleinEcran();
     }
 
@@ -84,16 +99,18 @@ public class DashBoardControleur {
     private void chargerDevisRecents() {
         if (!gestionnaire.isSauvegardeActive()) return;
 
-        List<Immeuble> immeubles = gestionnaire.chargerTousBatiments();
+        List<Batiment> immeubles = gestionnaire.chargerTousBatiments();
 
-        for (Immeuble immeuble : immeubles) {
+        for (Batiment immeuble : immeubles) {
             creerBoutonDevis(immeuble); // gère lui-même l'ajout à la HBox
         }
     }
 
-    private Button creerBoutonDevis(Immeuble immeuble) {
+    private Button creerBoutonDevis(Batiment immeuble) {
         Image icone = new Image(
-            getClass().getResource("/images/immeuble_icone.png").toExternalForm()
+            getClass().getResource(immeuble instanceof Maison
+                    ? "/images/maison_icone.png"
+                    : "/images/immeuble_icone.png").toExternalForm()
         );
         ImageView img = new ImageView(icone);
         img.setFitWidth(50);
@@ -131,7 +148,7 @@ public class DashBoardControleur {
         return btn; 
     }
 
-    private void ouvrirImmeuble(Immeuble immeuble) {
+    private void ouvrirImmeuble(Batiment immeuble) {
         AppView appView = new AppView();
         Scene scene = new Scene(appView);
         stage.setScene(scene);

@@ -36,7 +36,8 @@ public class AppControleur {
     private final GestionnaireSauvegarde gestionnaire;
 
     // --- Modèle métier ---
-    private Immeuble immeuble = null;
+    private Batiment immeuble = null;
+    private boolean modeMaison = false;
 
     // --- Catalogue des revêtements ---
     private CatalogueRevetements catalogue;
@@ -70,9 +71,16 @@ public class AppControleur {
     // =========================================================================
     public AppControleur(AppView appView, Stage stage,
                          GestionnaireSauvegarde gestionnaire) {
+        this(appView, stage, gestionnaire, false);
+    }
+
+    public AppControleur(AppView appView, Stage stage,
+                         GestionnaireSauvegarde gestionnaire,
+                         boolean modeMaison) {
         this.appView      = appView;
         this.stage        = stage;
         this.gestionnaire = gestionnaire;
+        this.modeMaison   = modeMaison;
 
         this.catalogue = new CatalogueRevetements("src/main/resources/data/revetements.txt");
 
@@ -90,18 +98,19 @@ public class AppControleur {
         );
 
         basculerContexte(new ContexteAire(immeubleControleur, appView, this));
-        Platform.runLater(this::demanderNomImmeuble);
+        Platform.runLater(this::demanderNomBatiment);
     }
 
     // =========================================================================
     // CONSTRUCTEUR 2 : RECHARGEMENT D'UN PROJET EXISTANT
     // =========================================================================
     public AppControleur(AppView appView, Stage stage,
-                         GestionnaireSauvegarde gestionnaire, Immeuble immeubleExistant) {
+                         GestionnaireSauvegarde gestionnaire, Batiment immeubleExistant) {
         this.appView      = appView;
         this.stage        = stage;
         this.gestionnaire = gestionnaire;
         this.catalogue    = new CatalogueRevetements("src/main/resources/data/revetements.txt");
+        this.modeMaison   = immeubleExistant instanceof Maison;
 
         brancherToolBar();
         brancherToolBarDevis();
@@ -123,7 +132,7 @@ public class AppControleur {
         recalibrerCompteursBatiment(immeubleExistant);
 
         // Mettre à jour le navigateur
-        appView.getNavigateurView().setNomImmeuble(immeubleExistant.getNomBatiment());
+        appView.getNavigateurView().setNomBatiment(immeubleExistant.getTypeBatiment(), immeubleExistant.getNomBatiment());
         appView.activerVoile();
 
         // Reconstruire niveaux + appartements + pièces dans l'UI
@@ -266,7 +275,7 @@ public class AppControleur {
 
         tbDevis.getBtnExporterDevis().setOnAction(e -> {
             if (immeuble == null) {
-                Alert alert = new Alert(Alert.AlertType.WARNING, "Aucun immeuble à exporter !");
+                Alert alert = new Alert(Alert.AlertType.WARNING, "Aucun b\u00e2timent \u00e0 exporter !");
                 alert.showAndWait();
                 return;
             }
@@ -305,6 +314,7 @@ public class AppControleur {
     private List<String> appartementsSansPorteCouloir() {
         List<String> invalides = new ArrayList<>();
         if (immeuble == null) return invalides;
+        if (estMaison()) return invalides;
 
         for (int i = 0; i < niveauControleurs.size(); i++) {
             NiveauControleur ctrl = niveauControleurs.get(i);
@@ -382,7 +392,8 @@ public class AppControleur {
             nav.effacerProprietes();
             if (immeuble != null) {
                 double total = immeuble.calculerDevisTotal();
-                tbDevis.getLabelTotalDevis().setText(String.format("TOTAL IMMEUBLE : %.2f €", total));
+                tbDevis.getLabelTotalDevis().setText(String.format("TOTAL %s : %.2f €",
+                        immeuble.getTypeBatiment().toUpperCase(), total));
             }
             return;
         }
@@ -398,6 +409,16 @@ public class AppControleur {
         // --- Clic sur un niveau ---
         int idxNiveau = itemsNiveau.indexOf(item);
         if (idxNiveau >= 0) {
+            if (estMaison()) {
+                Niveau niveau = mapItemNiveau.get(item);
+                if (niveau != null && !niveau.getAppartements().isEmpty()) {
+                    TreeItem<String> itemAppart = trouverItemAppartement(niveau.getAppartements().get(0));
+                    if (itemAppart != null) {
+                        appView.getNavigateurView().selectionner(itemAppart);
+                        return;
+                    }
+                }
+            }
             NiveauControleur ctrl = niveauControleurs.get(idxNiveau);
             itemNiveauActif = item;
             basculerContexte(new ContexteNiveau(ctrl, appView, this));
@@ -578,17 +599,34 @@ public class AppControleur {
     public void onAireValidee() {
         String label = appView.getNavigateurView().getRootItem().getValue();
         String nom   = extraireNomImmeuble(label);
-        immeuble = new Immeuble(nom, immeubleControleur.getAireImmeuble());
+        immeuble = modeMaison
+                ? new Maison(nom, immeubleControleur.getAireImmeuble())
+                : new Immeuble(nom, immeubleControleur.getAireImmeuble());
 
         // Sauvegarde de l'immeuble (Code collègue)
         gestionnaire.sauvegarderBatiment(immeuble);
+
+        if (estMaison()) {
+            Niveau niveau = immeuble.ajouterNiveau(2.5);
+            Appartement appartement = niveau.ajouterAppartement(niveau.getMursDelimiteurs());
+            gestionnaire.sauvegarderNiveau(niveau, immeuble);
+            gestionnaire.sauvegarderAppartement(appartement, niveau, immeuble);
+
+            appView.activerVoile();
+            rechargerNiveaux(immeuble);
+            TreeItem<String> itemAppartement = trouverItemAppartement(appartement);
+            if (itemAppartement != null) {
+                appView.getNavigateurView().selectionner(itemAppartement);
+            }
+            return;
+        }
 
         appView.activerVoile();
         basculerContexte(new ContexteAire(immeubleControleur, appView, this));
     }
 
     public void onBtnAjouterNiveau() {
-        if (immeuble == null) return;
+        if (immeuble == null || estMaison()) return;
 
         Niveau niveau = immeuble.ajouterNiveau(2.5);
         gestionnaire.sauvegarderNiveau(niveau, immeuble);
@@ -708,12 +746,12 @@ public class AppControleur {
         new DashBoardControleur(dashBoardView, stage, gestionnaire);
     }
 
-    private void demanderNomImmeuble() {
+    private void demanderNomBatiment() {
         javafx.scene.control.TextInputDialog dialog =
-                new javafx.scene.control.TextInputDialog("Nouvel Immeuble");
-        dialog.setTitle("Nom de l'immeuble");
+                new javafx.scene.control.TextInputDialog(modeMaison ? "Nouvelle Maison" : "Nouvel Immeuble");
+        dialog.setTitle(modeMaison ? "Nom de la maison" : "Nom de l'immeuble");
         dialog.setHeaderText("Initialisation du projet");
-        dialog.setContentText("Veuillez entrer le nom de l'immeuble :");
+        dialog.setContentText(modeMaison ? "Veuillez entrer le nom de la maison :" : "Veuillez entrer le nom de l'immeuble :");
         dialog.setGraphic(null);
 
         javafx.scene.control.Button okButton =
@@ -728,7 +766,7 @@ public class AppControleur {
 
         Optional<String> result = dialog.showAndWait();
         if (result.isPresent() && !result.get().trim().isEmpty()) {
-            appView.getNavigateurView().setNomImmeuble(result.get().trim());
+            appView.getNavigateurView().setNomBatiment(modeMaison ? "Maison" : "Immeuble", result.get().trim());
         } else {
             retourDashboard();
         }
@@ -740,7 +778,11 @@ public class AppControleur {
         if (debut != -1 && fin != -1 && fin > debut) {
             return label.substring(debut + 2, fin);
         }
-        return "Immeuble";
+        return modeMaison ? "Maison" : "Immeuble";
+    }
+
+    public boolean estMaison() {
+        return modeMaison || immeuble instanceof Maison;
     }
 
     public AireImmeuble getAireImmeuble() {
@@ -872,7 +914,7 @@ public class AppControleur {
         }
     }
 
-    private void rechargerNiveaux(Immeuble immeuble) {
+    private void rechargerNiveaux(Batiment immeuble) {
         for (Niveau niveau : immeuble.getNiveaux()) {
             String nomNiveau = niveauControleurs.isEmpty()
                     ? "RDC" : "Niveau " + niveauControleurs.size();
@@ -1007,7 +1049,7 @@ public class AppControleur {
         return copie;
     }
 
-    private void recalibrerCompteursBatiment(Immeuble immeuble) {
+    private void recalibrerCompteursBatiment(Batiment immeuble) {
         int maxAppartement = 0;
         int maxPiece = 0;
 

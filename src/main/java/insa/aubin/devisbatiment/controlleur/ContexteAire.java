@@ -109,6 +109,9 @@ public class ContexteAire implements Contexte {
     @Override
     public List<String> getBoutonsVisibles() {
         if (immeubleControleur.isAireValidee()) {
+            if (appControleur.estMaison()) {
+                return List.of("navigation", "echelle");
+            }
             return List.of("navigation", "echelle", "ajouterNiveau");
         }
         return List.of("navigation", "echelle", "validerAire");
