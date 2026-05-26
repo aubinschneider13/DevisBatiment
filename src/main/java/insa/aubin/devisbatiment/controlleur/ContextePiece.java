@@ -100,6 +100,7 @@ public class ContextePiece implements Contexte {
                 TreeItem<String> itemPiece = appView.getNavigateurView()
                     .ajouterItemPiece(itemAppartement, piece.toString());
                 appControleur.enregistrerPiece(itemPiece, piece, itemAppartement);
+                appControleur.rafraichirDevisEtProprietes();
                 return itemPiece;
             });
             pieceControleur.setOnPieceSupprimee(appControleur::oublierPieceSupprimee);
