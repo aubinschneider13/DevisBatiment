@@ -58,11 +58,13 @@ public class ContexteSousPiece implements Contexte {
         if (!callbackBranche) {
             pieceControleur.setOnPieceSupprimee(appControleur::oublierPieceSupprimee);
             pieceControleur.setOnModification(() -> {
+                appControleur.rafraichirLibellePiece(piece);
                 appControleur.rafraichirDevisEtProprietes();
                 appControleur.sauvegarderDetailsOuvertures();
             });
             callbackBranche = true;
         }
+        pieceControleur.afficherOptionsUsagePiece(piece);
         appView.afficherPiece(pieceView);
         appView.setInstructions(
             "Vue de « " + piece + " » — dessinez l'aménagement intérieur"
@@ -73,6 +75,7 @@ public class ContexteSousPiece implements Contexte {
     public void desinstaller() {
         if (pieceControleur != null) {
             pieceControleur.annulerConstruction();
+            pieceControleur.masquerOptionsUsagePiece();
         }
     }
 

@@ -510,13 +510,19 @@ public class GestionnaireSauvegarde {
 
                 String[] parts = ligne.split(";");
 
-                // PIECE;id;numero;surface;hauteurPlafond;x1;y1;x2;y2...
+                // PIECE;id;numero;surface;hauteurPlafond;usage;x1;y1;x2;y2...
                 if (parts.length < 7 || !parts[0].equals("PIECE")) continue;
 
                 String id = parts[1];
+                String usage = "";
+                int indexPremierPoint = 5;
+                if (!estDouble(parts[5])) {
+                    usage = parts[5];
+                    indexPremierPoint = 6;
+                }
 
                 List<Point> pointsPiece = new ArrayList<>();
-                for (int i = 5; i + 1 < parts.length; i += 2) {
+                for (int i = indexPremierPoint; i + 1 < parts.length; i += 2) {
                     pointsPiece.add(new Point(
                             Double.parseDouble(parts[i]),
                             Double.parseDouble(parts[i + 1])
@@ -541,6 +547,7 @@ public class GestionnaireSauvegarde {
 
                 Piece piece = appart.ajouterPiece(mursPiece);
                 piece.setId(id);
+                piece.setUsage(usage);
             }
         } catch (Exception e) {
             System.err.println("Erreur chargement pièces : " + e.getMessage());
@@ -550,6 +557,16 @@ public class GestionnaireSauvegarde {
     // ────────────────────────────────────────────
     // Supprimer un bâtiment
     // ────────────────────────────────────────────
+
+    private boolean estDouble(String valeur) {
+        if (valeur == null || valeur.isBlank()) return false;
+        try {
+            Double.parseDouble(valeur);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
 
     private void chargerOuverturesMurs(List<Mur> murs, File fichier) {
         if (murs == null || fichier == null || !fichier.exists()) return;
