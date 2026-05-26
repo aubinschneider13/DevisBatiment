@@ -102,6 +102,7 @@ public class ContextePiece implements Contexte {
                 appControleur.enregistrerPiece(itemPiece, piece, itemAppartement);
                 return itemPiece;
             });
+            pieceControleur.setOnPieceSupprimee(appControleur::oublierPieceSupprimee);
             pieceControleur.setOnModification(() -> {
                 appControleur.rafraichirDevisEtProprietes();
                 appControleur.sauvegarderDetailsOuvertures();

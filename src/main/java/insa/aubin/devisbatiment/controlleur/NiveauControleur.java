@@ -60,6 +60,8 @@ public class NiveauControleur {
     private Runnable onCouloirsRecalcules = null;
     private Function<Tremie, Boolean> onTremiePlacee = null;
     private Consumer<Tremie> onTremieSupprimee = null;
+    private Consumer<Appartement> onAppartementSupprime = null;
+    private Runnable onModification = null;
     private final List<Couloir> couloirs = new ArrayList<>();
     private final Map<TreeItem<String>, Couloir> mapItemCouloir = new HashMap<>();
 
@@ -144,6 +146,14 @@ public class NiveauControleur {
         this.onTremieSupprimee = callback;
     }
 
+    public void setOnAppartementSupprime(Consumer<Appartement> callback) {
+        this.onAppartementSupprime = callback;
+    }
+
+    public void setOnModification(Runnable callback) {
+        this.onModification = callback;
+    }
+
     // =========================================================================
     // BRANCHEMENT DES LISTENERS SOURIS / CLAVIER
     // =========================================================================
@@ -164,7 +174,7 @@ public class NiveauControleur {
                 revenirEtatNeutre();
             } else if (e.getCode() == javafx.scene.input.KeyCode.DELETE
                     || e.getCode() == javafx.scene.input.KeyCode.BACK_SPACE) {
-                supprimerTremieSelectionnee();
+                supprimerSelection();
             }
         });
 
@@ -281,10 +291,25 @@ public class NiveauControleur {
 
     private void gererClicSelection(Point2D snap) {
         Point pClic = new Point(snap.getX(), snap.getY());
-        Tremie selection = trouverTremie(pClic);
+        Object selection = trouverTremie(pClic);
+        if (selection == null) {
+            selection = trouverAppartement(pClic);
+        }
+        if (selection == null) {
+            selection = trouverMurProche(pClic);
+        }
+
         vue.getCanvas().setElementSelectionne(selection);
-        if (selection != null) {
+        if (selection instanceof Tremie) {
             vue.setInstructions("Trémie sélectionnée — Suppr pour la supprimer sur tous les niveaux.");
+        } else if (selection instanceof Appartement) {
+            vue.setInstructions("Appartement selectionne - Suppr pour supprimer.");
+        } else if (selection instanceof Mur mur) {
+            if (estMurDelimiteurNiveau(mur) || estMurDelimiteurAppartement(mur)) {
+                vue.setInstructions("Mur delimiteur selectionne : suppression bloquee.");
+            } else {
+                vue.setInstructions("Mur libre selectionne - Suppr pour supprimer.");
+            }
         } else {
             vue.setInstructions("Aucun élément sélectionné.");
         }
@@ -301,7 +326,62 @@ public class NiveauControleur {
         return null;
     }
 
+    private Appartement trouverAppartement(Point p) {
+        for (int i = appartements.size() - 1; i >= 0; i--) {
+            Appartement appartement = appartements.get(i);
+            if (GeometrieUtils.pointDansPolygone(p.getX(), p.getY(), appartement.getPolygone())) {
+                return appartement;
+            }
+        }
+        return null;
+    }
+
+    private Mur trouverMurProche(Point p) {
+        Mur plusProche = null;
+        double distMin = 0.25;
+        for (Dessin d : vue.getCanvas().getElements()) {
+            if (d instanceof Mur m) {
+                double dist = m.distanceA(p);
+                if (dist < distMin) {
+                    distMin = dist;
+                    plusProche = m;
+                }
+            }
+        }
+        return plusProche;
+    }
+
+    private boolean estMurDelimiteurNiveau(Mur mur) {
+        if (mur == null) return true;
+        for (Mur delimiteur : niveau.getMursDelimiteurs()) {
+            if (GeometrieUtils.mursIdentiques(delimiteur, mur)
+                    || GeometrieUtils.mursSuperposes(delimiteur, mur)
+                    || GeometrieUtils.mursSuperposes(mur, delimiteur)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean estMurDelimiteurAppartement(Mur mur) {
+        if (mur == null) return true;
+        for (Appartement appartement : appartements) {
+            for (Mur delimiteur : appartement.getMursDelimiteurs()) {
+                if (GeometrieUtils.mursIdentiques(delimiteur, mur)
+                        || GeometrieUtils.mursSuperposes(delimiteur, mur)
+                        || GeometrieUtils.mursSuperposes(mur, delimiteur)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public void supprimerTremieSelectionnee() {
+        supprimerSelection();
+    }
+
+    public void supprimerSelection() {
         Object selection = vue.getCanvas().getElementSelectionne();
         if (selection instanceof Tremie tremie) {
             if (onTremieSupprimee != null) {
@@ -309,6 +389,107 @@ public class NiveauControleur {
             } else {
                 supprimerTremieDepuisPropagation(tremie.getId());
             }
+        } else if (selection instanceof Mur mur) {
+            supprimerMurSelectionne(mur);
+        } else if (selection instanceof Appartement appartement) {
+            supprimerAppartementSelectionne(appartement);
+        }
+    }
+
+    private void supprimerAppartementSelectionne(Appartement appartement) {
+        if (appartement == null) return;
+
+        supprimerOuverturesAppartement(appartement);
+        niveau.supprimerAppartement(appartement);
+        appartements.remove(appartement);
+        mapItemAppartement.entrySet().removeIf(entry -> entry.getValue() == appartement);
+        vue.getCanvas().getElements().removeIf(d -> d == appartement);
+        vue.getCanvas().setElementSelectionne(null);
+        recalculerCouloirs();
+        vue.getCanvas().redrawAll();
+        vue.setInstructions("Appartement supprime.");
+
+        if (onAppartementSupprime != null) {
+            onAppartementSupprime.accept(appartement);
+        }
+        if (onModification != null) {
+            onModification.run();
+        }
+    }
+
+    private void supprimerOuverturesAppartement(Appartement appartement) {
+        List<Point> polygone = appartement.getPolygone();
+        if (polygone == null || polygone.size() < 3) return;
+
+        Set<Mur> mursTraites = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Mur mur : appartement.getMurs()) {
+            supprimerOuverturesDansPolygone(mur, polygone);
+            mursTraites.add(mur);
+        }
+
+        for (Dessin dessin : vue.getCanvas().getElements()) {
+            if (dessin instanceof Mur mur && !mursTraites.contains(mur)) {
+                supprimerOuverturesDansPolygone(mur, polygone);
+            }
+        }
+    }
+
+    private void supprimerOuverturesDansPolygone(Mur mur, List<Point> polygone) {
+        if (mur == null || mur.getListeOuvertures() == null) return;
+
+        mur.getListeOuvertures().removeIf(ouverture -> {
+            Point position = mur.getPointSurMur(ouverture.getPositionSurMur());
+            return GeometrieUtils.estDansZone(position.getX(), position.getY(), polygone)
+                    || pointSurContour(position, polygone);
+        });
+    }
+
+    private boolean pointSurContour(Point point, List<Point> polygone) {
+        if (point == null || polygone == null || polygone.size() < 2) return false;
+        for (int i = 0; i < polygone.size(); i++) {
+            Point a = polygone.get(i);
+            Point b = polygone.get((i + 1) % polygone.size());
+            if (distancePointSegment(point, a, b) < 0.05) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private double distancePointSegment(Point point, Point a, Point b) {
+        double dx = b.getX() - a.getX();
+        double dy = b.getY() - a.getY();
+        double len2 = dx * dx + dy * dy;
+        if (len2 < 1e-9) {
+            return Math.hypot(point.getX() - a.getX(), point.getY() - a.getY());
+        }
+        double t = ((point.getX() - a.getX()) * dx + (point.getY() - a.getY()) * dy) / len2;
+        t = Math.max(0.0, Math.min(1.0, t));
+        double projX = a.getX() + t * dx;
+        double projY = a.getY() + t * dy;
+        return Math.hypot(point.getX() - projX, point.getY() - projY);
+    }
+
+    private void supprimerMurSelectionne(Mur mur) {
+        if (mur == null) return;
+
+        if (estMurDelimiteurNiveau(mur)) {
+            vue.setInstructions("Suppression refusee : ce mur delimite le niveau.");
+            return;
+        }
+
+        if (estMurDelimiteurAppartement(mur)) {
+            vue.setInstructions("Suppression refusee : ce mur delimite un appartement.");
+            return;
+        }
+
+        vue.getCanvas().getElements().removeIf(d -> d instanceof Mur m && GeometrieUtils.mursIdentiques(m, mur));
+        vue.getCanvas().setElementSelectionne(null);
+        recalculerCouloirs();
+        vue.getCanvas().redrawAll();
+        vue.setInstructions("Mur libre supprime.");
+        if (onModification != null) {
+            onModification.run();
         }
     }
 

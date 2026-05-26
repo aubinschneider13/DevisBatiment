@@ -312,6 +312,16 @@ public class DessinCanvas extends Canvas {
                     gc.strokePolygon(xs, ys, poly.size());
                 }
             }
+            else if (elementSelectionne instanceof Appartement a) {
+                List<Point> poly = a.getPolygone();
+                if (poly != null && poly.size() >= 3) {
+                    double[] xs = poly.stream().mapToDouble(Point::getX).toArray();
+                    double[] ys = poly.stream().mapToDouble(Point::getY).toArray();
+                    gc.fillPolygon(xs, ys, poly.size());
+                    gc.setLineWidth(0.06);
+                    gc.strokePolygon(xs, ys, poly.size());
+                }
+            }
             else if (elementSelectionne instanceof Tremie t) {
                 gc.setLineWidth(0.08);
                 gc.strokeRect(t.getMinX(), t.getMinY(), Tremie.COTE, Tremie.COTE);

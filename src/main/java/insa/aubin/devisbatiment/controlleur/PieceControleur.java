@@ -6,6 +6,7 @@ import insa.aubin.devisbatiment.view.DashBoardView;
 import insa.aubin.devisbatiment.view.PieceView;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javafx.application.Platform;
@@ -69,6 +70,7 @@ public class PieceControleur {
 
     // Callback notifiant AppControleur lors de la création d'une pièce
     private Function<Piece, TreeItem<String>> onPieceCree = null;
+    private Consumer<Piece> onPieceSupprimee = null;
 
     // État du dessin de mur libre
     private Mur mur1EnCours = null;
@@ -123,6 +125,10 @@ public class PieceControleur {
 
     public void setOnPieceCree(Function<Piece, TreeItem<String>> callback) {
         this.onPieceCree = callback;
+    }
+
+    public void setOnPieceSupprimee(Consumer<Piece> callback) {
+        this.onPieceSupprimee = callback;
     }
 
     // =========================================================================
@@ -996,8 +1002,12 @@ public class PieceControleur {
             if (selection != null) {
                 if (selection instanceof Ouverture) {
                     vue.setInstructions("Ouverture sélectionnée — Cliquer droit sur porte pour inverser, Suppr pour supprimer.");
-                } else if (selection instanceof Mur) {
-                    vue.setInstructions("Cloison sélectionnée — Suppr pour supprimer.");
+                } else if (selection instanceof Mur m) {
+                    if (estMurDelimiteurAppartement(m) || estMurDelimiteurPiece(m)) {
+                        vue.setInstructions("Mur delimiteur selectionne : suppression bloquee.");
+                    } else {
+                        vue.setInstructions("Cloison selectionnee - Suppr pour supprimer.");
+                    }
                 } else if (selection instanceof Piece) {
                     vue.setInstructions("Pièce sélectionnée — Suppr pour supprimer.");
                 }
@@ -1066,6 +1076,15 @@ public class PieceControleur {
         }
         else if (sel instanceof Mur) {
             Mur deletedWall = (Mur) sel;
+            if (estMurDelimiteurAppartement(deletedWall)) {
+                vue.setInstructions("Suppression refusee : ce mur delimite l'appartement.");
+                return;
+            }
+
+            if (estMurDelimiteurPiece(deletedWall)) {
+                vue.setInstructions("Suppression refusee : ce mur delimite une piece.");
+                return;
+            }
 
             // 1. Supprimer toutes les pièces dépendantes de ce mur
             List<Piece> piecesToDelete = new ArrayList<>();
@@ -1103,6 +1122,7 @@ public class PieceControleur {
 
                 // C. Retirer le dessin de la pièce sur le canevas
                 vue.getCanvas().getElements().removeIf(d -> d instanceof DessinPiece dp && dp.getPiece() == p);
+                notifierPieceSupprimee(p);
             }
 
             // 2. Retirer le mur lui-même (et tous ses clones correspondants)
@@ -1140,6 +1160,7 @@ public class PieceControleur {
 
             // C. Retirer le dessin de la pièce sur le canevas
             vue.getCanvas().getElements().removeIf(d -> d instanceof DessinPiece dp && dp.getPiece() == p);
+            notifierPieceSupprimee(p);
         }
 
         // Nettoyer la sélection et redessiner
@@ -1148,6 +1169,42 @@ public class PieceControleur {
         if (onModification != null) {
             onModification.run();
         }
+    }
+
+    private void notifierPieceSupprimee(Piece piece) {
+        if (onPieceSupprimee != null) {
+            onPieceSupprimee.accept(piece);
+        }
+    }
+
+    private boolean estMurDelimiteurAppartement(Mur mur) {
+        if (mur == null || mur.isEstDelimiteur()) return true;
+        if (appartement == null || appartement.getMursDelimiteurs() == null) return false;
+
+        for (Mur delimiteur : appartement.getMursDelimiteurs()) {
+            if (sontMursIdentiques(delimiteur, mur)
+                    || sontMursSuperposes(delimiteur, mur)
+                    || sontMursSuperposes(mur, delimiteur)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean estMurDelimiteurPiece(Mur mur) {
+        if (mur == null) return false;
+
+        for (Piece piece : pieces) {
+            if (piece.getMurs() == null) continue;
+            for (Mur murPiece : piece.getMurs()) {
+                if (sontMursIdentiques(murPiece, mur)
+                        || sontMursSuperposes(murPiece, mur)
+                        || sontMursSuperposes(mur, murPiece)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public void setNiveauControleur(NiveauControleur ctrl) {

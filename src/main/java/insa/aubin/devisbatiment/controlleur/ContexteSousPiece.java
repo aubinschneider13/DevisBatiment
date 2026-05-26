@@ -56,6 +56,7 @@ public class ContexteSousPiece implements Contexte {
             pieceControleur = pieceView.getControleur();
         }
         if (!callbackBranche) {
+            pieceControleur.setOnPieceSupprimee(appControleur::oublierPieceSupprimee);
             pieceControleur.setOnModification(() -> {
                 appControleur.rafraichirDevisEtProprietes();
                 appControleur.sauvegarderDetailsOuvertures();

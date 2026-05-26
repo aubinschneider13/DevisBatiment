@@ -149,6 +149,10 @@ public class Niveau extends ElementDeConstruction {
         return appartements;
     }
 
+    public void supprimerAppartement(Appartement appartement) {
+        appartements.remove(appartement);
+    }
+
     public List<Mur> getMursDelimiteurs() {
         return mursDelimiteurs;
     }

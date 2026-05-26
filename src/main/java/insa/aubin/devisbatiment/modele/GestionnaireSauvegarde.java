@@ -7,7 +7,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class GestionnaireSauvegarde {
 
@@ -142,7 +144,7 @@ public class GestionnaireSauvegarde {
         String cheminParent = getCheminNiveau(n, b);
         String cheminDossier = getCheminAppartement(a, n, b);
         new File(cheminDossier).mkdirs();
-        ecrireLigne(cheminParent + "/appartements.txt", a.toCSV());
+        sauvegarderListeAppartements(n, b);
         sauvegarderDetailsAppartement(a, n, b);
     }
 
@@ -189,11 +191,7 @@ public class GestionnaireSauvegarde {
     public void sauvegarderPiece(Piece p, Appartement a, Niveau n, Batiment b) {
         if (!sauvegardeActive) return;
 
-        String cheminParent = getCheminAppartement(a, n, b);
-        String cheminFichier = cheminParent + "/" + p.getId() + ".txt";
-
-        ecrireLigne(cheminParent + "/pieces.txt", p.toCSV());
-        sauvegarderDetailsPiece(p, a, n, b);
+        sauvegarderAppartementComplet(a, n, b);
     }
 
     public void sauvegarderDetailsAppartement(Appartement a, Niveau n, Batiment b) {
@@ -203,6 +201,40 @@ public class GestionnaireSauvegarde {
         new File(cheminDossier).mkdirs();
         ecrireLignes(cheminDossier + "/murs_appartement.txt",
                 a.getMurs().stream().map(Mur::toCSV).toList());
+    }
+
+    public void sauvegarderAppartementComplet(Appartement a, Niveau n, Batiment b) {
+        if (!sauvegardeActive || a == null || n == null || b == null) return;
+
+        sauvegarderListeAppartements(n, b);
+        sauvegarderDetailsAppartement(a, n, b);
+
+        String cheminDossier = getCheminAppartement(a, n, b);
+        new File(cheminDossier).mkdirs();
+
+        List<String> lignesPieces = new ArrayList<>();
+        Set<String> fichiersPiecesActifs = new HashSet<>();
+        for (Piece piece : a.getPieces()) {
+            lignesPieces.add(piece.toCSV());
+            fichiersPiecesActifs.add(piece.getId() + ".txt");
+            sauvegarderDetailsPiece(piece, a, n, b);
+        }
+
+        ecrireLignes(cheminDossier + "/pieces.txt", lignesPieces);
+        supprimerFichiersPiecesObsoletes(new File(cheminDossier), fichiersPiecesActifs);
+    }
+
+    public void sauvegarderListeAppartements(Niveau n, Batiment b) {
+        if (!sauvegardeActive || n == null || b == null) return;
+
+        String cheminParent = getCheminNiveau(n, b);
+        new File(cheminParent).mkdirs();
+
+        List<String> lignes = new ArrayList<>();
+        for (Appartement appartement : n.getAppartements()) {
+            lignes.add(appartement.toCSV());
+        }
+        ecrireLignes(cheminParent + "/appartements.txt", lignes);
     }
 
     public void rechargerOuverturesAppartement(Appartement a, Niveau n, Batiment b) {
@@ -626,6 +658,14 @@ public class GestionnaireSauvegarde {
         }
     }
 
+    public void supprimerAppartement(Appartement appartement, Niveau niveau, Batiment batiment) {
+        if (!sauvegardeActive || appartement == null || niveau == null || batiment == null) return;
+
+        supprimerDossierRecursivement(new File(getCheminAppartement(appartement, niveau, batiment)));
+        sauvegarderListeAppartements(niveau, batiment);
+        sauvegarderCouloirs(niveau, batiment);
+    }
+
     private void supprimerDossierRecursivement(File f) {
         if (f == null || !f.exists()) return;
 
@@ -639,6 +679,25 @@ public class GestionnaireSauvegarde {
         }
 
         f.delete();
+    }
+
+    private void supprimerFichiersPiecesObsoletes(File dossierAppartement, Set<String> fichiersPiecesActifs) {
+        if (dossierAppartement == null || !dossierAppartement.isDirectory()) return;
+
+        File[] fichiers = dossierAppartement.listFiles();
+        if (fichiers == null) return;
+
+        for (File fichier : fichiers) {
+            if (!fichier.isFile()) continue;
+
+            String nom = fichier.getName();
+            if (!nom.endsWith(".txt")) continue;
+            if ("pieces.txt".equals(nom) || "murs_appartement.txt".equals(nom)) continue;
+
+            if (!fichiersPiecesActifs.contains(nom)) {
+                fichier.delete();
+            }
+        }
     }
 
     // ────────────────────────────────────────────

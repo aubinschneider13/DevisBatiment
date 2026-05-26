@@ -630,12 +630,19 @@ public class AppControleur {
 
         // Notifie TOUS les ContextePiece ouverts pour ce niveau
         ctrl.setOnCouloirsRecalcules(() -> {
+            gestionnaire.sauvegarderCouloirs(niveau, immeuble);
             for (ContextePiece ctx : contextePieces.values()) {
                 if (ctx.getPieceControleur() != null) {
                     ctx.getPieceControleur().rafraichirTypesMursAffichage();
                 }
             }
         });
+
+        ctrl.setOnModification(() -> {
+            gestionnaire.sauvegarderCouloirs(niveau, immeuble);
+            rafraichirDevisEtProprietes();
+        });
+        ctrl.setOnAppartementSupprime(appart -> oublierAppartementSupprime(appart, niveau));
 
         brancherTremiesGlobales(ctrl);
 
@@ -754,6 +761,96 @@ public class AppControleur {
         }
     }
 
+    public void oublierPieceSupprimee(Piece piece) {
+        if (piece == null) return;
+
+        TreeItem<String> itemPiece = trouverItemPiece(piece);
+        if (itemPiece == null) return;
+
+        TreeItem<String> itemAppart = mapPieceVersAppart.get(itemPiece);
+        Appartement appart = itemAppart != null ? mapItemAppartement.get(itemAppart) : null;
+        Niveau niveau = null;
+        NiveauControleur niveauCtrl = trouverNiveauControleurPourPiece(itemPiece);
+        if (niveauCtrl != null) {
+            int idx = niveauControleurs.indexOf(niveauCtrl);
+            if (idx >= 0 && idx < immeuble.getNiveaux().size()) {
+                niveau = immeuble.getNiveaux().get(idx);
+            }
+        }
+
+        TreeItem<String> parent = itemPiece.getParent();
+        if (parent != null) {
+            parent.getChildren().remove(itemPiece);
+        }
+        mapItemPiece.remove(itemPiece);
+        mapPieceVersAppart.remove(itemPiece);
+        contexteSousPieces.remove(piece);
+
+        if (appart != null && niveau != null) {
+            gestionnaire.sauvegarderAppartementComplet(appart, niveau, immeuble);
+        }
+
+        if (parent != null) {
+            appView.getNavigateurView().selectionner(parent);
+        } else {
+            appView.getNavigateurView().effacerProprietes();
+        }
+        rafraichirDevisEtProprietes();
+    }
+
+    private TreeItem<String> trouverItemPiece(Piece piece) {
+        for (Map.Entry<TreeItem<String>, Piece> entry : mapItemPiece.entrySet()) {
+            if (entry.getValue() == piece) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    private void oublierAppartementSupprime(Appartement appartement, Niveau niveau) {
+        if (appartement == null || niveau == null) return;
+
+        TreeItem<String> itemAppart = trouverItemAppartement(appartement);
+        if (itemAppart != null) {
+            List<TreeItem<String>> enfants = new ArrayList<>(itemAppart.getChildren());
+            for (TreeItem<String> itemPiece : enfants) {
+                Piece piece = mapItemPiece.remove(itemPiece);
+                if (piece != null) {
+                    contexteSousPieces.remove(piece);
+                }
+                mapPieceVersAppart.remove(itemPiece);
+            }
+
+            TreeItem<String> parent = itemAppart.getParent();
+            if (parent != null) {
+                parent.getChildren().remove(itemAppart);
+            }
+        }
+
+        mapItemAppartement.entrySet().removeIf(entry -> entry.getValue() == appartement);
+        contextePieces.remove(appartement);
+        for (Piece piece : new ArrayList<>(appartement.getPieces())) {
+            contexteSousPieces.remove(piece);
+        }
+
+        gestionnaire.supprimerAppartement(appartement, niveau, immeuble);
+        sauvegarderDetailsOuvertures();
+        appView.getNavigateurView().effacerProprietes();
+        if (itemNiveauActif != null) {
+            appView.getNavigateurView().selectionner(itemNiveauActif);
+        }
+        rafraichirDevisEtProprietes();
+    }
+
+    private TreeItem<String> trouverItemAppartement(Appartement appartement) {
+        for (Map.Entry<TreeItem<String>, Appartement> entry : mapItemAppartement.entrySet()) {
+            if (entry.getValue() == appartement) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
     public void sauvegarderDetailsOuvertures() {
         if (immeuble == null || gestionnaire == null || !gestionnaire.isSauvegardeActive()) return;
 
@@ -763,10 +860,7 @@ public class AppControleur {
             if (niveau == null) continue;
 
             for (Appartement appart : niveau.getAppartements()) {
-                gestionnaire.sauvegarderDetailsAppartement(appart, niveau, immeuble);
-                for (Piece piece : appart.getPieces()) {
-                    gestionnaire.sauvegarderDetailsPiece(piece, appart, niveau, immeuble);
-                }
+                gestionnaire.sauvegarderAppartementComplet(appart, niveau, immeuble);
             }
         }
     }
@@ -830,12 +924,19 @@ public class AppControleur {
 
             // Notifie TOUS les ContextePiece ouverts pour ce niveau
             ctrl.setOnCouloirsRecalcules(() -> {
+                gestionnaire.sauvegarderCouloirs(niveauFinal, immeuble);
                 for (ContextePiece ctx : contextePieces.values()) {
                     if (ctx.getPieceControleur() != null) {
                         ctx.getPieceControleur().rafraichirTypesMursAffichage();
                     }
                 }
             });
+
+            ctrl.setOnModification(() -> {
+                gestionnaire.sauvegarderCouloirs(niveauFinal, immeuble);
+                rafraichirDevisEtProprietes();
+            });
+            ctrl.setOnAppartementSupprime(appart -> oublierAppartementSupprime(appart, niveauFinal));
 
             ctrl.rechargerCouloirs(niveau.getCouloirs());
             ctrl.rechargerTremies();
