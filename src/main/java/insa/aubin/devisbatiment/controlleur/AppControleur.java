@@ -638,6 +638,13 @@ public class AppControleur {
         }
     }
 
+    public void rafraichirLibellePiece(Piece piece) {
+        TreeItem<String> itemPiece = trouverItemPiece(piece);
+        if (itemPiece != null) {
+            itemPiece.setValue(piece.toString());
+        }
+    }
+
     // =========================================================================
     // ÉVÉNEMENTS TOOLBAR
     // =========================================================================

@@ -18,6 +18,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.TreeItem;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
@@ -119,6 +120,7 @@ public class PieceControleur {
         this.vue          = vue;
         this.stage        = stage;
         this.gestionnaire = gestionnaire;
+        this.vue.getOptionsPieceVue().setOnUsageModifie(this::enregistrerUsagePiece);
     }
 
     // =========================================================================
@@ -635,7 +637,7 @@ public class PieceControleur {
 
 
         vue.getCanvas().ajouterElement(creerDessinPiece(piece));
-        sauvegarderDetailsAppartement();
+        sauvegarderAppartementComplet();
         vue.setInstructions("Pièce créée — cliquez dans une autre zone pour en ajouter une.");
         vue.redrawAll();
     }
@@ -664,7 +666,11 @@ public class PieceControleur {
             gc.setFill(PaletteVisuelle.contourPiece(piece.getNumero()));
             gc.setFont(javafx.scene.text.Font.font(
                     "Arial", javafx.scene.text.FontWeight.BOLD, 0.25));
-            gc.fillText(piece.toString(), cx - 0.3, -cy + 0.1);
+            gc.setTextAlign(TextAlignment.CENTER);
+            gc.fillText(piece.getLibelleCanvas(), cx, -cy);
+            if (piece.getUsage() != null && !piece.getUsage().isBlank()) {
+                gc.fillText(piece.getUsage(), cx, -cy + 0.32);
+            }
             gc.restore();
         }
 
@@ -836,6 +842,45 @@ public class PieceControleur {
     private void sauvegarderDetailsAppartement() {
         if (appartement != null && niveauSauvegarde != null && batimentSauvegarde != null) {
             gestionnaire.sauvegarderAppartementComplet(appartement, niveauSauvegarde, batimentSauvegarde);
+        }
+    }
+
+    private void sauvegarderAppartementComplet() {
+        if (gestionnaire != null && appartement != null
+                && niveauSauvegarde != null && batimentSauvegarde != null) {
+            gestionnaire.sauvegarderAppartementComplet(appartement, niveauSauvegarde, batimentSauvegarde);
+        }
+    }
+
+    public void afficherOptionsUsagePiece(Piece piece) {
+        vue.getOptionsPieceVue().setPieceCourante(piece);
+        vue.getOptionsPieceVue().setVisible(piece != null);
+    }
+
+    public void masquerOptionsUsagePiece() {
+        vue.getOptionsPieceVue().setPieceCourante(null);
+        vue.getOptionsPieceVue().setVisible(false);
+    }
+
+    private void enregistrerUsagePiece(String usage) {
+        Piece piece = vue.getOptionsPieceVue().getPieceCourante();
+        if (piece == null) return;
+
+        piece.setUsage(usage);
+        rafraichirLibellePiece(piece);
+        sauvegarderAppartementComplet();
+        vue.redrawAll();
+        if (onModification != null) {
+            onModification.run();
+        }
+    }
+
+    private void rafraichirLibellePiece(Piece piece) {
+        for (Map.Entry<TreeItem<String>, Piece> entry : mapItemPiece.entrySet()) {
+            if (entry.getValue() == piece) {
+                entry.getKey().setValue(piece.toString());
+                return;
+            }
         }
     }
 

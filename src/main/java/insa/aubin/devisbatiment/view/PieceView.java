@@ -40,6 +40,7 @@ public class PieceView extends StackPane {
     private DessinCanvas canvas;
     private EchelleVue echelleVue;
     private OptionsMurVue optionsMurVue;
+    private OptionsPieceVue optionsPieceVue;
     private Label labelInstructions;
 
     // Constructeur de base
@@ -122,6 +123,10 @@ public class PieceView extends StackPane {
         StackPane.setAlignment(echelleVue, Pos.TOP_LEFT);
         StackPane.setMargin(echelleVue, new Insets(10));
 
+        optionsPieceVue = new OptionsPieceVue();
+        StackPane.setAlignment(optionsPieceVue, Pos.BOTTOM_RIGHT);
+        StackPane.setMargin(optionsPieceVue, new Insets(0, 10, 15, 0));
+
         labelInstructions = new Label("Sélectionnez un outil pour commencer");
         labelInstructions.setStyle(
                 "-fx-background-color: rgba(240,240,240,0.9);" +
@@ -134,7 +139,7 @@ public class PieceView extends StackPane {
         StackPane.setAlignment(labelInstructions, Pos.BOTTOM_CENTER);
         StackPane.setMargin(labelInstructions, new Insets(0, 0, 15, 0));
 
-        this.getChildren().addAll(canvas, optionsMurVue, echelleVue, labelInstructions);
+        this.getChildren().addAll(canvas, optionsMurVue, echelleVue, optionsPieceVue, labelInstructions);
         this.setStyle("-fx-background-color: #fffefe;");
 
         // Contrôleur initialisé avant initialiserAvecContourAppartement.
@@ -178,6 +183,10 @@ public class PieceView extends StackPane {
 
     public OptionsMurVue getOptionsMurVue() {
         return optionsMurVue;
+    }
+
+    public OptionsPieceVue getOptionsPieceVue() {
+        return optionsPieceVue;
     }
 
     public EchelleVue getEchelleVue() {

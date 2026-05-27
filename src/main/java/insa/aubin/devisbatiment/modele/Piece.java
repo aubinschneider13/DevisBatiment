@@ -11,7 +11,7 @@ public class Piece extends ElementDeConstruction {
     private List<Mur> murs;
     private List<MurOriente> mursOrientes;
     private List<CoteMur> cotesMurs;
-    private List<Usage> usages;
+    private String usage;
     private Sol sol;
     private Plafond plafond;
     private static int compteur = 0;
@@ -36,7 +36,7 @@ public class Piece extends ElementDeConstruction {
             this.murs.add(murOriente.mur());
         }
         this.cotesMurs = new ArrayList<>();
-        this.usages         = new ArrayList<>();
+        this.usage = "";
 
         // Dériver les points depuis les murs ordonnés
         this.points = new ArrayList<>();
@@ -113,11 +113,15 @@ public class Piece extends ElementDeConstruction {
     }
 
     // =========================================================================
-    // USAGES
+    // USAGE
     // =========================================================================
 
-    public void ajouterUsage(Usage u) {
-        if (u != null) usages.add(u);
+    public String getUsage() {
+        return usage;
+    }
+
+    public void setUsage(String usage) {
+        this.usage = usage != null ? usage.trim() : "";
     }
 
     // =========================================================================
@@ -197,7 +201,6 @@ public class Piece extends ElementDeConstruction {
         return result;
     }
 
-    public List<Usage> getUsages()                 { return usages; }
     public Sol getSol()                            { return sol; }
     public Plafond getPlafond()                    { return plafond; }
     public static void resetCompteur()             { compteur = 0; }
@@ -214,6 +217,7 @@ public class Piece extends ElementDeConstruction {
         sb.append(String.format(java.util.Locale.US,
             "PIECE;%s;%d;%.2f;%.2f",
             getId(), numero, calculerSurfaceTotale(), hauteurPlafond));
+        sb.append(";").append(encoderChampCSV(usage));
         for (Point p : points) {
             sb.append(String.format(java.util.Locale.US, ";%.2f;%.2f", p.getX(), p.getY()));
         }
@@ -222,7 +226,21 @@ public class Piece extends ElementDeConstruction {
 
     @Override
     public String toString() {
-        return "Pièce " + numero
+        String suffixeUsage = usage == null || usage.isBlank() ? "" : " - " + usage;
+        return "Pièce " + numero + suffixeUsage
              + String.format(" (%.1f m²)", calculerSurfaceTotale());
+    }
+
+    public String getLibelleCanvas() {
+        return "Pi\u00e8ce " + numero
+             + String.format(" (%.1f m\u00b2)", calculerSurfaceTotale());
+    }
+
+    private String encoderChampCSV(String valeur) {
+        if (valeur == null) return "";
+        return valeur.replace(";", ",")
+                .replace("\r", " ")
+                .replace("\n", " ")
+                .trim();
     }
 }
