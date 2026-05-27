@@ -1,9 +1,7 @@
 package insa.aubin.devisbatiment.controlleur;
 
-import insa.aubin.devisbatiment.controlleur.AppControleur;
-import insa.aubin.devisbatiment.controlleur.PieceControleur;
-import insa.aubin.devisbatiment.modele.Appartement;
 import insa.aubin.devisbatiment.modele.GestionnaireSauvegarde;
+import insa.aubin.devisbatiment.modele.Piece;
 import insa.aubin.devisbatiment.modele.SurfaceAvecRevetement;
 import insa.aubin.devisbatiment.view.AppView;
 import insa.aubin.devisbatiment.view.PieceView;
@@ -12,157 +10,89 @@ import javafx.scene.input.KeyEvent;
 
 import java.util.ArrayList;
 import java.util.List;
-import javafx.scene.control.TreeItem;
 
 /**
- * Contexte actif quand l'utilisateur aménage l'intérieur d'un appartement :
- * dessin des cloisons, insertion de portes et de fenêtres.
+ * Contexte actif quand l'utilisateur travaille à l'intérieur d'une pièce.
  *
  * Boutons visibles : navigation, échelle, mur, porte, fenêtre.
- * Les boutons appartement et ajouterNiveau sont masqués car ils n'ont pas de
- * sens à l'intérieur d'un appartement.
- *
- * Différence clé avec l'ancienne approche : PieceView n'est plus une fenêtre
- * autonome avec sa propre toolbar et son propre TreeView. C'est désormais un
- * simple canvas inséré dans la zone centrale d'AppView. La toolbar commune
- * d'AppView pilote PieceControleur via ce contexte.
+ * Même comportement que ContexteAppartement mais pour une Piece plutôt qu'un Appartement.
  */
 public class ContextePiece implements Contexte {
 
-    /** Identifiants des boutons affichés dans ce contexte (ordre = ordre toolbar). */
     private static final List<String> BOUTONS = List.of(
-            "navigation", "selection", "echelle", "mur", "piece","porte","fenetre"
+            "navigation", "echelle", "mur", "porte", "fenetre"
     );
 
-    // --- Dépendances ---
-    private final Appartement appartement;
+    private final Piece piece;
     private final AppView appView;
     private final AppControleur appControleur;
-
-    // --- Vue et contrôleur créés à l'installation ---
-    private PieceView pieceView;
-    private PieceControleur pieceControleur;
-
-    // --- Stage et gestionnaire nécessaires pour instancier PieceView ---
     private final Stage stage;
     private final GestionnaireSauvegarde gestionnaire;
-    private final TreeItem<String> itemAppartement;
+
+    private PieceView pieceView;
+    private PieceControleur pieceControleur;
     private boolean callbackBranche = false;
 
-    // --- Variables pour le Mode Sélection (Revêtements) ---
     //private boolean modeSelectionActif = false;
     //private final List<SurfaceAvecRevetement> surfacesSelectionnees = new ArrayList<>();
 
-    /**
-     * @param appartement  appartement dont on va aménager l'intérieur
-     * @param appView      vue racine (pour insérer le canvas de la pièce)
-     * @param appControleur chef d'orchestre
-     * @param stage        fenêtre principale (transmis à PieceControleur)
-     * @param gestionnaire service de sauvegarde (transmis à PieceControleur)
-     */
-    public ContextePiece(Appartement appartement, AppView appView,
-                     AppControleur appControleur, Stage stage,
-                     GestionnaireSauvegarde gestionnaire,
-                     TreeItem<String> itemAppartement) {
-        
-        this.appartement    = appartement;
+    public ContextePiece(Piece piece,
+                              AppView appView,
+                              AppControleur appControleur,
+                              Stage stage,
+                              GestionnaireSauvegarde gestionnaire) {
+        this.piece          = piece;
         this.appView        = appView;
         this.appControleur  = appControleur;
         this.stage          = stage;
         this.gestionnaire   = gestionnaire;
-        this.itemAppartement = itemAppartement;
     }
 
-    // =========================================================================
-    // CYCLE DE VIE
-    // =========================================================================
-
-    /**
-     * Crée la PieceView (canvas + contour de l'appartement en fond) et
-     * l'insère dans la zone centrale d'AppView.
-     *
-     * La PieceView instancie elle-même son PieceControleur ; on le récupère
-     * ensuite via un getter pour pouvoir lui déléguer les événements toolbar.
-     *
-     * Note : PieceView ne contient plus sa propre toolbar ni son propre
-     * TreeView — elle se réduit à son StackPane canvas + label d'instructions.
-     */
     @Override
     public void installer() {
         if (pieceView == null) {
-            pieceView = new PieceView(stage, gestionnaire, appartement,
+            pieceView = new PieceView(stage, gestionnaire, piece,
                                       appControleur.getAireImmeuble());
             pieceControleur = pieceView.getControleur();
         }
-        // ✅ Ne brancher le callback qu'une seule fois
         if (!callbackBranche) {
-            pieceControleur.setOnPieceCree(piece -> {
-                TreeItem<String> itemPiece = appView.getNavigateurView()
-                    .ajouterItemPiece(itemAppartement, piece.toString());
-                appControleur.enregistrerPiece(itemPiece, piece, itemAppartement);
-                appControleur.rafraichirDevisEtProprietes();
-                return itemPiece;
-            });
             pieceControleur.setOnPieceSupprimee(appControleur::oublierPieceSupprimee);
             pieceControleur.setOnModification(() -> {
+                appControleur.rafraichirLibellePiece(piece);
                 appControleur.rafraichirDevisEtProprietes();
                 appControleur.sauvegarderDetailsOuvertures();
             });
             callbackBranche = true;
         }
+        pieceControleur.afficherOptionsUsagePiece(piece);
         appView.afficherPiece(pieceView);
         appView.setInstructions(
-            "Vue pièce de « " + appartement + " » — dessinez les cloisons intérieures"
+            "Vue de « " + piece + " » — dessinez l'aménagement intérieur"
         );
-        insa.aubin.devisbatiment.modele.CoteMur.vueIsoleePieceActive = false;
+        insa.aubin.devisbatiment.modele.CoteMur.vueIsoleePieceActive = true;
     }
 
-    /**
-     * Annule toute construction en cours (mur à moitié tracé, etc.)
-     * avant de quitter la vue pièce.
-     */
     @Override
     public void desinstaller() {
         if (pieceControleur != null) {
             pieceControleur.annulerConstruction();
+            pieceControleur.masquerOptionsUsagePiece();
         }
+        insa.aubin.devisbatiment.modele.CoteMur.vueIsoleePieceActive = false;
     }
 
-    // =========================================================================
-    // BOUTONS TOOLBAR
-    // =========================================================================
-
-    /** Active le mode navigation (pan/zoom) sur le canvas de la pièce. */
     @Override
     public void onBtnNavigation() {
-        if (pieceControleur != null) {
+        if (pieceControleur != null)
             pieceControleur.changerEtat(PieceControleur.ETAT_RIEN);
-        }
     }
 
-    /** Active le mode Sélection/Édition. */
-    @Override
-    public void onBtnSelection() {
-        if (pieceControleur != null) {
-            pieceControleur.changerEtat(PieceControleur.ETAT_EDITION);
-        }
-    }
-
-    /** Active le mode dessin de cloison dans la pièce. */
     @Override
     public void onBtnMur() {
-        if (pieceControleur != null) {
+        if (pieceControleur != null)
             pieceControleur.changerEtat(PieceControleur.ETAT_MUR);
-        }
     }
-    
-    @Override
-    public void onBtnPiece() {
-        if (pieceControleur != null) {
-            pieceControleur.activerModePiece();
-        }
-    }
-    
+
     @Override
     public void onBtnPorte() {
         if (pieceControleur != null)
@@ -174,15 +104,11 @@ public class ContextePiece implements Contexte {
         if (pieceControleur != null)
             pieceControleur.changerEtat(PieceControleur.ETAT_FENETRE);
     }
-    
+
     @Override
     public void onBtnEchelle() {
         appControleur.onBtnEchelle();
     }
-
-    // =========================================================================
-    // TOOLBAR
-    // =========================================================================
 
     @Override
     public List<String> getBoutonsVisibles() {
@@ -239,11 +165,18 @@ public class ContextePiece implements Contexte {
             pieceControleur.changerEtat(PieceControleur.ETAT_RIEN); // Repasse en mode normal
         }
     }
-
-    public Appartement getAppartement() {
-        return appartement;
-    }
     
+    public void onEchap() {
+        if (pieceControleur != null) {
+            pieceControleur.annulerConstruction();
+            pieceControleur.changerEtat(PieceControleur.ETAT_RIEN);
+        }
+    }
+
+    public Piece getPiece() {
+        return piece;
+    }
+
     public PieceControleur getPieceControleur() {
         return pieceControleur;
     }

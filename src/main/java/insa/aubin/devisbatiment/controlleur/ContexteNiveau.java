@@ -13,11 +13,11 @@ import java.util.List;
  *
  * Boutons visibles : navigation, échelle, mur, appartement, ajouterNiveau.
  * Les boutons porte et fenêtre sont masqués — ils n'ont de sens que dans
- * un appartement (ContextePiece).
+ * un appartement (ContexteAppartement).
  *
  * Ce contexte délègue la logique de dessin à NiveauControleur. Il transmet
  * également les clics sur les items du TreeView à AppControleur pour que
- * celui-ci puisse déclencher la bascule vers ContextePiece quand l'utilisateur
+ * celui-ci puisse déclencher la bascule vers ContexteAppartement quand l'utilisateur
  * sélectionne un appartement.
  */
 public class ContexteNiveau implements Contexte {
@@ -36,7 +36,7 @@ public class ContexteNiveau implements Contexte {
     /**
      * @param niveauControleur contrôleur de l'étage courant
      * @param appView          vue racine (pour afficher le canvas du niveau)
-     * @param appControleur    chef d'orchestre (pour la bascule vers ContextePiece)
+     * @param appControleur    chef d'orchestre (pour la bascule vers ContexteAppartement)
      */
     public ContexteNiveau(NiveauControleur niveauControleur,
                           AppView appView,
@@ -128,7 +128,7 @@ public class ContexteNiveau implements Contexte {
     /**
      * Transmet la sélection à AppControleur.
      * Si l'item correspond à un appartement connu de niveauControleur,
-     * AppControleur déclenchera la bascule vers ContextePiece.
+     * AppControleur déclenchera la bascule vers ContexteAppartement.
      *
      * @param item item sélectionné dans le TreeView (peut être null)
      */

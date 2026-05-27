@@ -75,13 +75,13 @@ public interface Contexte {
     
     /**
      * Bouton "Porte" — active le mode insertion de porte.
-     * Pertinent uniquement en ContextePiece.
+     * Pertinent uniquement en ContexteAppartement et ContextePiece.
      */
     default void onBtnPorte() { }
 
     /**
      * Bouton "Fenêtre" — active le mode insertion de fenêtre.
-     * Pertinent uniquement en ContextePiece.
+     * Pertinent uniquement en ContexteAppartement et ContextePiece.
      */
     default void onBtnFenetre() { }
 
@@ -117,7 +117,7 @@ public interface Contexte {
     /**
      * Appelé par AppControleur quand l'utilisateur sélectionne un item dans
      * le TreeView. Chaque contexte décide s'il doit réagir (ex. : un clic sur
-     * un appartement en ContexteNiveau déclenchera la bascule vers ContextePiece
+     * un appartement en ContexteNiveau déclenchera la bascule vers ContexteAppartement
      * via AppControleur).
      *
      * @param item l'item sélectionné dans le TreeView (peut être null)

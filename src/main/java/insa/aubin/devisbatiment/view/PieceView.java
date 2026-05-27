@@ -24,14 +24,14 @@ import javafx.stage.Stage;
  *
  * Simplifiée par rapport à l'ancienne version :
  * - Ne contient plus sa propre toolbar : la ToolBarView commune d'AppView pilote
- *   PieceControleur via ContextePiece.
+ *   PieceControleur via ContexteAppartement ou ContextePiece.
  * - Ne contient plus son propre TreeView : c'est NavigateurView d'AppView.
  * - Ne connaît plus le Stage directement pour changer de scène :
  *   AppControleur.retourDashboard() s'en charge.
  * - Se réduit à un StackPane : canvas de dessin + OptionsMurVue + EchelleVue
  *   + label d'instructions.
  *
- * Expose getControleur() pour que ContextePiece puisse déléguer les événements
+ * Expose getControleur() pour que les contextes puissent déléguer les événements
  * toolbar à PieceControleur.
  */
 public class PieceView extends StackPane {

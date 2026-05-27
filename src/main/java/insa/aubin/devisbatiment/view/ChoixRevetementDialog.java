@@ -400,7 +400,7 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
                     case "Carrelage" -> new Carrelage(nouvelId, designation, chkMur.isSelected(), chkSol.isSelected(), chkPlafond.isSelected(), prix, attr1, attr2);
                     case "Parquet" -> new Parquet(nouvelId, designation, chkMur.isSelected(), chkSol.isSelected(), chkPlafond.isSelected(), prix, attr1, attr2);
                     case "Isolant" -> {
-                        TypeIsolant typeIso = TypeIsolant.fromString(attr1);
+                        Isolant.TypeIsolant typeIso = Isolant.TypeIsolant.fromString(attr1);
                         double epais = Double.parseDouble(attr2.isEmpty() ? "0.0" : attr2.replace(",", "."));
                         yield new Isolant(nouvelId, designation, chkMur.isSelected(), chkSol.isSelected(), chkPlafond.isSelected(), prix, typeIso, epais);
                     }

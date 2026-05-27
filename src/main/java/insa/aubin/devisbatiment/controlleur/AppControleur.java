@@ -22,7 +22,7 @@ import java.util.Optional;
  * AppControleur remplace ImmeubleControleur dans son rôle de coordinateur
  * global. Il est le seul à :
  * - connaître le Stage et à en changer la scène (retour dashboard)
- * - instancier et basculer les contextes (ContexteAire, ContexteNiveau, ContextePiece)
+ * - instancier et basculer les contextes (ContexteAire, ContexteNiveau, ContexteAppartement, ContextePiece)
  * - peupler le NavigateurView (ajout de niveaux et d'appartements)
  * - brancher tous les listeners de la ToolBarView, ToolBarDevisView et du TreeView
  *
@@ -58,8 +58,8 @@ public class AppControleur {
     // --- Maps de suivi (Fusion des vôtres et de celles de votre collègue) ---
     private final Map<TreeItem<String>, Piece> mapItemPiece = new HashMap<>();
     private final Map<TreeItem<String>, TreeItem<String>> mapPieceVersAppart = new HashMap<>();
-    private final Map<Appartement, ContextePiece> contextePieces = new HashMap<>();
-    private final Map<Piece, ContexteSousPiece> contexteSousPieces = new HashMap<>();
+    private final Map<Appartement, ContexteAppartement> contextesAppartements = new HashMap<>();
+    private final Map<Piece, ContextePiece> contextesPieces = new HashMap<>();
     private final Map<TreeItem<String>, Niveau> mapItemNiveau = new HashMap<>();
     private final Map<TreeItem<String>, Appartement> mapItemAppartement = new HashMap<>();
     private final Map<TreeItem<String>, Couloir> mapItemCouloir = new HashMap<>();
@@ -186,10 +186,10 @@ public class AppControleur {
         ToolBarDevisView tbDevis = appView.getToolBarDevisView();
 
         tbDevis.getBtnAppliquerRevetement().setOnAction(e -> {
-            if (contexteActif instanceof ContexteSousPiece ctx) {
+            if (contexteActif instanceof ContextePiece ctx) {
                 ctx.activerModeSelection();
                 appView.setInstructions("Mode Matériaux : Cliquez sur les surfaces de la pièce, puis validez.");
-            } else if (contexteActif instanceof ContextePiece ctx) {
+            } else if (contexteActif instanceof ContexteAppartement ctx) {
                 ctx.activerModeSelection();
                 appView.setInstructions("Mode Matériaux : Cliquez sur les murs de l'appartement, puis validez.");
             } else {
@@ -202,9 +202,9 @@ public class AppControleur {
         tbDevis.getBtnValiderRevetement().setOnAction(e -> {
             List<SurfaceAvecRevetement> selection = null;
 
-            if (contexteActif instanceof ContexteSousPiece ctx) {
+            if (contexteActif instanceof ContextePiece ctx) {
                 selection = ctx.getSurfacesSelectionnees();
-            } else if (contexteActif instanceof ContextePiece ctx) {
+            } else if (contexteActif instanceof ContexteAppartement ctx) {
                 selection = ctx.getSurfacesSelectionnees();
             }
 
@@ -228,9 +228,9 @@ public class AppControleur {
 
                 Appartement appartActuel = null;
                 Niveau niveauActuel = null;
-                if (contexteActif instanceof ContextePiece ctx) {
+                if (contexteActif instanceof ContexteAppartement ctx) {
                     appartActuel = ctx.getAppartement();
-                } else if (contexteActif instanceof ContexteSousPiece ctx) {
+                } else if (contexteActif instanceof ContextePiece ctx) {
                     Piece p = ctx.getPiece();
                     if (immeuble != null) {
                         for (Niveau niv : immeuble.getNiveaux()) {
@@ -282,7 +282,7 @@ public class AppControleur {
                         }
 
                         // Appliquer également à tous les clones graphiques du même mur sur le canvas actif pour IHM immédiate
-                        if (contexteActif instanceof ContextePiece ctx) {
+                        if (contexteActif instanceof ContexteAppartement ctx) {
                             for (Dessin d : ctx.getPieceControleur().getVue().getCanvas().getElements()) {
                                 if (d instanceof Mur murClone && murClone.getOriginal() == original) {
                                     CoteMur coteClone = estGauche ? murClone.getCoteGauche() : murClone.getCoteDroit();
@@ -291,7 +291,7 @@ public class AppControleur {
                                     }
                                 }
                             }
-                        } else if (contexteActif instanceof ContexteSousPiece ctx) {
+                        } else if (contexteActif instanceof ContextePiece ctx) {
                             for (Dessin d : ctx.getPieceControleur().getVue().getCanvas().getElements()) {
                                 if (d instanceof Mur murClone && murClone.getOriginal() == original) {
                                     CoteMur coteClone = estGauche ? murClone.getCoteGauche() : murClone.getCoteDroit();
@@ -321,15 +321,15 @@ public class AppControleur {
                     appartActuel.calculerDevis();
                 }
 
-                if (contexteActif instanceof ContextePiece ctx) {
+                if (contexteActif instanceof ContexteAppartement ctx) {
                     ctx.getPieceControleur().redraw();
-                } else if (contexteActif instanceof ContexteSousPiece ctx) {
+                } else if (contexteActif instanceof ContextePiece ctx) {
                     ctx.getPieceControleur().redraw();
                 }
 
-                if (contexteActif instanceof ContexteSousPiece ctx) {
+                if (contexteActif instanceof ContextePiece ctx) {
                     ctx.viderSelection();
-                } else if (contexteActif instanceof ContextePiece ctx) {
+                } else if (contexteActif instanceof ContexteAppartement ctx) {
                     ctx.viderSelection();
                 }
 
@@ -507,8 +507,8 @@ public class AppControleur {
                 sauvegarderDetailsOuvertures();
                 itemNiveauActif = itemsNiveau.get(i);
 
-                ContextePiece ctx = contextePieces.computeIfAbsent(appart, a ->
-                        new ContextePiece(a, appView, this, stage, gestionnaire, item)
+                ContexteAppartement ctx = contextesAppartements.computeIfAbsent(appart, a ->
+                        new ContexteAppartement(a, appView, this, stage, gestionnaire, item)
                         
                 );
                 
@@ -541,8 +541,8 @@ public class AppControleur {
         Piece piece = mapItemPiece.get(item);
         if (piece != null) {
             sauvegarderDetailsOuvertures();
-            ContexteSousPiece ctx = contexteSousPieces.computeIfAbsent(piece, p ->
-                    new ContexteSousPiece(p, appView, this, stage, gestionnaire)
+            ContextePiece ctx = contextesPieces.computeIfAbsent(piece, p ->
+                    new ContextePiece(p, appView, this, stage, gestionnaire)
             );
 
             basculerContexte(ctx);
@@ -630,18 +630,18 @@ public class AppControleur {
         NavigateurView nav = appView.getNavigateurView();
 
         // 1. Mise à jour du libellé de devis selon le contexte actif
-        if (contexteActif instanceof ContextePiece ctx) {
+        if (contexteActif instanceof ContexteAppartement ctx) {
             double totalDevis = calculerDevisAppartement(ctx.getAppartement());
             tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
-        } else if (contexteActif instanceof ContexteSousPiece ctx) {
+        } else if (contexteActif instanceof ContextePiece ctx) {
             double totalDevis = ctx.getPiece().calculerDevis();
             tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
         }
 
         // 2. Mise à jour de la fiche de propriétés latérale droite
-        if (contexteActif instanceof ContexteSousPiece ctx) {
+        if (contexteActif instanceof ContextePiece ctx) {
             nav.afficherProprietesPiece(ctx.getPiece());
-        } else if (contexteActif instanceof ContextePiece ctx) {
+        } else if (contexteActif instanceof ContexteAppartement ctx) {
             nav.afficherProprietesAppartement(ctx.getAppartement());
         } else {
             TreeItem<String> itemSelectionne = nav.getTreeView().getSelectionModel().getSelectedItem();
@@ -747,10 +747,10 @@ public class AppControleur {
             return itemCouloir;
         });
 
-        // Notifie TOUS les ContextePiece ouverts pour ce niveau
+        // Notifie TOUS les ContexteAppartement ouverts pour ce niveau
         ctrl.setOnCouloirsRecalcules(() -> {
             gestionnaire.sauvegarderCouloirs(niveau, immeuble);
-            for (ContextePiece ctx : contextePieces.values()) {
+            for (ContexteAppartement ctx : contextesAppartements.values()) {
                 if (ctx.getPieceControleur() != null) {
                     ctx.getPieceControleur().rafraichirTypesMursAffichage();
                 }
@@ -802,9 +802,9 @@ public class AppControleur {
             ctx.getNiveauControleur().revenirEtatNeutre();
         } else if (contexteActif instanceof ContexteAire) {
             immeubleControleur.annulerAire();
-        } else if (contexteActif instanceof ContexteSousPiece ctx) {
-            ctx.onEchap();
         } else if (contexteActif instanceof ContextePiece ctx) {
+            ctx.onEchap();
+        } else if (contexteActif instanceof ContexteAppartement ctx) {
             ctx.getPieceControleur().annulerConstruction();
             ctx.getPieceControleur().changerEtat(PieceControleur.ETAT_RIEN);
         }
@@ -907,7 +907,7 @@ public class AppControleur {
         }
         mapItemPiece.remove(itemPiece);
         mapPieceVersAppart.remove(itemPiece);
-        contexteSousPieces.remove(piece);
+        contextesPieces.remove(piece);
 
         if (appart != null && niveau != null) {
             gestionnaire.sauvegarderAppartementComplet(appart, niveau, immeuble);
@@ -939,7 +939,7 @@ public class AppControleur {
             for (TreeItem<String> itemPiece : enfants) {
                 Piece piece = mapItemPiece.remove(itemPiece);
                 if (piece != null) {
-                    contexteSousPieces.remove(piece);
+                    contextesPieces.remove(piece);
                 }
                 mapPieceVersAppart.remove(itemPiece);
             }
@@ -951,9 +951,9 @@ public class AppControleur {
         }
 
         mapItemAppartement.entrySet().removeIf(entry -> entry.getValue() == appartement);
-        contextePieces.remove(appartement);
+        contextesAppartements.remove(appartement);
         for (Piece piece : new ArrayList<>(appartement.getPieces())) {
-            contexteSousPieces.remove(piece);
+            contextesPieces.remove(piece);
         }
 
         gestionnaire.supprimerAppartement(appartement, niveau, immeuble);
@@ -1045,10 +1045,10 @@ public class AppControleur {
                 return itemCouloir;
             });
 
-            // Notifie TOUS les ContextePiece ouverts pour ce niveau
+            // Notifie TOUS les ContexteAppartement ouverts pour ce niveau
             ctrl.setOnCouloirsRecalcules(() -> {
                 gestionnaire.sauvegarderCouloirs(niveauFinal, immeuble);
-                for (ContextePiece ctx : contextePieces.values()) {
+                for (ContexteAppartement ctx : contextesAppartements.values()) {
                     if (ctx.getPieceControleur() != null) {
                         ctx.getPieceControleur().rafraichirTypesMursAffichage();
                     }
