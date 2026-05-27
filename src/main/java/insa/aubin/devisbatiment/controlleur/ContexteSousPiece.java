@@ -69,6 +69,7 @@ public class ContexteSousPiece implements Contexte {
         appView.setInstructions(
             "Vue de « " + piece + " » — dessinez l'aménagement intérieur"
         );
+        insa.aubin.devisbatiment.modele.CoteMur.vueIsoleePieceActive = true;
     }
 
     @Override
@@ -77,6 +78,7 @@ public class ContexteSousPiece implements Contexte {
             pieceControleur.annulerConstruction();
             pieceControleur.masquerOptionsUsagePiece();
         }
+        insa.aubin.devisbatiment.modele.CoteMur.vueIsoleePieceActive = false;
     }
 
     @Override

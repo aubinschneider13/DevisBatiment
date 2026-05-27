@@ -92,6 +92,8 @@ public class PieceControleur {
 
     // ✅ Ajouté : Variables de votre mode sélection pour les revêtements
     private final List<SurfaceAvecRevetement> surfacesSelectionnees = new ArrayList<>();
+    private boolean vuePieceActive = false;
+    private Piece pieceActive = null;
 
     private Runnable onModification = null;
 
@@ -284,12 +286,66 @@ public class PieceControleur {
             return;
         }
 
+        boolean isVueIsolee = CoteMur.vueIsoleePieceActive || vuePieceActive;
+
+        // Évaluation de l'état de la sélection existante pour les contraintes exclusives (uniquement en vue appartement)
+        boolean aDesMursExterieurs = false;
+        boolean aDesSurfacesInterieures = false;
+        if (!isVueIsolee) {
+            for (SurfaceAvecRevetement s : surfacesSelectionnees) {
+                if (s instanceof CoteMur && ((CoteMur) s).getMurParent().getTypeMur() == Mur.TypeMur.EXTERIEUR) {
+                    aDesMursExterieurs = true;
+                } else {
+                    aDesSurfacesInterieures = true;
+                }
+            }
+        }
+
         // Clic Gauche : Sélection du mur
         double distMinMur = 0.15;
 
         for (Dessin d : vue.getCanvas().getElements()) {
             if (d instanceof Mur m) {
                 if (m.distanceA(pClic) < distMinMur) {
+                    boolean clicEstExterieur = (m.getTypeMur() == Mur.TypeMur.EXTERIEUR);
+
+                    // Validation de la contrainte d'exclusivité (uniquement en vue appartement)
+                    if (!isVueIsolee) {
+                        if (aDesMursExterieurs && !clicEstExterieur) {
+                            vue.setInstructions("Sélection refusée : vous ne pouvez sélectionner que d'autres façades extérieures, ou valider.");
+                            return;
+                        }
+                        if (aDesSurfacesInterieures && clicEstExterieur) {
+                            vue.setInstructions("Sélection refusée : vous ne pouvez pas mélanger des surfaces intérieures et des façades extérieures.");
+                            return;
+                        }
+                    }
+
+                    // Sélection globale en vue appartement pour les façades
+                    // Sélection globale en vue appartement pour les façades
+                    if (!isVueIsolee && clicEstExterieur) {
+                        Mur original = m;
+                        if (appartement != null) {
+                            original = appartement.getMurs().stream()
+                                    .filter(wall -> GeometrieUtils.mursIdentiques(wall, m))
+                                    .findFirst()
+                                    .orElse(m);
+                        }
+                        boolean contientG = surfacesSelectionnees.contains(original.getCoteGauche());
+                        boolean contientD = surfacesSelectionnees.contains(original.getCoteDroit());
+                        if (contientG || contientD) {
+                            surfacesSelectionnees.remove(original.getCoteGauche());
+                            surfacesSelectionnees.remove(original.getCoteDroit());
+                            vue.setInstructions("Façade désélectionnée entièrement.");
+                        } else {
+                            surfacesSelectionnees.add(original.getCoteGauche());
+                            surfacesSelectionnees.add(original.getCoteDroit());
+                            vue.setInstructions("Façade sélectionnée entièrement (Côté Gauche et Droit).");
+                        }
+                        vue.getCanvas().setSelection(surfacesSelectionnees);
+                        vue.redrawAll();
+                        return;
+                    }
 
                     double x1 = m.getPoint1().getX(), y1 = m.getPoint1().getY();
                     double x2 = m.getPoint2().getX(), y2 = m.getPoint2().getY();
@@ -298,14 +354,52 @@ public class PieceControleur {
                     // Calcul du produit vectoriel par rapport au sens du mur affiché (m)
                     double cross = (x2 - x1) * (py - y1) - (y2 - y1) * (px - x1);
 
+                    // Chercher le vrai mur correspondant dans l'appartement actif par ses coordonnées géométriques
+                    Mur original = m;
+                    if (appartement != null) {
+                        original = appartement.getMurs().stream()
+                                .filter(wall -> GeometrieUtils.mursIdentiques(wall, m))
+                                .findFirst()
+                                .orElse(m);
+                    }
+                    CoteMur coteOriginalG = original.getCoteGauche();
+                    CoteMur coteOriginalD = original.getCoteDroit();
+
                     // Sélection directe sur le mur d'AFFICHAGE (pas l'original).
-                    // Cela garantit que les coordonnées de surbrillance restent
-                    // dans les limites du mur tel qu'il est dessiné sur le canevas.
-                    CoteMur coteSel = (cross > 0) ? m.getCoteGauche() : m.getCoteDroit();
+                    CoteMur coteSel = (cross > 0) ? coteOriginalG : coteOriginalD;
+
+                    // Si nous sommes dans la vue isolée d'une pièce, on choisit automatiquement la face intérieure de cette pièce active
+                    if (pieceActive != null) {
+                        for (CoteMur cm : pieceActive.getCotesMurs()) {
+                            if (GeometrieUtils.mursIdentiques(cm.getMurParent(), original)) {
+                                coteSel = cm;
+                                break;
+                            }
+                        }
+                    } else {
+                        // Trouver si le clic est dans une pièce et si le mur appartient à cette pièce
+                        Piece pieceDuClic = null;
+                        if (pieces != null) {
+                            for (Piece p : pieces) {
+                                if (p.getPoints() != null && GeometrieUtils.pointDansPolygone(pClic.getX(), pClic.getY(), p.getPoints())) {
+                                    pieceDuClic = p;
+                                    break;
+                                }
+                            }
+                        }
+                        if (pieceDuClic != null) {
+                            for (CoteMur cm : pieceDuClic.getCotesMurs()) {
+                                if (cm.getMurParent() == original) {
+                                    coteSel = cm;
+                                    break;
+                                }
+                            }
+                        }
+                    }
 
                     if (event.isShiftDown()) {
-                        basculerSelection(m.getCoteGauche());
-                        basculerSelection(m.getCoteDroit());
+                        basculerSelection(coteOriginalG);
+                        basculerSelection(coteOriginalD);
                         vue.setInstructions("Sélection biface : Côté Gauche ET Droit synchronisés.");
                     } else {
                         basculerSelection(coteSel);
@@ -317,6 +411,11 @@ public class PieceControleur {
         }
 
         // Clic au centre de la pièce (Sol + Plafond)
+        if (!isVueIsolee && aDesMursExterieurs) {
+            vue.setInstructions("Sélection refusée : vous ne pouvez sélectionner que d'autres façades extérieures, ou valider.");
+            return;
+        }
+
         for (Piece piece : pieces) {
             if (GeometrieUtils.pointDansPolygone(pClic.getX(), pClic.getY(), piece.getPoints())) {
                 basculerSelection(piece.getSol());
@@ -465,10 +564,26 @@ public class PieceControleur {
                 vue.redrawAll();
             }
         } else if (e.getCode() == javafx.scene.input.KeyCode.DELETE || e.getCode() == javafx.scene.input.KeyCode.BACK_SPACE) {
-            if (this.etat == ETAT_EDITION) {
+            boolean modifie = false;
+            if (this.etat == ETAT_SELECTION && !surfacesSelectionnees.isEmpty()) {
+                System.out.println("[DEBUG CONTROLLER] Appui sur SUPPR en mode sélection. Nb surfaces cibles: " + surfacesSelectionnees.size());
+                for (SurfaceAvecRevetement surface : new ArrayList<>(surfacesSelectionnees)) {
+                    surface.getRevetements().clear();
+                    modifie = true;
+                }
+                vue.setInstructions("Matériaux supprimés sur les surfaces sélectionnées !");
+            } else if (this.etat == ETAT_EDITION) {
                 Object sel = vue.getCanvas().getElementSelectionne();
                 if (sel != null) {
                     supprimerElement(sel);
+                    modifie = true;
+                }
+            }
+            if (modifie) {
+                sauvegarderDetailsAppartement();
+                vue.redrawAll();
+                if (onModification != null) {
+                    onModification.run();
                 }
             }
         }
@@ -679,6 +794,8 @@ public class PieceControleur {
 
     public void rechargerVueAppartementDepuisDisque() {
         if (appartement == null) return;
+        this.vuePieceActive = false;
+        this.pieceActive = null;
         gestionnaire.rechargerOuverturesAppartement(appartement, niveauSauvegarde, batimentSauvegarde);
         vue.getCanvas().getElements().clear();
         if (polygoneAppartement != null && polygoneAppartement.size() >= 3) {
@@ -700,6 +817,8 @@ public class PieceControleur {
 
     public void rechargerVuePieceDepuisDisque(Piece piece) {
         if (piece == null) return;
+        this.vuePieceActive = true;
+        this.pieceActive = piece;
         if (appartement != null)
             gestionnaire.rechargerOuverturesAppartement(appartement, niveauSauvegarde, batimentSauvegarde);
 
@@ -721,9 +840,8 @@ public class PieceControleur {
     }
 
     private void sauvegarderDetailsAppartement() {
-        if (gestionnaire != null && appartement != null
-                && niveauSauvegarde != null && batimentSauvegarde != null) {
-            gestionnaire.sauvegarderDetailsAppartement(appartement, niveauSauvegarde, batimentSauvegarde);
+        if (appartement != null && niveauSauvegarde != null && batimentSauvegarde != null) {
+            gestionnaire.sauvegarderAppartementComplet(appartement, niveauSauvegarde, batimentSauvegarde);
         }
     }
 
@@ -813,7 +931,29 @@ public class PieceControleur {
             for (int i = 0; i < n; i++) {
                 Point a = polygoneAppartement.get(i);
                 Point b = polygoneAppartement.get((i + 1) % n);
-                bruts.add(new SegmentSource(a, b, new Mur(a, b)));
+                
+                Mur original = null;
+                if (appartement != null && appartement.getMursDelimiteurs() != null) {
+                    double tol = 0.02;
+                    for (Mur delim : appartement.getMursDelimiteurs()) {
+                        boolean matchDirect = 
+                            Math.abs(delim.getPoint1().getX() - a.getX()) < tol &&
+                            Math.abs(delim.getPoint1().getY() - a.getY()) < tol &&
+                            Math.abs(delim.getPoint2().getX() - b.getX()) < tol &&
+                            Math.abs(delim.getPoint2().getY() - b.getY()) < tol;
+                        boolean matchInverse = 
+                            Math.abs(delim.getPoint1().getX() - b.getX()) < tol &&
+                            Math.abs(delim.getPoint1().getY() - b.getY()) < tol &&
+                            Math.abs(delim.getPoint2().getX() - a.getX()) < tol &&
+                            Math.abs(delim.getPoint2().getY() - a.getY()) < tol;
+                        if (matchDirect || matchInverse) {
+                            original = delim;
+                            break;
+                        }
+                    }
+                }
+                
+                bruts.add(new SegmentSource(a, b, original != null ? original : new Mur(a, b)));
             }
         }
 
@@ -1282,5 +1422,13 @@ public class PieceControleur {
     private boolean estMurAdjacentCouloir(Mur mur) {
         return mur.getTypeMur() == Mur.TypeMur.ADJ_COULOIR
                 || (niveauControleur != null && niveauControleur.estAdjacentsAuCouloir(mur));
+    }
+
+    public PieceView getVue() {
+        return vue;
+    }
+
+    public void redraw() {
+        vue.redrawAll();
     }
 }

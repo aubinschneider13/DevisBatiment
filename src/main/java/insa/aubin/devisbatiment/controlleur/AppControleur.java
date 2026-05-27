@@ -82,7 +82,7 @@ public class AppControleur {
         this.gestionnaire = gestionnaire;
         this.modeMaison   = modeMaison;
 
-        this.catalogue = new CatalogueRevetements("src/main/resources/data/revetements.txt");
+        this.catalogue = gestionnaire.getCatalogue();
 
         brancherToolBar();
         brancherToolBarDevis();
@@ -223,53 +223,121 @@ public class AppControleur {
                 boolean targetSol = dialog.isAppliquerAuSol();
                 boolean targetPlafond = dialog.isAppliquerAuPlafond();
 
-                for (SurfaceAvecRevetement surface : selection) {
-                    boolean compatibleEtVise = false;
+                System.out.println("[DEBUG GUI] Clic Validation Matériau: " + revChoisi.getDesignation() + " (ID: " + revChoisi.getId() + ")");
+                System.out.println("[DEBUG GUI] Nombre de surfaces sélectionnées à traiter: " + selection.size());
 
-                    // ✅ CORRECTION : On teste "CoteMur" (qui hérite bien de SurfaceAvecRevetement)
-                    if (surface instanceof CoteMur && targetMurs) {
-                        compatibleEtVise = surface.estCompatibleAvec(revChoisi);
+                Appartement appartActuel = null;
+                Niveau niveauActuel = null;
+                if (contexteActif instanceof ContextePiece ctx) {
+                    appartActuel = ctx.getAppartement();
+                } else if (contexteActif instanceof ContexteSousPiece ctx) {
+                    Piece p = ctx.getPiece();
+                    if (immeuble != null) {
+                        for (Niveau niv : immeuble.getNiveaux()) {
+                            for (Appartement app : niv.getAppartements()) {
+                                if (app.getPieces().contains(p)) {
+                                    appartActuel = app;
+                                    break;
+                                }
+                            }
+                            if (appartActuel != null) break;
+                        }
+                    }
+                }
+                
+                if (appartActuel != null && immeuble != null) {
+                    for (Niveau niv : immeuble.getNiveaux()) {
+                        if (niv.getAppartements().contains(appartActuel)) {
+                            niveauActuel = niv;
+                            break;
+                        }
+                    }
+                }
+
+                final Appartement finalAppartActuel = appartActuel;
+
+                for (SurfaceAvecRevetement surface : selection) {
+                    if (surface instanceof CoteMur coteSel && targetMurs) {
+                        Mur parent = coteSel.getMurParent();
+                        
+                        // Chercher le vrai mur correspondant dans l'appartement actif par ses coordonnées géométriques
+                        Mur original = parent;
+                        if (finalAppartActuel != null) {
+                            original = finalAppartActuel.getMurs().stream()
+                                    .filter(wall -> GeometrieUtils.mursIdentiques(wall, parent))
+                                    .findFirst()
+                                    .orElse(parent);
+                        }
+
+                        boolean estGauche = (coteSel == parent.getCoteGauche());
+                        CoteMur coteOriginal = estGauche ? original.getCoteGauche() : original.getCoteDroit();
+
+                        if (coteOriginal.estCompatibleAvec(revChoisi)) {
+                            coteOriginal.ajouterRevetement(revChoisi);
+                        }
+
+                        // Appliquer également au clone graphique pour l'IHM immédiate
+                        if (coteSel != coteOriginal && coteSel.estCompatibleAvec(revChoisi)) {
+                            coteSel.ajouterRevetement(revChoisi);
+                        }
+
+                        // Appliquer également à tous les clones graphiques du même mur sur le canvas actif pour IHM immédiate
+                        if (contexteActif instanceof ContextePiece ctx) {
+                            for (Dessin d : ctx.getPieceControleur().getVue().getCanvas().getElements()) {
+                                if (d instanceof Mur murClone && murClone.getOriginal() == original) {
+                                    CoteMur coteClone = estGauche ? murClone.getCoteGauche() : murClone.getCoteDroit();
+                                    if (coteClone.estCompatibleAvec(revChoisi)) {
+                                        coteClone.ajouterRevetement(revChoisi);
+                                    }
+                                }
+                            }
+                        } else if (contexteActif instanceof ContexteSousPiece ctx) {
+                            for (Dessin d : ctx.getPieceControleur().getVue().getCanvas().getElements()) {
+                                if (d instanceof Mur murClone && murClone.getOriginal() == original) {
+                                    CoteMur coteClone = estGauche ? murClone.getCoteGauche() : murClone.getCoteDroit();
+                                    if (coteClone.estCompatibleAvec(revChoisi)) {
+                                        coteClone.ajouterRevetement(revChoisi);
+                                    }
+                                }
+                            }
+                        }
                     }
                     else if (surface instanceof Sol && targetSol) {
-                        compatibleEtVise = surface.estCompatibleAvec(revChoisi);
+                        if (surface.estCompatibleAvec(revChoisi)) {
+                            surface.getRevetements().clear();
+                            surface.ajouterRevetement(revChoisi);
+                        }
                     }
                     else if (surface instanceof Plafond && targetPlafond) {
-                        compatibleEtVise = surface.estCompatibleAvec(revChoisi);
+                        if (surface.estCompatibleAvec(revChoisi)) {
+                            surface.getRevetements().clear();
+                            surface.ajouterRevetement(revChoisi);
+                        }
                     }
+                }
 
-                    if (compatibleEtVise) {
-                        surface.getRevetements().clear();
-                        surface.ajouterRevetement(revChoisi);
-                    }
+                if (appartActuel != null && niveauActuel != null) {
+                    gestionnaire.sauvegarderAppartementComplet(appartActuel, niveauActuel, immeuble);
+                    appartActuel.calculerDevis();
+                }
+
+                if (contexteActif instanceof ContextePiece ctx) {
+                    ctx.getPieceControleur().redraw();
+                } else if (contexteActif instanceof ContexteSousPiece ctx) {
+                    ctx.getPieceControleur().redraw();
                 }
 
                 if (contexteActif instanceof ContexteSousPiece ctx) {
                     ctx.viderSelection();
-                    double totalDevis = ctx.getPiece().calculerDevis();
-                    tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
                 } else if (contexteActif instanceof ContextePiece ctx) {
                     ctx.viderSelection();
-                    double totalDevis = calculerDevisAppartement(ctx.getAppartement());
-                    tbDevis.getLabelTotalDevis().setText(String.format("Total estimé : %.2f €", totalDevis));
                 }
 
-                appView.setInstructions("Matériau " + revChoisi.getDesignation() + " appliqué avec succès !");
+                sauvegarderDetailsOuvertures();
 
-                // Rafraîchir le panneau de propriétés
-                TreeItem<String> itemSelectionne = appView.getNavigateurView()
-                        .getTreeView().getSelectionModel().getSelectedItem();
-                if (itemSelectionne != null) {
-                    NavigateurView nav = appView.getNavigateurView();
-                    Piece pieceSelectionnee = mapItemPiece.get(itemSelectionne);
-                    if (pieceSelectionnee != null) {
-                        nav.afficherProprietesPiece(pieceSelectionnee);
-                    } else {
-                        Appartement appart = mapItemAppartement.get(itemSelectionne);
-                        if (appart != null) {
-                            nav.afficherProprietesAppartement(appart);
-                        }
-                    }
-                }
+                appView.setInstructions("Mat\u00e9riau " + revChoisi.getDesignation() + " appliqu\u00e9 avec succ\u00e8s !");
+
+                rafraichirDevisEtProprietes();
             }
         });
 
@@ -571,15 +639,21 @@ public class AppControleur {
         }
 
         // 2. Mise à jour de la fiche de propriétés latérale droite
-        TreeItem<String> itemSelectionne = nav.getTreeView().getSelectionModel().getSelectedItem();
-        if (itemSelectionne != null) {
-            Piece pieceSelectionnee = mapItemPiece.get(itemSelectionne);
-            if (pieceSelectionnee != null) {
-                nav.afficherProprietesPiece(pieceSelectionnee);
-            } else {
-                Appartement appart = mapItemAppartement.get(itemSelectionne);
-                if (appart != null) {
-                    nav.afficherProprietesAppartement(appart);
+        if (contexteActif instanceof ContexteSousPiece ctx) {
+            nav.afficherProprietesPiece(ctx.getPiece());
+        } else if (contexteActif instanceof ContextePiece ctx) {
+            nav.afficherProprietesAppartement(ctx.getAppartement());
+        } else {
+            TreeItem<String> itemSelectionne = nav.getTreeView().getSelectionModel().getSelectedItem();
+            if (itemSelectionne != null) {
+                Piece pieceSelectionnee = mapItemPiece.get(itemSelectionne);
+                if (pieceSelectionnee != null) {
+                    nav.afficherProprietesPiece(pieceSelectionnee);
+                } else {
+                    Appartement appart = mapItemAppartement.get(itemSelectionne);
+                    if (appart != null) {
+                        nav.afficherProprietesAppartement(appart);
+                    }
                 }
             }
         }

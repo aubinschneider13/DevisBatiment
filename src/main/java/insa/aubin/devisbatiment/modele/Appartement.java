@@ -113,6 +113,23 @@ public class Appartement extends ElementDeConstruction implements Dessin {
             total += p.calculerDevis();
         }
 
+        // Ajouter le coût des revêtements/isolants des côtés de murs non comptabilisés dans les pièces (ex: façades extérieures)
+        java.util.Set<CoteMur> cotesMursComptabilises = new java.util.HashSet<>();
+        for (Piece p : pieces) {
+            cotesMursComptabilises.addAll(p.getCotesMurs());
+        }
+
+        double coutCotesOrphelins = 0;
+        for (Mur m : getMurs()) {
+            if (!cotesMursComptabilises.contains(m.getCoteGauche())) {
+                coutCotesOrphelins += m.getCoteGauche().calculerPrixRevetement();
+            }
+            if (!cotesMursComptabilises.contains(m.getCoteDroit())) {
+                coutCotesOrphelins += m.getCoteDroit().calculerPrixRevetement();
+            }
+        }
+        total += coutCotesOrphelins;
+
         // Filtrage spatial absolu des ouvertures (Anti-doublons complet)
         List<Point> positionsOuverturesFacturees = new ArrayList<>();
         double prixMenuiseries = 0;

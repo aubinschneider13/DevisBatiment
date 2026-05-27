@@ -77,6 +77,11 @@ public class CatalogueRevetements {
                             case "parquet":
                                 r = new Parquet(id, designation, pourMur, pourSol, pourPlafond, prix, essenceBois, finition);
                                 break;
+                            case "isolant":
+                                TypeIsolant typeIso = TypeIsolant.fromString(couleur);
+                                double epais = Double.parseDouble(finition.isEmpty() ? "0.0" : finition.replace(",", "."));
+                                r = new Isolant(id, designation, pourMur, pourSol, pourPlafond, prix, typeIso, epais);
+                                break;
                             default:
                                 // Repli de sécurité pour un revêtement générique
                                 r = new Revetement(id, designation, pourMur, pourSol, pourPlafond, prix);

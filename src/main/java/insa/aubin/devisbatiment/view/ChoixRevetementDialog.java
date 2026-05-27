@@ -137,11 +137,44 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
                     return false;
                 }
                 
-                boolean compatible = false;
-                if (targetMurs && r.isPourMur()) compatible = true;
-                if (targetSol && r.isPourSol()) compatible = true;
-                if (targetPlafond && r.isPourPlafond()) compatible = true;
-                return compatible;
+                boolean matchType = false;
+                if (targetMurs && r.isPourMur()) matchType = true;
+                if (targetSol && r.isPourSol()) matchType = true;
+                if (targetPlafond && r.isPourPlafond()) matchType = true;
+                
+                if (!matchType) return false;
+                
+                // Vérifier la compatibilité avec au moins une des surfaces sélectionnées ciblées (condition OU au lieu de ET)
+                if (surfacesSelectionnees != null) {
+                    boolean compatibleAvecAuMoinsUne = false;
+                    boolean aDesSurfacesCiblesActives = false;
+                    
+                    for (SurfaceAvecRevetement surface : surfacesSelectionnees) {
+                        if (surface instanceof CoteMur && targetMurs) {
+                            aDesSurfacesCiblesActives = true;
+                            if (surface.estCompatibleAvec(r)) {
+                                compatibleAvecAuMoinsUne = true;
+                            }
+                        }
+                        else if (surface instanceof Sol && targetSol) {
+                            aDesSurfacesCiblesActives = true;
+                            if (surface.estCompatibleAvec(r)) {
+                                compatibleAvecAuMoinsUne = true;
+                            }
+                        }
+                        else if (surface instanceof Plafond && targetPlafond) {
+                            aDesSurfacesCiblesActives = true;
+                            if (surface.estCompatibleAvec(r)) {
+                                compatibleAvecAuMoinsUne = true;
+                            }
+                        }
+                    }
+                    
+                    if (aDesSurfacesCiblesActives && !compatibleAvecAuMoinsUne) {
+                        return false;
+                    }
+                }
+                return true;
             });
         };
         
@@ -183,6 +216,8 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
                         lblDetails.setText(String.format("🧱 Carrelage • Dim : %s • Matière : %s", c.getDimension(), c.getMatiere()));
                     } else if (item instanceof Parquet pq) {
                         lblDetails.setText(String.format("🪵 Parquet • Bois : %s • Finition : %s", pq.getEssenceBois(), pq.getFinition()));
+                    } else if (item instanceof Isolant iso) {
+                        lblDetails.setText(String.format("☀️ Isolation • Type : %s • Épaisseur : %.1f cm", iso.getTypeIsolant().getLibelle(), iso.getEpaisseur()));
                     } else {
                         lblDetails.setText("🛠️ Revêtement Standard");
                     }
@@ -230,7 +265,7 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
         grid.setStyle("-fx-background-color: #f8fafc; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e2e8f0; -fx-border-width: 1px;");
 
         // Éléments de base
-        ComboBox<String> cbType = new ComboBox<>(FXCollections.observableArrayList("Revetement Standard", "Peinture", "Carrelage", "Parquet"));
+        ComboBox<String> cbType = new ComboBox<>(FXCollections.observableArrayList("Revetement Standard", "Peinture", "Carrelage", "Parquet", "Isolant"));
         cbType.setValue("Revetement Standard");
 
         TextField txtDesignation = new TextField(); 
@@ -298,6 +333,13 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
                         chkMur.setSelected(false); chkSol.setSelected(true); chkPlafond.setSelected(false);
                     }
                     break;
+                case "Isolant":
+                    lblAttr1.setText("Type Isolant :"); txtAttr1.setPromptText("Ex: LAINE_DE_ROCHE, BARDAGE_BOIS...");
+                    lblAttr2.setText("Épaisseur (cm) :"); txtAttr2.setPromptText("Ex: 10.0");
+                    if (finalNbMurs == 0 && finalNbSols == 0 && finalNbPlafonds == 0) {
+                        chkMur.setSelected(true); chkSol.setSelected(false); chkPlafond.setSelected(false);
+                    }
+                    break;
                 default:
                     lblAttr1.setText(""); lblAttr2.setText("");
                     break;
@@ -357,6 +399,11 @@ public class ChoixRevetementDialog extends Dialog<Revetement> {
                     case "Peinture" -> new Peinture(nouvelId, designation, chkMur.isSelected(), chkSol.isSelected(), chkPlafond.isSelected(), prix, attr1, attr2);
                     case "Carrelage" -> new Carrelage(nouvelId, designation, chkMur.isSelected(), chkSol.isSelected(), chkPlafond.isSelected(), prix, attr1, attr2);
                     case "Parquet" -> new Parquet(nouvelId, designation, chkMur.isSelected(), chkSol.isSelected(), chkPlafond.isSelected(), prix, attr1, attr2);
+                    case "Isolant" -> {
+                        TypeIsolant typeIso = TypeIsolant.fromString(attr1);
+                        double epais = Double.parseDouble(attr2.isEmpty() ? "0.0" : attr2.replace(",", "."));
+                        yield new Isolant(nouvelId, designation, chkMur.isSelected(), chkSol.isSelected(), chkPlafond.isSelected(), prix, typeIso, epais);
+                    }
                     default -> new Revetement(nouvelId, designation, chkMur.isSelected(), chkSol.isSelected(), chkPlafond.isSelected(), prix);
                 };
 

@@ -16,6 +16,14 @@ public class GestionnaireSauvegarde {
     private boolean sauvegardeActive;
     private String cheminRacine;
     private static final String FICHIER_CONFIG = "config.properties";
+    private CatalogueRevetements catalogue;
+
+    public CatalogueRevetements getCatalogue() {
+        if (this.catalogue == null) {
+            this.catalogue = new CatalogueRevetements("src/main/resources/data/revetements.txt");
+        }
+        return this.catalogue;
+    }
 
     public GestionnaireSauvegarde() {
         this.sauvegardeActive = false;
@@ -199,8 +207,17 @@ public class GestionnaireSauvegarde {
 
         String cheminDossier = getCheminAppartement(a, n, b);
         new File(cheminDossier).mkdirs();
-        ecrireLignes(cheminDossier + "/murs_appartement.txt",
-                a.getMurs().stream().map(Mur::toCSV).toList());
+
+        List<String> csvLines = new ArrayList<>();
+        for (Mur m : a.getMurs()) {
+            System.out.println("[DEBUG SAVE] Tentative d'écriture du mur: " + m.toString() + " (Instance: " + m.hashCode() + ")");
+            String idG = (m.getCoteGauche().getRevetements() != null && !m.getCoteGauche().getRevetements().isEmpty()) ? m.getCoteGauche().getRevetements().get(0).getId() : "VIDE";
+            String idD = (m.getCoteDroit().getRevetements() != null && !m.getCoteDroit().getRevetements().isEmpty()) ? m.getCoteDroit().getRevetements().get(0).getId() : "VIDE";
+            System.out.println("  -> Données lues pour le fichier - Gauche: " + idG + " | Droit: " + idD);
+            csvLines.add(m.toCSV());
+        }
+
+        ecrireLignes(cheminDossier + "/murs_appartement.txt", csvLines);
     }
 
     public void sauvegarderAppartementComplet(Appartement a, Niveau n, Batiment b) {
@@ -239,14 +256,109 @@ public class GestionnaireSauvegarde {
 
     public void rechargerOuverturesAppartement(Appartement a, Niveau n, Batiment b) {
         if (a == null || n == null || b == null || !sauvegardeActive) return;
-        chargerOuverturesMurs(a.getMurs(),
-                new File(getCheminAppartement(a, n, b) + "/murs_appartement.txt"));
+        File fichier = new File(getCheminAppartement(a, n, b) + "/murs_appartement.txt");
+        chargerOuverturesMurs(a.getMurs(), fichier);
+        chargerRevetementsMurs(a.getMurs(), fichier);
+
+        // Recharger également les détails de toutes les pièces (Sols & Plafonds)
+        if (a.getPieces() != null) {
+            for (Piece piece : a.getPieces()) {
+                File fichierPiece = new File(getCheminAppartement(a, n, b) + "/" + piece.getId() + ".txt");
+                chargerDetailsPiece(piece, fichierPiece);
+            }
+        }
+    }
+
+    public void chargerRevetementsMurs(List<Mur> murs, File fichier) {
+        if (murs == null || fichier == null || !fichier.exists()) return;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(fichier))) {
+            String ligne;
+            while ((ligne = br.readLine()) != null) {
+                ligne = ligne.trim();
+                if (ligne.isEmpty()) continue;
+                String[] parts = ligne.split(";");
+                if (parts.length < 9 || !parts[0].equals("MUR")) continue;
+
+                Mur mur = trouverMurParCoordonnees(murs,
+                        Double.parseDouble(parts[2]),
+                        Double.parseDouble(parts[3]),
+                        Double.parseDouble(parts[4]),
+                        Double.parseDouble(parts[5]));
+                if (mur == null) continue;
+
+                CatalogueRevetements cat = getCatalogue();
+                if (parts.length > 7) {
+                    String idsGauche = parts[7];
+                    mur.getCoteGauche().getRevetements().clear();
+                    if (!"VIDE".equals(idsGauche)) {
+                        for (String id : idsGauche.split(",")) {
+                            Revetement r = cat.rechercherParId(id.trim());
+                            if (r != null) {
+                                mur.getCoteGauche().getRevetements().add(r);
+                            }
+                        }
+                    }
+                }
+                if (parts.length > 8) {
+                    String idsDroit = parts[8];
+                    mur.getCoteDroit().getRevetements().clear();
+                    if (!"VIDE".equals(idsDroit)) {
+                        for (String id : idsDroit.split(",")) {
+                            Revetement r = cat.rechercherParId(id.trim());
+                            if (r != null) {
+                                mur.getCoteDroit().getRevetements().add(r);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur chargement revetements : " + e.getMessage());
+        }
+    }
+
+    public void chargerDetailsPiece(Piece p, File fichier) {
+        if (p == null || fichier == null || !fichier.exists()) return;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(fichier))) {
+            String ligne;
+            CatalogueRevetements cat = getCatalogue();
+            while ((ligne = br.readLine()) != null) {
+                ligne = ligne.trim();
+                if (ligne.isEmpty()) continue;
+                String[] parts = ligne.split(";");
+
+                if (parts[0].equals("SOL")) {
+                    p.getSol().getRevetements().clear();
+                    for (int i = 2; i < parts.length - 1; i++) {
+                        String id = parts[i];
+                        Revetement r = cat.rechercherParId(id.trim());
+                        if (r != null) {
+                            p.getSol().getRevetements().add(r);
+                        }
+                    }
+                } else if (parts[0].equals("PLAFOND")) {
+                    p.getPlafond().getRevetements().clear();
+                    for (int i = 2; i < parts.length - 1; i++) {
+                        String id = parts[i];
+                        Revetement r = cat.rechercherParId(id.trim());
+                        if (r != null) {
+                            p.getPlafond().getRevetements().add(r);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur chargement détails pièce " + p.getId() + " : " + e.getMessage());
+        }
     }
 
     public void sauvegarderDetailsPiece(Piece p, Appartement a, Niveau n, Batiment b) {
         if (!sauvegardeActive) return;
 
         String cheminParent = getCheminAppartement(a, n, b);
+        new File(cheminParent).mkdirs();
         String cheminFichier = cheminParent + "/" + p.getId() + ".txt";
         List<String> lignes = new ArrayList<>();
         for (Mur m : p.getMurs()) {
@@ -369,8 +481,8 @@ public class GestionnaireSauvegarde {
                 List<Point> pointsAppart = new ArrayList<>();
                 for (int i = 6; i + 1 < parts.length; i += 2) {
                     pointsAppart.add(new Point(
-                            Double.parseDouble(parts[i]),
-                            Double.parseDouble(parts[i + 1])
+                             Double.parseDouble(parts[i]),
+                             Double.parseDouble(parts[i + 1])
                     ));
                 }
 
@@ -386,16 +498,16 @@ public class GestionnaireSauvegarde {
 
                 Appartement appart = niveau.ajouterAppartement(mursAppart);
                 appart.setId(id);
-                chargerOuverturesMurs(
-                        appart.getMursDelimiteurs(),
-                        new File(cheminRacine + "/" + nomBatiment + "/" + idNiveau
-                                + "/" + id + "/murs_appartement.txt"));
+
+                File fichierMurs = new File(cheminRacine + "/" + nomBatiment + "/" + idNiveau
+                                + "/" + id + "/murs_appartement.txt");
+                chargerOuverturesMurs(appart.getMursDelimiteurs(), fichierMurs);
+                chargerRevetementsMurs(appart.getMursDelimiteurs(), fichierMurs);
 
                 chargerPieces(appart, nomBatiment, idNiveau, id);
-                chargerOuverturesMurs(
-                        appart.getMurs(),
-                        new File(cheminRacine + "/" + nomBatiment + "/" + idNiveau
-                                + "/" + id + "/murs_appartement.txt"));
+
+                chargerOuverturesMurs(appart.getMurs(), fichierMurs);
+                chargerRevetementsMurs(appart.getMurs(), fichierMurs);
             }
         } catch (Exception e) {
             System.err.println("Erreur chargement appartements : " + e.getMessage());
@@ -551,6 +663,9 @@ public class GestionnaireSauvegarde {
                 Piece piece = appart.ajouterPiece(mursPiece);
                 piece.setId(id);
                 piece.setUsage(usage);
+                File fichierPiece = new File(cheminRacine + "/" + nomBatiment + "/"
+                        + idNiveau + "/" + idAppart + "/" + piece.getId() + ".txt");
+                chargerDetailsPiece(piece, fichierPiece);
             }
         } catch (Exception e) {
             System.err.println("Erreur chargement pièces : " + e.getMessage());
