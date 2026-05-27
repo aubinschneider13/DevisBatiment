@@ -4,17 +4,48 @@ import java.util.ArrayList;
 import java.util.List;
 import insa.aubin.devisbatiment.modele.GeometrieUtils.MurOriente;
 
+/**
+ * Représente une pièce fermée à l'intérieur d'un appartement.
+ * <p>
+ * Une pièce est un élément structurel délimité par une succession de cloisons ou de murs 
+ * formant un contour polygonal fermé. Elle possède :
+ * <ul>
+ *   <li>Une hauteur sous plafond spécifique (héritée ou surchargée).</li>
+ *   <li>Un ensemble de sommets 2D ({@link Point}) définissant son polygone de base.</li>
+ *   <li>Une liste de murs ({@link Mur}) formant son périmètre.</li>
+ *   <li>Un revêtement de {@link Sol} et un revêtement de {@link Plafond} associés à sa surface.</li>
+ *   <li>Une liste de {@link CoteMur} correspondant aux faces de murs qui font strictement face à 
+ *       l'intérieur de cette pièce (indispensable pour l'isolation et la décoration).</li>
+ *   <li>Un usage descriptif (ex: "Salon", "Chambre", "Cuisine").</li>
+ * </ul>
+ * </p>
+ * 
+ * @see ElementDeConstruction
+ * @see Sol
+ * @see Plafond
+ * @see CoteMur
+ */
 public class Piece extends ElementDeConstruction {
 
+    /** La hauteur physique sous plafond de la pièce (en mètres). */
     private double hauteurPlafond;
+    /** Liste ordonnée des sommets (points 2D) délimitant la forme géométrique de la pièce. */
     private List<Point> points;
+    /** Liste des murs physiques constituant le contour géométrique de la pièce. */
     private List<Mur> murs;
+    /** Liste des murs orientés dans le sens trigonométrique pour assurer la cohérence géométrique. */
     private List<MurOriente> mursOrientes;
+    /** Faces des murs de contour faisant strictement face à l'intérieur de la pièce. */
     private List<CoteMur> cotesMurs;
+    /** Description ou nature fonctionnelle de la pièce (ex : "Chambre 1"). */
     private String usage;
+    /** Le sol physique de la pièce supportant les revêtements de sol. */
     private Sol sol;
+    /** Le plafond de la pièce supportant les revêtements de plafond. */
     private Plafond plafond;
+    /** Compteur global statique pour l'attribution des numéros uniques de pièces. */
     private static int compteur = 0;
+    /** Numéro séquentiel unique attribué à cette pièce pour l'IHM et les devis. */
     private final int numero;
 
     // =========================================================================
@@ -22,8 +53,21 @@ public class Piece extends ElementDeConstruction {
     // =========================================================================
 
     /**
-     * Constructeur principal — reçoit les murs existants (déjà dessinés).
-     * Les points sont dérivés des murs pour éviter la duplication.
+     * Construit une pièce à partir d'un ensemble de murs fermés formant un cycle.
+     * <p>
+     * <b>Processus d'initialisation géométrique :</b>
+     * <ol>
+     *   <li>Les murs bruts sont ordonnés de manière cyclique et continue via {@link GeometrieUtils#ordonnerMurs}.</li>
+     *   <li>Les points 2D de sommets sont extraits séquentiellement de ces murs ordonnés.</li>
+     *   <li>Pour chaque mur du périmètre, l'algorithme détermine de manière déterministe quelle face 
+     *       (Gauche ou Droite) est orientée vers l'intérieur du polygone de la pièce. Cette face spécifique 
+     *       est enregistrée dans {@link #cotesMurs}.</li>
+     *   <li>La surface totale est calculée via la formule de Gauss/Shoelace pour instancier le sol et le plafond.</li>
+     * </ol>
+     * </p>
+     * 
+     * @param murs           La liste non ordonnée des murs formant la boucle de la pièce.
+     * @param hauteurPlafond La hauteur sous plafond associée.
      */
     public Piece(List<Mur> murs, double hauteurPlafond) {
         super("Piece");
@@ -83,8 +127,16 @@ public class Piece extends ElementDeConstruction {
     // =========================================================================
 
     /**
-     * Calcule la surface au sol via la formule du lacet (Shoelace).
-     * Recalculée à chaque appel pour rester cohérente si les points changent.
+     * Calcule la surface au sol de la pièce en appliquant la <b>Formule du Lacet (Shoelace Algorithm ou formule de Gauss)</b>.
+     * <p>
+     * <b>Principe mathématique :</b>
+     * L'algorithme calcule l'aire signée du polygone simple à partir des coordonnées cartésiennes de ses sommets :
+     * $$\text{Aire} = \frac{1}{2} \left| \sum_{i=0}^{n-1} (x_i y_{i+1} - x_{i+1} y_i) \right|$$
+     * La prise en compte de la valeur absolue garantit un résultat strictement positif, 
+     * indépendamment du sens de parcours des sommets (horaire ou trigonométrique).
+     * </p>
+     * 
+     * @return La surface habitable de la pièce en mètres carrés (m²).
      */
     public double calculerSurfaceTotale() {
         double surface = 0;
@@ -99,8 +151,17 @@ public class Piece extends ElementDeConstruction {
     }
 
     /**
-     * Calcule le devis de la pièce :
-     * somme des prix des revêtements de tous les CoteMur + sol + plafond.
+     * Calcule le montant total estimé du devis pour cette pièce.
+     * <p>
+     * Le calcul intègre de manière exhaustive :
+     * <ul>
+     *   <li>Le coût de tous les revêtements intérieurs appliqués sur les faces de cloisons orientées vers la pièce ({@link CoteMur}).</li>
+     *   <li>Le coût du revêtement de {@link Sol} posé.</li>
+     *   <li>Le coût du revêtement de {@link Plafond} appliqué.</li>
+     * </ul>
+     * </p>
+     * 
+     * @return Le montant cumulé estimé de la pièce en euros (€).
      */
     public double calculerDevis() {
         double total = 0;
@@ -116,10 +177,20 @@ public class Piece extends ElementDeConstruction {
     // USAGE
     // =========================================================================
 
+    /**
+     * Retourne l'usage ou la nature de cette pièce.
+     * 
+     * @return L'usage sous forme de chaîne de caractères.
+     */
     public String getUsage() {
         return usage;
     }
 
+    /**
+     * Attribue ou modifie l'usage descriptif de la pièce (ex : "Salon").
+     * 
+     * @param usage Le libellé décrivant l'usage.
+     */
     public void setUsage(String usage) {
         this.usage = usage != null ? usage.trim() : "";
     }
@@ -133,7 +204,9 @@ public class Piece extends ElementDeConstruction {
     public List<Point> getPoints()                 { return points; }
     
     /**
-     * Retourne les murs de contour ordonnés de la pièce.
+     * Retourne les murs constituant le périmètre physique de la pièce.
+     * 
+     * @return Liste de murs {@link Mur}.
      */
     public List<Mur> getMurs() {
         return murs;
@@ -143,6 +216,21 @@ public class Piece extends ElementDeConstruction {
         return mursOrientes;
     }
 
+    /**
+     * Algorithme géométrique de détection de face intérieure.
+     * <p>
+     * Détermine si le côté gauche d'un mur orienté regarde vers l'intérieur du polygone de la pièce.
+     * <p>
+     * <b>Méthodologie :</b>
+     * <ol>
+     *   <li>Calcule le milieu géométrique du mur $(m_x, m_y)$.</li>
+     *   <li>Extrait le vecteur normal unitaire pointant à gauche par rapport au sens trigonométrique du segment.</li>
+     *   <li>Génère un point de test temporaire légèrement décalé (offset de $1\text{ cm}$) le long de cette normale.</li>
+     *   <li>Applique un test de Ray-Casting (point-dans-polygone) via {@link GeometrieUtils#pointDansPolygone} 
+     *       pour vérifier si ce point de test réside à l'intérieur du périmètre de la pièce.</li>
+     * </ol>
+     * </p>
+     */
     private boolean estCoteGaucheDansPiece(MurOriente mur, List<Point> pointsPiece) {
         if (pointsPiece == null || pointsPiece.size() < 3) return true;
         double mx = (mur.getPoint1().getX() + mur.getPoint2().getX()) / 2.0;
@@ -156,10 +244,21 @@ public class Piece extends ElementDeConstruction {
         return GeometrieUtils.pointDansPolygone(tx, ty, pointsPiece);
     }
     
+    /**
+     * Retourne les côtés de murs faisant face à l'intérieur de la pièce.
+     * 
+     * @return Liste de {@link CoteMur}.
+     */
     public List<CoteMur> getCotesMurs() {
         return cotesMurs;
     }
     
+    /**
+     * Construit dynamiquement des arêtes géométriques de murs orientées dans le bon sens, 
+     * synchronisées avec les ouvertures et revêtements d'origine, prêtes à être dessinées dans la vue isolée.
+     * 
+     * @return Liste de murs temporaires synchronisés pour l'affichage graphique de la pièce.
+     */
     public List<Mur> construireMursAffichage() {
         List<Point> pts = getPoints();
         if (pts == null || pts.size() < 3) return getMurs();
@@ -211,6 +310,17 @@ public class Piece extends ElementDeConstruction {
     // SÉRIALISATION
     // =========================================================================
 
+    /**
+     * Sérialise cette pièce au format CSV reconnu par {@link GestionnaireSauvegarde}.
+     * <p>
+     * <b>Format CSV généré :</b>
+     * <pre>
+     * PIECE;[ID];[NUMERO];[SURFACE];[HAUTEUR_PLAFOND];[USAGE];[X1];[Y1];[X2];[Y2]...
+     * </pre>
+     * </p>
+     * 
+     * @return La chaîne sérialisée.
+     */
     @Override
     public String toCSV() {
         StringBuilder sb = new StringBuilder();
@@ -224,6 +334,11 @@ public class Piece extends ElementDeConstruction {
         return sb.toString();
     }
 
+    /**
+     * Libellé d'affichage abrégé pour l'arborescence du NavigateurView.
+     * 
+     * @return Chaîne descriptive incluant le numéro unique, l'usage et la surface de la pièce.
+     */
     @Override
     public String toString() {
         String suffixeUsage = usage == null || usage.isBlank() ? "" : " - " + usage;
@@ -231,11 +346,22 @@ public class Piece extends ElementDeConstruction {
              + String.format(" (%.1f m²)", calculerSurfaceTotale());
     }
 
+    /**
+     * Libellé de texte formel tracé sur le canvas interactif.
+     * 
+     * @return Texte de dessin 2D de la pièce.
+     */
     public String getLibelleCanvas() {
         return "Pi\u00e8ce " + numero
              + String.format(" (%.1f m\u00b2)", calculerSurfaceTotale());
     }
 
+    /**
+     * Encode une chaîne pour éviter des collisions avec le séparateur CSV point-virgule et les sauts de lignes.
+     * 
+     * @param valeur La valeur textuelle brute.
+     * @return La valeur nettoyée et sécurisée.
+     */
     private String encoderChampCSV(String valeur) {
         if (valeur == null) return "";
         return valeur.replace(";", ",")

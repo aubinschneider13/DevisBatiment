@@ -23,14 +23,25 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 /**
- * Contrôleur de la vue d'un appartement.
- *
- * Responsabilité : gérer le dessin interactif sur le DessinCanvas de l'appartement
- * (murs intérieurs libres ou rectangulaires, pièces par détection de cycle minimal,
- * portes et fenêtres sur les murs).
- *
- * La géométrie (détection de point dans polygone, cycle minimal, subdivision
- * des segments, etc.) est entièrement déléguée à {@link GeometrieUtils}.
+ * Contrôleur interactif principal pour la vue d'un appartement ou d'une pièce isolée.
+ * <p>
+ * Cette classe est responsable de l'ensemble des interactions graphiques sur le {@link insa.aubin.devisbatiment.view.DessinCanvas}.
+ * Ses responsabilités incluent :
+ * <ul>
+ *   <li>Le dessin géométrique interactif de cloisons (murs intérieurs libres ou rectangulaires).</li>
+ *   <li>La détection automatique d'espaces clos et la création de pièces via la recherche de cycles minimaux.</li>
+ *   <li>L'insertion de menuiseries (portes et fenêtres) sur les axes des murs avec accrochage magnétique automatique.</li>
+ *   <li>La gestion du mode Sélection pour l'application des isolants et revêtements sur les surfaces du sol, plafond et murs.</li>
+ *   <li>L'inversion interactive du sens d'ouverture des portes par clic droit ou touche de raccourci.</li>
+ * </ul>
+ * La géométrie complexe (calculs d'inclusion dans des polygones, subdivision de segments, détection de cycles) 
+ * est entièrement déléguée à {@link GeometrieUtils}.
+ * </p>
+ * 
+ * @see insa.aubin.devisbatiment.view.PieceView
+ * @see GeometrieUtils
+ * @see Appartement
+ * @see Piece
  */
 public class PieceControleur {
 
@@ -426,13 +437,7 @@ public class PieceControleur {
         }
     }
 
-    /**
-     * Vérifie si deux segments de mur partagent les mêmes extrémités géométriques,
-     * peu importe le sens (A->B ou B->A).
-     */
-    private boolean sontMursIdentiques(Mur m1, Mur m2) {
-        return GeometrieUtils.mursIdentiques(m1, m2);
-    }
+    // Nettoyage : Délégation géométrique redondante supprimée (remplacée par GeometrieUtils.mursIdentiques).
     private void basculerSelection(SurfaceAvecRevetement surface) {
         if (surfacesSelectionnees.contains(surface)) {
             surfacesSelectionnees.remove(surface);
@@ -1021,20 +1026,7 @@ public class PieceControleur {
         return plusProche;
     }
 
-    private Mur trouverMurProcheAjuste(Point p, double sensibiliteMax) {
-        Mur plusProche = null;
-        double distMin = sensibiliteMax;
-        for (Dessin d : vue.getCanvas().getElements()) {
-            if (d instanceof Mur m) {
-                double dist = m.distanceA(p);
-                if (dist < distMin) {
-                    distMin = dist;
-                    plusProche = m;
-                }
-            }
-        }
-        return plusProche;
-    }
+    // Nettoyage : trouverMurProcheAjuste obsolète et inutilisé supprimé.
 
     private boolean murInclsDansCote(Mur mur, double[] cote) {
         double ax = cote[0], ay = cote[1], bx = cote[2], by = cote[3];
@@ -1110,20 +1102,18 @@ public class PieceControleur {
 
     public Map<TreeItem<String>, Piece> getMapItemPiece() { return mapItemPiece; }
 
-    public void rafraichirNavigateur() { }
+    // Nettoyage : rafraichirNavigateur obsolète et inutilisé supprimé.
 
     // =========================================================================
     // UTILITAIRES DE MURS
     // =========================================================================
 
-    private boolean sontMursSuperposes(Mur murParent, Mur sousMur) {
-        return GeometrieUtils.mursSuperposes(murParent, sousMur);
-    }
+    // Nettoyage : sontMursSuperposes géométrique redondant supprimé.
 
     /** Remonte les portes/fenêtres des pièces vers la grande vue Appartement */
     private boolean contientMurIdentiqueCanvas(Mur mur) {
         for (Dessin d : vue.getCanvas().getElements()) {
-            if (d instanceof Mur existant && sontMursIdentiques(existant, mur)) {
+            if (d instanceof Mur existant && GeometrieUtils.mursIdentiques(existant, mur)) {
                 return true;
             }
         }
@@ -1275,9 +1265,9 @@ public class PieceControleur {
             List<Piece> piecesToDelete = new ArrayList<>();
             for (Piece piece : pieces) {
                 if (piece.getMurs().stream().anyMatch(m ->
-                        sontMursIdentiques(m, deletedWall)
-                                || sontMursSuperposes(deletedWall, m)
-                                || sontMursSuperposes(m, deletedWall))) {
+                        GeometrieUtils.mursIdentiques(m, deletedWall)
+                                || GeometrieUtils.mursSuperposes(deletedWall, m)
+                                || GeometrieUtils.mursSuperposes(m, deletedWall))) {
                     piecesToDelete.add(piece);
                 }
             }
@@ -1311,10 +1301,10 @@ public class PieceControleur {
             }
 
             // 2. Retirer le mur lui-même (et tous ses clones correspondants)
-            vue.getCanvas().getElements().removeIf(d -> d instanceof Mur m && sontMursIdentiques(m, deletedWall));
+            vue.getCanvas().getElements().removeIf(d -> d instanceof Mur m && GeometrieUtils.mursIdentiques(m, deletedWall));
 
             if (appartement != null) {
-                appartement.getMursDelimiteurs().removeIf(m -> sontMursIdentiques(m, deletedWall));
+                appartement.getMursDelimiteurs().removeIf(m -> GeometrieUtils.mursIdentiques(m, deletedWall));
             }
 
         }
@@ -1367,9 +1357,9 @@ public class PieceControleur {
         if (appartement == null || appartement.getMursDelimiteurs() == null) return false;
 
         for (Mur delimiteur : appartement.getMursDelimiteurs()) {
-            if (sontMursIdentiques(delimiteur, mur)
-                    || sontMursSuperposes(delimiteur, mur)
-                    || sontMursSuperposes(mur, delimiteur)) {
+            if (GeometrieUtils.mursIdentiques(delimiteur, mur)
+                    || GeometrieUtils.mursSuperposes(delimiteur, mur)
+                    || GeometrieUtils.mursSuperposes(mur, delimiteur)) {
                 return true;
             }
         }
@@ -1382,9 +1372,9 @@ public class PieceControleur {
         for (Piece piece : pieces) {
             if (piece.getMurs() == null) continue;
             for (Mur murPiece : piece.getMurs()) {
-                if (sontMursIdentiques(murPiece, mur)
-                        || sontMursSuperposes(murPiece, mur)
-                        || sontMursSuperposes(mur, murPiece)) {
+                if (GeometrieUtils.mursIdentiques(murPiece, mur)
+                        || GeometrieUtils.mursSuperposes(murPiece, mur)
+                        || GeometrieUtils.mursSuperposes(mur, murPiece)) {
                     return true;
                 }
             }

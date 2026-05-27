@@ -11,6 +11,37 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Gestionnaire de persistance pour l'application DevisBatiment.
+ * <p>
+ * Cette classe assure la sauvegarde et le rechargement complets des structures de bâtiments 
+ * sur le disque sous la forme d'un système de fichiers organisé et de fichiers texte au format CSV.
+ * </p>
+ * <p>
+ * <b>Structure de l'arborescence sur le disque :</b>
+ * <pre>
+ * [CheminRacine]/
+ *   ├── config.properties   (État d'activation et chemin racine de la persistance)
+ *   ├── batiments.txt       (Liste brute des bâtiments enregistrés avec leurs emprises géométriques)
+ *   └── [NomBatiment]/      (Dossier par bâtiment)
+ *         ├── niveaux.txt   (Liste des niveaux du bâtiment)
+ *         └── [IdNiveau]/   (Dossier par niveau d'étage, ex: RDC)
+ *               ├── appartements.txt       (Liste des appartements de l'étage)
+ *               ├── couloirs.txt           (Périmètres des couloirs communs)
+ *               ├── tremies.txt            (Emplacements des escaliers et ascenseurs)
+ *               └── [IdAppartement]/       (Dossier par appartement)
+ *                     ├── pieces.txt       (Liste des pièces fermées de l'appartement)
+ *                     ├── murs_appartement.txt  (Murs avec ouvertures et revêtements)
+ *                     └── [IdPiece].txt    (Revêtements de sol et plafond d'une pièce)
+ * </pre>
+ * </p>
+ * 
+ * @see Batiment
+ * @see Niveau
+ * @see Appartement
+ * @see Piece
+ * @see CatalogueRevetements
+ */
 public class GestionnaireSauvegarde {
 
     private boolean sauvegardeActive;
@@ -34,6 +65,17 @@ public class GestionnaireSauvegarde {
     // Activation / Désactivation Sauvegarde
     // ────────────────────────────────────────────
 
+    /**
+     * Active le système de persistance automatique sur le répertoire spécifié.
+     * <p>
+     * Vérifie la validité du répertoire (existence, droits en écriture) et stocke
+     * la configuration locale dans {@code config.properties} pour un rechargement automatique 
+     * lors du prochain démarrage de l'application.
+     * </p>
+     * 
+     * @param chemin Le chemin absolu ou relatif vers le dossier de sauvegarde.
+     * @throws IllegalArgumentException Si le chemin est vide, invalide, ou inaccessible en écriture.
+     */
     public void activer(String chemin) throws IllegalArgumentException {
         if (chemin == null || chemin.trim().isEmpty()) {
             throw new IllegalArgumentException("Le chemin ne peut pas être vide.");
@@ -202,6 +244,18 @@ public class GestionnaireSauvegarde {
         sauvegarderAppartementComplet(a, n, b);
     }
 
+    /**
+     * Flux de sauvegarde : Écrit les cloisons et ouvertures de l'appartement sur le disque.
+     * <p>
+     * Enregistre l'ensemble des murs de l'appartement (incluant les coordonnées des ouvertures, 
+     * les identifiants des isolants et des peintures/finitions) dans le fichier 
+     * {@code murs_appartement.txt} au format CSV structuré.
+     * </p>
+     * 
+     * @param a L'appartement à sauvegarder.
+     * @param n Le niveau contenant l'appartement.
+     * @param b Le bâtiment parent.
+     */
     public void sauvegarderDetailsAppartement(Appartement a, Niveau n, Batiment b) {
         if (!sauvegardeActive) return;
 
@@ -210,16 +264,29 @@ public class GestionnaireSauvegarde {
 
         List<String> csvLines = new ArrayList<>();
         for (Mur m : a.getMurs()) {
-            System.out.println("[DEBUG SAVE] Tentative d'écriture du mur: " + m.toString() + " (Instance: " + m.hashCode() + ")");
-            String idG = (m.getCoteGauche().getRevetements() != null && !m.getCoteGauche().getRevetements().isEmpty()) ? m.getCoteGauche().getRevetements().get(0).getId() : "VIDE";
-            String idD = (m.getCoteDroit().getRevetements() != null && !m.getCoteDroit().getRevetements().isEmpty()) ? m.getCoteDroit().getRevetements().get(0).getId() : "VIDE";
-            System.out.println("  -> Données lues pour le fichier - Gauche: " + idG + " | Droit: " + idD);
             csvLines.add(m.toCSV());
         }
 
         ecrireLignes(cheminDossier + "/murs_appartement.txt", csvLines);
     }
 
+    /**
+     * Flux de sauvegarde : Orchestre la persistance intégrale d'un appartement.
+     * <p>
+     * Cette méthode réalise séquentiellement :
+     * <ol>
+     *   <li>La sauvegarde de la liste d'appartements de l'étage (appartements.txt).</li>
+     *   <li>L'écriture des murs et ouvertures de l'appartement (murs_appartement.txt).</li>
+     *   <li>L'écriture des métadonnées de toutes ses pièces (pieces.txt).</li>
+     *   <li>Pour chaque pièce, la sauvegarde individuelle des revêtements de sol/plafond (pièce_id.txt).</li>
+     *   <li>La purge des fichiers de pièces obsolètes qui ont été supprimées graphiquement.</li>
+     * </ol>
+     * </p>
+     * 
+     * @param a L'appartement d'intérêt.
+     * @param n Le niveau contenant l'appartement.
+     * @param b Le bâtiment parent.
+     */
     public void sauvegarderAppartementComplet(Appartement a, Niveau n, Batiment b) {
         if (!sauvegardeActive || a == null || n == null || b == null) return;
 
@@ -254,6 +321,18 @@ public class GestionnaireSauvegarde {
         ecrireLignes(cheminParent + "/appartements.txt", lignes);
     }
 
+    /**
+     * Flux de chargement : Restaure les ouvertures et revêtements d'un appartement depuis le disque.
+     * <p>
+     * Lit le fichier {@code murs_appartement.txt} et applique les ouvertures et revêtements 
+     * correspondants sur les murs en mémoire de l'appartement, puis parcourt toutes les pièces pour 
+     * charger leurs revêtements de sol/plafond à partir de leurs fichiers respectifs.
+     * </p>
+     * 
+     * @param a L'appartement mémoire à peupler.
+     * @param n Le niveau associé.
+     * @param b Le bâtiment associé.
+     */
     public void rechargerOuverturesAppartement(Appartement a, Niveau n, Batiment b) {
         if (a == null || n == null || b == null || !sauvegardeActive) return;
         File fichier = new File(getCheminAppartement(a, n, b) + "/murs_appartement.txt");
@@ -373,6 +452,20 @@ public class GestionnaireSauvegarde {
     // Charger les données
     // ────────────────────────────────────────────
 
+    /**
+     * Flux de chargement global : Restaure l'intégralité du projet en mémoire.
+     * <p>
+     * Parcourt récursivement le répertoire racine pour reconstruire la hiérarchie complète :
+     * <ol>
+     *   <li>Reconstruction de la liste des bâtiments (immeubles) avec leurs emprises géométriques.</li>
+     *   <li>Chargement des niveaux d'étages de chaque immeuble.</li>
+     *   <li>Chargement des appartements, couloirs, et trémies de chaque niveau.</li>
+     *   <li>Chargement des pièces intérieures, avec rechargement de leurs ouvertures et finitions.</li>
+     * </ol>
+     * </p>
+     * 
+     * @return La liste reconstituée de tous les bâtiments chargés de type {@link Immeuble}.
+     */
     public List<Batiment> chargerTousBatiments() {
         List<Batiment> result = new ArrayList<>();
 
