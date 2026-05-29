@@ -10,7 +10,6 @@ import java.util.List;
 
 public class CatalogueRevetements {
 
-    // ObservableList est parfait pour JavaFX : si on ajoute un élément, l'interface se met à jour toute seule
     private ObservableList<Revetement> listeRevetements;
     private String cheminFichier;
 
@@ -108,7 +107,6 @@ public class CatalogueRevetements {
     /**
      * Ajoute un nouveau revêtement à la liste en mémoire et l'écrit à la fin du fichier.
      */
-    // --- NOUVEAU : Sauvegarde propre qui réécrit le fichier ---
     public void ajouterEtSauvegarderRevetement(Revetement r) {
         if (r == null) return;
         listeRevetements.add(r);
@@ -125,7 +123,6 @@ public class CatalogueRevetements {
         }
     }
 
-    // --- NOUVEAU : Générateur d'ID formaté "REVxxx" ---
     public String genererNouvelId() {
         int maxId = 0;
         for (Revetement r : listeRevetements) {

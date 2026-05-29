@@ -36,7 +36,6 @@ public final class OuvertureUtils {
     public static void ajouterCopieSiAbsente(Mur destination, Ouverture ouverture, Mur murSource) {
         Point position = murSource.getPointSurMur(ouverture.getPositionSurMur());
 
-        // ✅ NOUVEAU : Vérifier que la position absolue est bien sur ce segment
         if (!positionSurMur(destination, position)) return;
 
         if (contientOuvertureA(destination, position)) return;

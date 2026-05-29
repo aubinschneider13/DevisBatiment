@@ -85,8 +85,6 @@ public class Niveau extends ElementDeConstruction {
    public Appartement ajouterAppartement(List<GeometrieUtils.MurOriente> mursAppartement) {
         Appartement appartement = new Appartement(mursAppartement, this.hauteurPlafond);
         this.appartements.add(appartement);
-        // NE PAS ajouter dans mursDelimiteurs — ce sont des cloisons intérieures
-        // mursDelimiteurs ne contient que les 4 murs du périmètre du bâtiment
         return appartement;
     }
 

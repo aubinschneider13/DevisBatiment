@@ -58,8 +58,6 @@ public class Isolant extends Revetement {
 
     @Override
     public String toCSV() {
-        // Pour être compatible avec le CSV à 12 colonnes, on stocke typeIsolant dans la colonne 'couleur'
-        // et l'épaisseur dans la colonne 'finition', en laissant le reste vide.
         return super.toCSV() + ";" + typeIsolant.name() + ";" + epaisseur + ";;;";
     }
 

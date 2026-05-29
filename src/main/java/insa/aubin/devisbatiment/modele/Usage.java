@@ -1,7 +1,7 @@
 package insa.aubin.devisbatiment.modele;
 /**
  *
- * @author Jeffrey Epstein
+ * @author Aubin
  */
 public class Usage {
     private String idUsage;

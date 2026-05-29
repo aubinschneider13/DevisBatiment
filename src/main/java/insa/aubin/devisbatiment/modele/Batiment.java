@@ -98,9 +98,7 @@ public abstract class Batiment extends ElementDeConstruction {
     // =========================================================================
 
     public String getNomBatiment()              { return nomBatiment; }
-    public void setNomBatiment(String nom)      { this.nomBatiment = nom; }
     public String getTypeBatiment()             { return typeBatiment; }
-    public void setTypeBatiment(String type)    { this.typeBatiment = type; }
     public Point getPoint1()                    { return point1; }
     public Point getPoint2()                    { return point2; }
     public Point getPoint3()                    { return point3; }
