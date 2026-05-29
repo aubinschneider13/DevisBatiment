@@ -17,16 +17,37 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Chef d'orchestre unique de l'application.
- *
- * AppControleur remplace ImmeubleControleur dans son rôle de coordinateur
- * global. Il est le seul à :
- * - connaître le Stage et à en changer la scène (retour dashboard)
- * - instancier et basculer les contextes (ContexteAire, ContexteNiveau, ContexteAppartement, ContextePiece)
- * - peupler le NavigateurView (ajout de niveaux et d'appartements)
- * - brancher tous les listeners de la ToolBarView, ToolBarDevisView et du TreeView
- *
- * Pattern utilisé : State (via l'interface Contexte).
+ * Chef d'orchestre central et coordinateur global de l'application DevisBatiment.
+ * <p>
+ * Cette classe agit comme l'unique point d'entree et de coordination (Controller central)
+ * entre le modele metier (Batiment, Niveau, Appartement, Piece) et la vue utilisateur (AppView, NavigateurView, ToolBarView).
+ * </p>
+ * 
+ * <h3>Responsabilites principales :</h3>
+ * <ul>
+ *   <li><b>Gestion de la fenetre principale (Stage) :</b> Regit l'affichage global, le chargement initial, les boites de dialogue et le retour au tableau de bord.</li>
+ *   <li><b>Gestion du Navigateur (TreeView) :</b> Assure le peuplement dynamique de l'arborescence (niveaux, appartements, pieces, couloirs) et synchronise la selection avec les vues graphiques.</li>
+ *   <li><b>Orchestration des actions :</b> Centralise et connecte tous les ecouteurs d'evenements (ToolbarView, ToolbarDevisView, evenements clavier globaux).</li>
+ * </ul>
+ * 
+ * <h3>Gestion du Pattern State (Contexte) :</h3>
+ * <p>
+ * Afin de gerer la complexite des differents modes d'edition (Aire globale, Niveau, Appartement, Piece, Couloir), 
+ * {@code AppControleur} implemente une machine a etats comportementale via le <b>Pattern State</b>.
+ * </p>
+ * <p>
+ * L'etat courant est modelise par l'interface {@link Contexte}. Lors d'une interaction utilisateur dans l'arbre du navigateur 
+ * ou d'un evenement de transition, {@code AppControleur} effectue un switch de contextes via {@link #basculerContexte(Contexte)}.
+ * Ce basculement delegue alors de maniere transparente les actions de la barre d'outils, les clics sur le canvas, 
+ * et les raccourcis clavier au contexte actif (par exemple {@code ContextePiece} ou {@code ContexteAppartement}), 
+ * garantissant une separation stricte des responsabilites et une grande modularite.
+ * </p>
+ * 
+ * @see Contexte
+ * @see ContexteAire
+ * @see ContexteNiveau
+ * @see ContexteAppartement
+ * @see ContextePiece
  */
 public class AppControleur {
 
@@ -438,6 +459,23 @@ public class AppControleur {
     // GESTION DES CONTEXTES
     // =========================================================================
 
+    /**
+     * Effectue la transition d'etat du pattern State en basculant le contexte actif de l'IHM.
+     * <p>
+     * Cette methode orchestre de facon unifiee la transition comportementale globale :
+     * <ol>
+     *   <li>Desinstalle proprement le contexte actif actuel (nettoyage des listeners temporaires,
+     *       arret des modes de dessin en cours, etc.).</li>
+     *   <li>Assigne la nouvelle instance de {@link Contexte} comme etat courant de l'application.</li>
+     *   <li>Met a jour dynamiquement la visibilite des boutons dans la barre d'outils de {@link ToolBarView}
+     *       en fonction des capacites exposees par le nouveau contexte.</li>
+     *   <li>Installe le nouveau contexte (configuration des ecouteurs du canvas, messages d'instructions
+     *       a destination de l'utilisateur, rafraichissement visuel).</li>
+     * </ol>
+     * </p>
+     * 
+     * @param nouveau Le nouveau contexte dans lequel basculer l'application.
+     */
     public void basculerContexte(Contexte nouveau) {
         if (contexteActif != null) {
             contexteActif.desinstaller();

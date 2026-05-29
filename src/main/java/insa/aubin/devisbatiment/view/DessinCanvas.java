@@ -14,6 +14,32 @@ import javafx.scene.transform.Affine;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Canvas de dessin vectoriel interactif et dynamique de DevisBatiment.
+ * <p>
+ * {@code DessinCanvas} etend le composant {@link Canvas} de JavaFX pour fournir un espace de tracé 2D performant.
+ * Il assure la transposition bidirectionnelle fluide entre les coordonnees pixels de l'IHM et les coordonnees réelles (mètres) du modele.
+ * </p>
+ * 
+ * <h3>Fonctionnalites majeures :</h3>
+ * <ul>
+ *   <li><b>Rafraichissement Vectoriel Dynamique (redrawAll) :</b> A chaque modification d'etat ou de vue, 
+ *       la methode {@link #redrawAll()} efface et redessine en temps reel le fond (la grille millimetrique), 
+ *       les axes de repere cartesiens (style GeoGebra), ainsi que l'ensemble des composants metiers visibles ({@link Dessin}). 
+ *       Il applique pour cela une transformation matricielle affine (zoom + translation + inversion de l'axe Y pour diriger les Y positifs vers le haut).</li>
+ *   <li><b>Systeme d'aimantage (Snapping) a la grille :</b> La methode {@link #snapToGrid(double, double)} permet 
+ *       de contraindre les coordonnees du curseur de la souris aux intersections les plus proches de la grille de reference 
+ *       (delineee par {@code gridSize}), assurant un trace parfait des cloisons a angle droit et un placement precis des ouvertures.</li>
+ *   <li><b>Gestion de l'aperçu dynamique (Fantome) :</b> Via {@link #setFantome(Fantome, double, double, double, boolean)}, 
+ *       le canvas permet de dessiner en surbrillance semi-transparente un element interactif (comme une porte ou une fenetre) 
+ *       directement sous la souris avant la confirmation definitive de son placement.</li>
+ *   <li><b>Systeme de Zoom et Pan interactif :</b> Supporte le zoom centre sur la souris avec la molette de defilement, 
+ *       et le deplacement panoramique (Pan) de la zone de dessin par clic molette ou clic droit glisse.</li>
+ * </ul>
+ * 
+ * @see Dessin
+ * @see Fantome
+ */
 public class DessinCanvas extends Canvas {
 
     private List<Dessin> elements;
@@ -115,6 +141,20 @@ public class DessinCanvas extends Canvas {
             }
         });
     }
+    /**
+     * Configure et met a jour l'aperçu dynamique ("fantôme") d'un composant en cours de tracé ou de pose.
+     * <p>
+     * Cette previsualisation est dessinee par-dessus tous les autres composants vectoriels 
+     * pour donner un retour visuel immediat de la position, de l'orientation et de la validite 
+     * géométrique de l'element sous le curseur.
+     * </p>
+     * 
+     * @param f     L'instance de {@link Fantome} representant le composant a previsualiser (ex. Porte ou Fenetre).
+     * @param x     La coordonnee X en metres dans l'espace modele.
+     * @param y     La coordonnee Y en metres dans l'espace modele.
+     * @param angle L'angle d'orientation en degres par rapport a l'axe horizontal.
+     * @param actif Indique si le fantome doit s'afficher sous forme valide (ex. vert semi-transparent) ou invalide (ex. rouge).
+     */
     public void setFantome(Fantome f, double x, double y,
                            double angle, boolean actif) {
         this.fantomeCourant = f;
@@ -124,14 +164,29 @@ public class DessinCanvas extends Canvas {
         this.fantomeActif = actif;
     }
 
+    /**
+     * Supprime l'aperçu dynamique de l'ecran.
+     */
     public void clearFantome() {
         this.fantomeCourant = null;
     }
 
     /**
-     * Convertit les coordonnées pixels en coordonnées modèle
-     * avec magnétisme sur la grille (snap).
-     * Le Y est inversé pour avoir les Y positifs vers le haut.
+     * Transpose des coordonnees de l'ecran (pixels) en coordonnees réelles du modele (mètres), 
+     * en les aimantant automatiquement (snapping) sur le noeud de grille le plus proche.
+     * <p>
+     * <b>Principe de calcul :</b>
+     * <ol>
+     *   <li>Soustrait le decalage de translation panoramique {@code offsetX} et {@code offsetY}.</li>
+     *   <li>Divise par le facteur de zoom {@code zoomFactor} pour ramener l'unite pixel a l'unite metre.</li>
+     *   <li>Inverse l'ordonnee Y pour retablir l'axe cartesien standard du modele (Y croissant vers le haut).</li>
+     *   <li>Arrondit le resultat a la valeur multiple la plus proche du pas de grille active {@code gridSize}.</li>
+     * </ol>
+     * </p>
+     * 
+     * @param px Coordonnee X en pixels sur l'ecran.
+     * @param py Coordonnee Y en pixels sur l'ecran.
+     * @return Une instance {@link Point2D} contenant les coordonnees réelles (mètres) snapées sur la grille.
      */
     public Point2D snapToGrid(double px, double py) {
         // Conversion pixels → coordonnées modèle
@@ -164,6 +219,25 @@ public class DessinCanvas extends Canvas {
         return valeur;
     }
 
+    /**
+     * Effectue le rafraichissement vectoriel integral de la zone de dessin.
+     * <p>
+     * Cette methode orchestre le trace complet dans l'ordre d'empilement (z-index) suivant :
+     * <ol>
+     *   <li><b>Nettoyage :</b> Efface la totalite de la surface du canvas.</li>
+     *   <li><b>Grille de fond :</b> Trace les lignes de grille millimetriques fines et les axes principaux X et Y 
+     *       gradues et styles de facon cartesienne.</li>
+     *   <li><b>Repere Modele :</b> Ouvre un contexte graphique transforme ({@code gc.save()}) en appliquant 
+     *       la translation de pan et l'echelle de zoom standardisee avec Y inverse.</li>
+     *   <li><b>Composants :</b> Parcourt et dessine chaque element vectoriel (murs, cloisons, etc.) de la liste {@code elements}.</li>
+     *   <li><b>Selection de revetements :</b> Dessine en surbrillance cyan translucide les surfaces selectionnees 
+     *       pour l'application de materiaux (cotes de murs, sols polygonaux, plafonds).</li>
+     *   <li><b>Selection active :</b> Met en surbrillance orange vif l'element actuellement selectionne 
+     *       (murs avec poignees circulaires d'extremite, ouvertures, pieces, appartements).</li>
+     *   <li><b>Fantome :</b> Dessine l'aperçu dynamique temps reel (si configure et actif) par-dessus tous les autres tracés.</li>
+     * </ol>
+     * </p>
+     */
     public void redrawAll() {
         GraphicsContext gc = this.getGraphicsContext2D();
         gc.clearRect(0, 0, this.getWidth(), this.getHeight());

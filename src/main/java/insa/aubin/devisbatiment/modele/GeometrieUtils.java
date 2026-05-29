@@ -3,23 +3,53 @@ package insa.aubin.devisbatiment.modele;
 import java.util.*;
 
 /**
- * Utilitaires géométriques partagés entre NiveauControleur et PieceControleur.
- *
- * Centralise :
- *   - la détection de point dans polygone / sur contour
- *   - la collecte et subdivision des segments (pour la détection de zones fermées)
- *   - l'algorithme de cycle minimal (faces planaires)
- *   - l'ordonnancement des murs
- *   - les opérations de base sur les nœuds
+ * Utilitaires géométriques partagés entre les contrôleurs (NiveauControleur, PieceControleur) 
+ * et la couche modèle de DevisBatiment.
+ * <p>
+ * Centralise et expose des algorithmes fondamentaux de géométrie computationnelle plane en 2D :
+ * <ul>
+ *   <li>Détection d'inclusion de points dans des polygones (picking interactif par Ray-Casting).</li>
+ *   <li>Calculs d'adjacence, de colinéarité, et de chevauchement géométrique de segments.</li>
+ *   <li>Subdivision dynamique de segments de murs aux points d'intersection (formation d'un graphe planaire cohérent).</li>
+ *   <li>Détection déterministe de cycles minimaux (algorithme des faces planaires pour la création automatique de pièces).</li>
+ *   <li>Ordonnancement cyclique et orientation trigonométrique des parois constituant le contour d'un espace fermé.</li>
+ * </ul>
+ * </p>
+ * 
+ * @see Point
+ * @see Mur
+ * @see Piece
  */
 public class GeometrieUtils {
 
+    /** Tolérance par défaut pour les calculs de double précision géométriques (1 micromètre). */
     public static final double TOL = 1e-6;
 
     // =========================================================================
     // POINT DANS POLYGONE / SUR CONTOUR
     // =========================================================================
 
+    /**
+     * Algorithme géométrique de Ray-Casting (Jordan Curve Theorem).
+     * <p>
+     * Détermine si un point {@code (px, py)} est situé strictement à l'intérieur d'un polygone simple.
+     * </p>
+     * <p>
+     * <b>Principe algorithmique :</b>
+     * Trace un rayon horizontal infini partant du point {@code (px, py)} vers la droite (X croissant).
+     * L'algorithme compte le nombre d'intersections de ce rayon avec les arêtes du polygone :
+     * <ul>
+     *   <li>Un nombre <b>impair</b> d'intersections indique que le point est à l'<b>intérieur</b>.</li>
+     *   <li>Un nombre <b>pair</b> d'intersections indique qu'il est à l'<b>extérieur</b>.</li>
+     * </ul>
+     * Le cas limite où l'arête est horizontale ou colinéaire au rayon est géré par des inégalités strictes sur l'ordonnée Y.
+     * </p>
+     * 
+     * @param px   Coordonnée X du point à tester.
+     * @param py   Coordonnée Y du point à tester.
+     * @param poly Liste ordonnée des sommets constituant le polygone.
+     * @return {@code true} si le point réside à l'intérieur, {@code false} sinon.
+     */
     public static boolean pointDansPolygone(double px, double py, List<Point> poly) {
         if (poly == null || poly.size() < 3) return false;
         int n = poly.size(), intersections = 0;
@@ -35,6 +65,14 @@ public class GeometrieUtils {
         return (intersections % 2) == 1;
     }
 
+    /**
+     * Détermine si un point réside exactement sur le contour polygonal (la frontière physique) d'une zone.
+     * 
+     * @param px       Coordonnée X du point.
+     * @param py       Coordonnée Y du point.
+     * @param polygone Liste ordonnée de sommets délimitant la zone.
+     * @return {@code true} si le point est sur une arête du contour, {@code false} sinon.
+     */
     public static boolean pointSurContour(double px, double py, List<Point> polygone) {
         if (polygone == null) return false;
         int n = polygone.size();
@@ -52,6 +90,14 @@ public class GeometrieUtils {
         return false;
     }
 
+    /**
+     * Détermine si un point est inclus dans la zone délimitée par un polygone (soit à l'intérieur, soit sur sa frontière).
+     * 
+     * @param px       Coordonnée X du point.
+     * @param py       Coordonnée Y du point.
+     * @param polygone Sommets délimitant le polygone.
+     * @return {@code true} si le point est dans la zone ou sur la frontière, {@code false} sinon.
+     */
     public static boolean estDansZone(double px, double py, List<Point> polygone) {
         if (polygone == null) return true;
         return pointDansPolygone(px, py, polygone)
@@ -62,6 +108,17 @@ public class GeometrieUtils {
     // SEGMENTS
     // =========================================================================
 
+    /**
+     * Détermine si un point se situe sur un segment de droite défini par deux extrémités géométriques.
+     * 
+     * @param px Coordonnée X du point à tester.
+     * @param py Coordonnée Y du point à tester.
+     * @param x1 Coordonnée X de l'extrémité 1.
+     * @param y1 Coordonnée Y de l'extrémité 1.
+     * @param x2 Coordonnée X de l'extrémité 2.
+     * @param y2 Coordonnée Y de l'extrémité 2.
+     * @return {@code true} si le point est situé sur le segment de droite, {@code false} sinon.
+     */
     public static boolean pointSurSegment(double px, double py,
                                           double x1, double y1,
                                           double x2, double y2) {
@@ -74,11 +131,35 @@ public class GeometrieUtils {
         return t >= -TOL && t <= 1.0 + TOL;
     }
 
+    /**
+     * Vérifie la coïncidence géométrique stricte entre deux points en appliquant le seuil de tolérance {@link #TOL}.
+     * 
+     * @param p1 Premier point.
+     * @param p2 Second point.
+     * @return {@code true} si les points ont les mêmes coordonnées à epsilon près (tolérance TOL), {@code false} sinon.
+     */
     public static boolean correspondA(Point p1, Point p2) {
         return Math.abs(p1.getX() - p2.getX()) < TOL
             && Math.abs(p1.getY() - p2.getY()) < TOL;
     }
 
+    /**
+     * Vérifie l'identité géométrique absolue entre deux instances de murs.
+     * <p>
+     * <b>Gestion de l'incertitude numérique :</b>
+     * Afin de pallier les approximations inhérentes aux calculs de nombres réels en virgule flottante ({@code double}), 
+     * cette comparaison applique une marge d'incertitude epsilon fixée à 10^-4 (soit 0.1 mm).
+     * Elle teste :
+     * <ul>
+     *   <li>Le sens normal (extrémité 1 de m1 coïncide avec extrémité 1 de m2, et extrémité 2 de m1 avec extrémité 2 de m2).</li>
+     *   <li>Le sens inversé (extrémité 1 de m1 coïncide avec extrémité 2 de m2, et extrémité 2 de m1 avec extrémité 1 de m2).</li>
+     * </ul>
+     * </p>
+     * 
+     * @param m1 Premier mur à comparer.
+     * @param m2 Second mur à comparer.
+     * @return {@code true} si les deux segments de murs coïncident géométriquement, {@code false} sinon.
+     */
     public static boolean mursIdentiques(Mur m1, Mur m2) {
         double tol = 1e-4;
         boolean sensNormal =
@@ -96,11 +177,26 @@ public class GeometrieUtils {
         return sensNormal || sensInverse;
     }
 
+    /**
+     * Vérifie si un mur (sous-mur de cloison) est entièrement colinéaire et superposé à un mur parent.
+     * 
+     * @param murParent Le mur parent servant de support géométrique.
+     * @param sousMur   Le mur enfant à vérifier.
+     * @return {@code true} si le sous-mur repose entièrement sur le segment du mur parent, {@code false} sinon.
+     */
     public static boolean mursSuperposes(Mur murParent, Mur sousMur) {
         return pointSurSegmentAvecTolerance(sousMur.getPoint1(), murParent, 0.05)
             && pointSurSegmentAvecTolerance(sousMur.getPoint2(), murParent, 0.05);
     }
 
+    /**
+     * Détermine si un point réside sur un segment de mur avec une tolérance latérale et d'extrémité donnée.
+     * 
+     * @param p         Le point de test.
+     * @param m         Le mur.
+     * @param tolerance La distance maximale autorisée par rapport au segment.
+     * @return {@code true} si le point est dans le périmètre d'accroche du mur, {@code false} sinon.
+     */
     public static boolean pointSurSegmentAvecTolerance(Point p, Mur m, double tolerance) {
         double x1 = m.getPoint1().getX(), y1 = m.getPoint1().getY();
         double x2 = m.getPoint2().getX(), y2 = m.getPoint2().getY();
@@ -123,6 +219,14 @@ public class GeometrieUtils {
     // NŒUDS
     // =========================================================================
 
+    /**
+     * Ajoute un couple de coordonnées dans une liste de nœuds géométriques si aucun nœud 
+     * similaire (à la tolérance {@link #TOL} près) n'y figure déjà.
+     * 
+     * @param noeuds Liste de nœuds existants.
+     * @param x      Coordonnée X.
+     * @param y      Coordonnée Y.
+     */
     public static void ajouterNoeudSiAbsent(List<double[]> noeuds, double x, double y) {
         for (double[] n : noeuds) {
             if (Math.abs(n[0] - x) < TOL && Math.abs(n[1] - y) < TOL) return;
@@ -130,6 +234,14 @@ public class GeometrieUtils {
         noeuds.add(new double[]{x, y});
     }
 
+    /**
+     * Localise l'index d'un nœud spécifique dans une liste de coordonnées réelles.
+     * 
+     * @param noeuds Liste de nœuds de référence.
+     * @param x      Coordonnée X à chercher.
+     * @param y      Coordonnée Y à chercher.
+     * @return L'index 0-indexé du nœud trouvé, ou {@code -1} si absent.
+     */
     public static int indexNoeud(List<double[]> noeuds, double x, double y) {
         for (int i = 0; i < noeuds.size(); i++) {
             double[] n = noeuds.get(i);
@@ -142,6 +254,14 @@ public class GeometrieUtils {
     // AIRE ET ORDONNANCEMENT
     // =========================================================================
 
+    /**
+     * Calcule l'aire géométrique signée d'un polygone.
+     * Le résultat est positif si le polygone est orienté dans le sens trigonométrique, 
+     * et négatif s'il est orienté dans le sens horaire.
+     * 
+     * @param poly Liste ordonnée de sommets.
+     * @return L'aire signée du polygone en mètres carrés (m²).
+     */
     public static double calculerAire(List<Point> poly) {
         if (poly == null || poly.isEmpty()) return 0.0;
         double aire = 0;
@@ -154,6 +274,10 @@ public class GeometrieUtils {
         return aire / 2.0;
     }
 
+    /**
+     * Représente l'association structurée d'un mur physique et d'un indicateur d'inversion géométrique 
+     * pour l'ordonnancement séquentiel des parois.
+     */
     public static record MurOriente(Mur mur, boolean inverse) {
         public Point getPoint1() {
             return inverse ? mur.getPoint2() : mur.getPoint1();
@@ -164,6 +288,17 @@ public class GeometrieUtils {
         }
     }
 
+    /**
+     * Réordonne de manière continue et cyclique un ensemble de segments de murs non triés.
+     * <p>
+     * Garantit que l'extrémité finale de chaque mur correspond géométriquement à l'extrémité initiale 
+     * du mur suivant (avec inversion de sens {@link MurOriente#inverse()} si nécessaire), formant 
+     * ainsi un contour polygonal exploitable.
+     * </p>
+     * 
+     * @param murs Liste non triée de murs.
+     * @return Une liste ordonnée et continue d'instances {@link MurOriente}.
+     */
     public static List<MurOriente> ordonnerMurs(List<Mur> murs) {
         if (murs == null || murs.isEmpty()) return new ArrayList<>();
         List<MurOriente> ordonne  = new ArrayList<>();
@@ -198,7 +333,11 @@ public class GeometrieUtils {
     }
 
     /**
-     * Détermine si le côté gauche d'un mur fait face à l'intérieur d'une pièce.
+     * Détermine si le côté gauche d'un segment de mur fait face à l'intérieur d'un polygone.
+     * 
+     * @param mur         Le mur.
+     * @param pointsPiece Les sommets du polygone.
+     * @return {@code true} si le vecteur normal gauche pointe vers l'intérieur du polygone, {@code false} sinon.
      */
     public static boolean estCoteGaucheDansPiece(Mur mur, List<Point> pointsPiece) {
         if (pointsPiece == null || pointsPiece.size() < 3) return true;
@@ -231,11 +370,15 @@ public class GeometrieUtils {
     // =========================================================================
 
     /**
-     * Collecte une liste de segments bruts, les subdivise aux intersections,
-     * et retourne la liste déduplicée de SegmentSource.
-     *
-     * @param bruts liste de segments bruts (non subdivisés)
-     * @return segments subdivisés et dédupliqués
+     * Traitement topologique : Subdivise les segments géométriques au niveau de toutes leurs intersections.
+     * <p>
+     * C'est une étape préparatoire cruciale à la détection de cycles fermés. Elle convertit un ensemble 
+     * désorganisé de cloisons qui se croisent en un ensemble de sous-arêtes non chevauchantes et connectées 
+     * uniquement à leurs extrémités communes, prêtes pour le parcours de graphe planaire.
+     * </p>
+     * 
+     * @param bruts Liste de cloisons brutes potentiellement entrecroisées.
+     * @return Liste de segments subdivisés géométriquement et dédupliqués.
      */
     public static List<SegmentSource> subdiviserEtDeduplicer(List<SegmentSource> bruts) {
         if (bruts == null) return new ArrayList<>();
@@ -313,13 +456,29 @@ public class GeometrieUtils {
     // =========================================================================
 
     /**
-     * Trouve la plus petite face planaire contenant le point (px, py)
-     * parmi les segments fournis.
-     *
-     * @param px       coordonnée X du point cible
-     * @param py       coordonnée Y du point cible
-     * @param sources  segments subdivisés (résultat de subdiviserEtDeduplicer)
-     * @return liste de SegmentSource formant le cycle minimal, ou null si aucun
+     * Algorithme géométrique de détection de cycle minimal orienté (Faces Planaires).
+     * <p>
+     * Cet algorithme isole la plus petite région fermée (pièce) entourant directement 
+     * un clic souris {@code (px, py)} à partir d'un ensemble de segments de cloisons.
+     * </p>
+     * <p>
+     * <b>Mécanique de l'algorithme :</b>
+     * <ol>
+     *   <li>Construit un graphe planaire où les sommets sont les jonctions de murs et les arêtes sont les cloisons subdivisées.</li>
+     *   <li>Associe à chaque arête deux demi-arêtes orientées en sens inverses (Half-Edges).</li>
+     *   <li>Trie angulairement (trigonométriquement) les voisins autour de chaque nœud pour définir un parcours déterministe.</li>
+     *   <li>Parcourt le graphe en appliquant la règle systématique du <i>Next Half-Edge</i> (prendre le voisin suivant dans le tri 
+     *       angulaire de proche en proche) afin d'isoler l'ensemble de toutes les faces planaires.</li>
+     *   <li>Filtre les faces résultantes : conserve uniquement celles contenant le point cible {@code (px, py)}.</li>
+     *   <li>Sélectionne la face ayant l'<b>aire géométrique minimale</b>. Cela permet d'exclure la face extérieure infinie et 
+     *       d'autres contours enveloppants plus larges.</li>
+     * </ol>
+     * </p>
+     * 
+     * @param px      Coordonnée X du point cible.
+     * @param py      Coordonnée Y du point cible.
+     * @param sources Liste de segments subdivisés et dédupliqués de type {@link SegmentSource}.
+     * @return La liste ordonnée des segments constituant le périmètre du cycle minimal trouvé, ou {@code null} si aucun.
      */
     public static List<SegmentSource> trouverCycleMinimal(double px, double py,
                                                            List<SegmentSource> sources) {
@@ -421,14 +580,15 @@ public class GeometrieUtils {
     // =========================================================================
 
     /**
-     * Si le point est dans la zone, le retourne tel quel.
-     * Sinon, le projette sur le bord le plus proche du polygone.
-     *
-     * @param px      coordonnée X
-     * @param py      coordonnée Y
-     * @param coins   sommets du polygone (tableau de Points)
-     * @param n       nombre de sommets
-     * @return {x, y} contraint
+     * Restreint les coordonnées d'un point à la frontière interne d'un polygone.
+     * Si le point réside à l'extérieur de la zone autorisée, il est projeté orthogonalement 
+     * sur le bord le plus proche de la frontière.
+     * 
+     * @param px    Coordonnée X du point à contraindre.
+     * @param py    Coordonnée Y du point à contraindre.
+     * @param coins Sommets délimitant la zone.
+     * @param n     Nombre de sommets.
+     * @return Tableau réel à deux éléments {x_contraint, y_contraint}.
      */
     public static double[] contraindreAZone(double px, double py,
                                              Point[] coins, int n) {
@@ -454,8 +614,8 @@ public class GeometrieUtils {
     // =========================================================================
 
     /**
-     * Représente un segment orienté avec son mur source.
-     * Partagé entre NiveauControleur et PieceControleur.
+     * Représente un segment orienté en coordonnées réelles lié à son mur physique source.
+     * Sert de structure d'arête élémentaire pour l'ensemble des calculs topologiques.
      */
     public static class SegmentSource {
         public final double x1, y1, x2, y2;
@@ -468,12 +628,25 @@ public class GeometrieUtils {
         }
     }
     
-    // GeometrieUtils.java
+    /**
+     * Vérifie si deux arêtes de murs ont un support géométrique ou un tracé physique commun 
+     * (soit identiques, soit superposées).
+     * 
+     * @param a Premier mur.
+     * @param b Second mur.
+     * @return {@code true} s'ils partagent le même axe physique de paroi, {@code false} sinon.
+     */
     public static boolean mursOntUnSupportCommun(Mur a, Mur b) {
         return mursIdentiques(a, b) || mursSuperposes(a, b) || mursSuperposes(b, a);
     }
     
-    // GeometrieUtils.java
+    /**
+     * Évalue si deux segments de murs colinéaires ou identiques sont orientés dans le même sens directionnel.
+     * 
+     * @param a Premier mur.
+     * @param b Second mur.
+     * @return {@code true} s'ils pointent dans la même direction générale (produit scalaire positif), {@code false} sinon.
+     */
     public static boolean memeSens(Mur a, Mur b) {
         double dxA = a.getPoint2().getX() - a.getPoint1().getX();
         double dyA = a.getPoint2().getY() - a.getPoint1().getY();
