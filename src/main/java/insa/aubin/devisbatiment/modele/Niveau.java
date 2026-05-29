@@ -88,15 +88,7 @@ public class Niveau extends ElementDeConstruction {
         return appartement;
     }
 
-    private boolean contientMurGeometriquement(List<Mur> murs, Mur mur) {
-        if (murs.contains(mur)) return true;
-        for (Mur existant : murs) {
-            if (GeometrieUtils.mursIdentiques(existant, mur)) {
-                return true;
-            }
-        }
-        return false;
-    }
+
 
     // =========================================================================
     // GESTION DES COULOIRS

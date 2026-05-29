@@ -251,56 +251,6 @@ public class Appartement extends ElementDeConstruction implements Dessin {
     // =========================================================================
 
     public List<Mur> getMursDelimiteurs()              { return mursDelimiteurs; }
-    public void setMursDelimiteurs(List<Mur> murs)     {
-        this.mursDelimiteurs = new ArrayList<>(murs);
-        this.mursOrientes = new ArrayList<>();
-        for (Mur mur : this.mursDelimiteurs) {
-            this.mursOrientes.add(new GeometrieUtils.MurOriente(mur, false));
-        }
-    }
-    /**
-     * Rassemble tous les murs de l'appartement :
-     * les murs délimiteurs extérieurs ET toutes les cloisons intérieures des pièces.
-     * Utile pour la détection et la sélection globale des revêtements.
-     */
-    private boolean estPointSurSegment(Point p, Mur m) {
-        double x1 = m.getPoint1().getX(), y1 = m.getPoint1().getY();
-        double x2 = m.getPoint2().getX(), y2 = m.getPoint2().getY();
-        double px = p.getX(), py = p.getY();
-
-        double dx = x2 - x1;
-        double dy = y2 - y1;
-        double len2 = dx * dx + dy * dy;
-        if (len2 < 1e-6) return false;
-
-        // Distance du point à la droite (tolérance 5 cm)
-        double cross = (px - x1) * dy - (py - y1) * dx;
-        double dist = Math.abs(cross) / Math.sqrt(len2);
-        if (dist > 0.05) return false;
-
-        // Le point doit être situé entre les extrémités (tolérance 5 cm)
-        double dot = (px - x1) * dx + (py - y1) * dy;
-        if (dot < -0.05 || dot > len2 + 0.05) return false;
-
-        return true;
-    }
-
-    private boolean sontMursSuperposes(Mur m1, Mur m2) {
-        // Deux murs sont superposés si l'un est contenu dans l'autre (collinéaires et chevauchants)
-        return (estPointSurSegment(m1.getPoint1(), m2) && estPointSurSegment(m1.getPoint2(), m2)) ||
-               (estPointSurSegment(m2.getPoint1(), m1) && estPointSurSegment(m2.getPoint2(), m1));
-    }
-
-    private boolean estMurDejaPresent(List<Mur> liste, Mur murTest) {
-        if (murTest == null) return false;
-        for (Mur m : liste) {
-            if (m != null && sontMursSuperposes(m, murTest)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private boolean estMemeLigne(Mur m1, Mur m2) {
         double tol = 1e-3;
         boolean sens1 = m1.getPoint1().distanceA(m2.getPoint1()) < tol && m1.getPoint2().distanceA(m2.getPoint2()) < tol;
@@ -308,6 +258,11 @@ public class Appartement extends ElementDeConstruction implements Dessin {
         return sens1 || sens2;
     }
 
+    /**
+     * Rassemble tous les murs de l'appartement :
+     * les murs délimiteurs extérieurs ET toutes les cloisons intérieures des pièces.
+     * Utile pour la détection et la sélection globale des revêtements.
+     */
     public List<Mur> getMurs() {
         List<Mur> tousLesMurs = new ArrayList<>();
         if (this.mursDelimiteurs != null) {

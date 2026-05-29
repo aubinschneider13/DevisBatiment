@@ -251,17 +251,7 @@ public class Mur extends ElementDeConstruction implements Dessin {
      * 
      * @return Le coût cumulé forfaitaire en euros (€).
      */
-    public double calculerPrixMenuiseries() {
-        double total = 0.0;
-        if (listeOuvertures != null) {
-            for (Ouverture o : listeOuvertures) {
-                if (o != null) {
-                    total += o.getPrixForfaitaire();
-                }
-            }
-        }
-        return total;
-    }
+
 
     /**
      * Calcule le prix global des revêtements appliqués sur ce mur, en cumulant 

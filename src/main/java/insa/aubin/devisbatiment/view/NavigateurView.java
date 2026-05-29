@@ -71,10 +71,7 @@ public class NavigateurView extends VBox {
     // API PUBLIQUE — peuplement de l'arbre (inchangée)
     // =========================================================================
 
-    /** Met à jour le libellé de la racine avec le nom du bâtiment. */
-    public void setNomImmeuble(String nomImmeuble) {
-        setNomBatiment("Immeuble", nomImmeuble);
-    }
+
 
     public void setNomBatiment(String typeBatiment, String nomBatiment) {
         rootItem.setValue(typeBatiment + " : ( " + nomBatiment + " )");

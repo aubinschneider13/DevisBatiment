@@ -18,9 +18,7 @@ public abstract class Tremie extends ElementDeConstruction implements Dessin, Fa
         this.color = color;
     }
 
-    public Point getCentre() {
-        return centre;
-    }
+
 
     public double getX() {
         return centre.getX();

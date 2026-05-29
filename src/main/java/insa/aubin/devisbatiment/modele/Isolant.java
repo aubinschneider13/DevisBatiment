@@ -48,13 +48,7 @@ public class Isolant extends Revetement {
         return epaisseur;
     }
 
-    public void setTypeIsolant(TypeIsolant typeIsolant) {
-        this.typeIsolant = typeIsolant;
-    }
 
-    public void setEpaisseur(double epaisseur) {
-        this.epaisseur = epaisseur;
-    }
 
     @Override
     public String toCSV() {

@@ -907,22 +907,7 @@ public class PieceControleur {
         rafraichirTypesMursAffichage();
     }
 
-    public void rechargerPieces(List<Piece> piecesChargees) {
-        for (Piece piece : piecesChargees) {
-            pieces.add(piece);
 
-            // Ajouter les murs de la pièce au canvas
-            for (Mur mur : piece.getMurs()) {
-                if (!contientMurIdentiqueCanvas(mur)) {
-                    vue.getCanvas().getElements().add(mur);
-                }
-            }
-
-            // Ajouter le dessin coloré de la pièce
-            vue.getCanvas().getElements().add(creerDessinPiece(piece));
-        }
-        vue.getCanvas().redrawAll();
-    }
 
     // =========================================================================
     // COLLECTE DES SEGMENTS (délègue la subdivision à GeometrieUtils)

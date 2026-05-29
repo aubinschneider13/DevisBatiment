@@ -51,9 +51,7 @@ public class Revetement extends ElementDeConstruction {
         return designation;
     }
 
-    public void setDesignation(String designation) {
-        this.designation = designation;
-    }
+
 
     public boolean isPourMur() {
         return pourMur;
@@ -71,7 +69,5 @@ public class Revetement extends ElementDeConstruction {
         return prixUnitaire;
     }
 
-    public void setPrixUnitaire(double prixUnitaire) {
-        this.prixUnitaire = prixUnitaire;
-    }
+
 }

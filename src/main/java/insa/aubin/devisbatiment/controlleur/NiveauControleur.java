@@ -784,47 +784,7 @@ public class NiveauControleur {
                         Math.abs(a.getY() - b.getY()) < tol));
     }
     
-    private void marquerMursAdjacents(Couloir couloir) {
-        double tol = 0.05;
-        List<Mur> mursDelimiteurs = niveau.getMursDelimiteurs();
 
-        // Collecter tous les segments du couloir
-        List<double[]> segmentsCouloir = new ArrayList<>();
-        for (List<Mur> zone : couloir.getZonesDelimiteurs()) {
-            List<Point> polygone = new ArrayList<>();
-            for (Mur m : zone) polygone.add(m.getPoint1());
-            int n = polygone.size();
-            for (int i = 0; i < n; i++) {
-                Point a = polygone.get(i);
-                Point b = polygone.get((i + 1) % n);
-                segmentsCouloir.add(new double[]{a.getX(), a.getY(), b.getX(), b.getY()});
-            }
-        }
-
-        // Parcourir tous les murs du canvas pour trouver lesquels touchent le couloir
-        for (Object el : vue.getCanvas().getElements()) {
-            if (!(el instanceof Mur mur)) continue;
-            if (mursDelimiteurs.contains(mur)) continue;
-            if (mur.getTypeMur() == Mur.TypeMur.EXTERIEUR) continue;
-
-            double ax1 = mur.getPoint1().getX(), ay1 = mur.getPoint1().getY();
-            double ax2 = mur.getPoint2().getX(), ay2 = mur.getPoint2().getY();
-
-            for (double[] seg : segmentsCouloir) {
-                if (segmentsSeRecouvrent(ax1, ay1, ax2, ay2,
-                                          seg[0], seg[1], seg[2], seg[3], tol)) {
-                    // Si le mur touche le couloir, on lui donne le type ADJ_COULOIR
-                    // Ancien marquage direct volontairement neutralise.
-                    
-                    // Si ce morceau appartient à un mur original, on met aussi à jour l'original
-                    if (mur.getOriginal() != null) {
-                        // Ancien marquage direct volontairement neutralise.
-                    }
-                    break;
-                }
-            }
-        }
-    }
 
     // =========================================================================
     // COLLECTE DES SEGMENTS (délègue la subdivision à GeometrieUtils)

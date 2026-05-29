@@ -68,9 +68,7 @@ public class DessinCanvas extends Canvas {
         redrawAll();
     }
 
-    public double getGridSize() {
-        return gridSize;
-    }
+
     
     public DessinCanvas() {
         this.elements = new ArrayList<>();
@@ -484,12 +482,7 @@ public class DessinCanvas extends Canvas {
      * Retourne la transformation affine courante (zoom + translation + Y inversé)
      * utilisée pour convertir les coordonnées modèle en pixels.
      */
-    public Affine getTransform() {
-        Affine t = new Affine();
-        t.appendTranslation(offsetX, offsetY);
-        t.appendScale(zoomFactor, -zoomFactor);
-        return t;
-    }
+
 
     public void ajouterElement(Dessin d) {
         this.elements.add(d);
@@ -504,12 +497,7 @@ public class DessinCanvas extends Canvas {
         this.panActif = panActif;
     }
     
-    public void centrerSur(double cx, double cy, double zoom) {
-        this.zoomFactor = zoom;
-        this.offsetX = getWidth() / 2 - cx * zoom;
-        this.offsetY = getHeight() / 2 + cy * zoom; // Y inversé
-        redrawAll();
-    }
+
 
     public void setSelection(List<SurfaceAvecRevetement> selection) {
         this.selection = selection;
@@ -526,7 +514,5 @@ public class DessinCanvas extends Canvas {
         redrawAll();
     }
 
-    public double getZoomFactor() {
-        return zoomFactor;
-    }
+
 }

@@ -23,9 +23,7 @@ public class DashBoardView extends BorderPane {
     String cheminSettings = "/images/engrenage_icone.png";
 
     private Button immeubleButton;
-    private Button appartementButton;
     private Button maisonButton;
-    private Button pieceButton;
     private Button settingsButton;
     private HBox secondHBox;
 
@@ -133,17 +131,11 @@ public class DashBoardView extends BorderPane {
         return immeubleButton;
     }
 
-    public Button getAppartementButton() {
-        return appartementButton;
-    }
-
     public Button getMaisonButton() {
         return maisonButton;
     }
 
-    public Button getPieceButton() {
-        return pieceButton;
-    }
+
     
      public Button getSettingsButton() {
         return settingsButton;

@@ -153,27 +153,6 @@ public class CatalogueRevetements {
     }
 
     /**
-     * Retourne uniquement les revêtements applicables sur un MUR
-     */
-    public ObservableList<Revetement> getRevetementsPourMur() {
-        return listeRevetements.filtered(Revetement::isPourMur);
-    }
-
-    /**
-     * Retourne uniquement les revêtements applicables sur un SOL
-     */
-    public ObservableList<Revetement> getRevetementsPourSol() {
-        return listeRevetements.filtered(Revetement::isPourSol);
-    }
-
-    /**
-     * Retourne uniquement les revêtements applicables sur un PLAFOND
-     */
-    public ObservableList<Revetement> getRevetementsPourPlafond() {
-        return listeRevetements.filtered(Revetement::isPourPlafond);
-    }
-
-    /**
      * Recherche un revêtement par son ID
      */
     public Revetement rechercherParId(String id) {

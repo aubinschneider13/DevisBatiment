@@ -212,9 +212,7 @@ public class Piece extends ElementDeConstruction {
         return murs;
     }
 
-    public List<MurOriente> getMursOrientes() {
-        return mursOrientes;
-    }
+
 
     /**
      * Algorithme géométrique de détection de face intérieure.

@@ -92,9 +92,7 @@ public class ImmeubleView extends StackPane {
      * Restaure la visibilité du voile selon l'état mémorisé.
      * Appelé par AppView.afficherCanvasAire() lors d'un retour sur cette vue.
      */
-    public void restaurerVoile() {
-        voileValidation.setVisible(voileActif);
-    }
+
 
     /**
      * Crée le voile gris semi-transparent avec un cadenas centré.
