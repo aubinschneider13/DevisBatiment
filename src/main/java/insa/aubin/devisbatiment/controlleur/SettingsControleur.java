@@ -51,8 +51,6 @@ public class SettingsControleur {
         // Clic sur le bouton
         settingsView.getValiderButton().setOnAction(e -> validerChemin());
 
-        // Entrée dans le TextField : utiliser setOnAction (pas setOnKeyPressed)
-        // car setOnKeyPressed est consommé en interne par le TextField
         settingsView.getCheminField().setOnAction(e -> validerChemin());
     }
 

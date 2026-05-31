@@ -33,9 +33,6 @@ public class ContextePiece implements Contexte {
     private PieceControleur pieceControleur;
     private boolean callbackBranche = false;
 
-    //private boolean modeSelectionActif = false;
-    //private final List<SurfaceAvecRevetement> surfacesSelectionnees = new ArrayList<>();
-
     public ContextePiece(Piece piece,
                               AppView appView,
                               AppControleur appControleur,
@@ -118,32 +115,6 @@ public class ContextePiece implements Contexte {
     // =========================================================================
     // GESTION DU MODE SÉLECTION (POUR LES REVÊTEMENTS)
     // =========================================================================
-
-    /*public boolean isModeSelectionActif() {
-        return modeSelectionActif;
-    }
-
-    public void setModeSelectionActif(boolean modeSelectionActif) {
-        this.modeSelectionActif = modeSelectionActif;
-    }
-
-    public List<SurfaceAvecRevetement> getSurfacesSelectionnees() {
-        return surfacesSelectionnees;
-    }
-
-    public void ajouterSurface(SurfaceAvecRevetement surface) {
-        if (surface != null && !surfacesSelectionnees.contains(surface)) {
-            surfacesSelectionnees.add(surface);
-        }
-    }
-
-    public void retirerSurface(SurfaceAvecRevetement surface) {
-        surfacesSelectionnees.remove(surface);
-    }
-
-    public void viderSelection() {
-        surfacesSelectionnees.clear();
-    }*/
 
     public void activerModeSelection() {
         if (pieceControleur != null) {

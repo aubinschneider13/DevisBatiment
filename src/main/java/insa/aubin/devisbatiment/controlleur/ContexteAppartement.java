@@ -49,10 +49,6 @@ public class ContexteAppartement implements Contexte {
     private final TreeItem<String> itemAppartement;
     private boolean callbackBranche = false;
 
-    // --- Variables pour le Mode Sélection (Revêtements) ---
-    //private boolean modeSelectionActif = false;
-    //private final List<SurfaceAvecRevetement> surfacesSelectionnees = new ArrayList<>();
-
     /**
      * @param appartement  appartement dont on va aménager l'intérieur
      * @param appView      vue racine (pour insérer le canvas de la pièce)
@@ -94,7 +90,6 @@ public class ContexteAppartement implements Contexte {
                                       appControleur.getAireImmeuble());
             pieceControleur = pieceView.getControleur();
         }
-        // ✅ Ne brancher le callback qu'une seule fois
         if (!callbackBranche) {
             pieceControleur.setOnPieceCree(piece -> {
                 TreeItem<String> itemPiece = appView.getNavigateurView()
@@ -192,32 +187,6 @@ public class ContexteAppartement implements Contexte {
     // =========================================================================
     // GESTION DU MODE SÉLECTION (POUR LES REVÊTEMENTS)
     // =========================================================================
-
-    /*public boolean isModeSelectionActif() {
-        return modeSelectionActif;
-    }
-
-    public void setModeSelectionActif(boolean modeSelectionActif) {
-        this.modeSelectionActif = modeSelectionActif;
-    }
-
-    public List<SurfaceAvecRevetement> getSurfacesSelectionnees() {
-        return surfacesSelectionnees;
-    }
-
-    public void ajouterSurface(SurfaceAvecRevetement surface) {
-        if (surface != null && !surfacesSelectionnees.contains(surface)) {
-            surfacesSelectionnees.add(surface);
-        }
-    }
-
-    public void retirerSurface(SurfaceAvecRevetement surface) {
-        surfacesSelectionnees.remove(surface);
-    }
-
-    public void viderSelection() {
-        surfacesSelectionnees.clear();
-    }*/
 
     public void activerModeSelection() {
         if (pieceControleur != null) {

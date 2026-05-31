@@ -96,7 +96,6 @@ public class ContexteAire implements Contexte {
     @Override
     public void onBtnValiderAire() {
         immeubleControleur.btnValiderAire(null);
-        // ✅ On ne bascule que si la validation a réellement eu lieu
         if (immeubleControleur.isAireValidee()) {
             appControleur.onAireValidee();
         }

@@ -7,70 +7,71 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 
 /**
- * Contrôleur de l'aire de l'immeuble.
- *
- * ✅ ALLÉGÉ par rapport à l'ancienne version :
- *   - Ne connaît plus le Stage (c'est AppControleur qui gère la navigation).
- *   - Ne connaît plus le TreeView (c'est NavigateurView + AppControleur).
- *   - Ne gère plus les niveaux ni les appartements.
- *   - Ne dialogue plus avec NiveauControleur.
- *   - N'instancie plus ImmeubleView : il reçoit le canvas depuis AppView
- *     via AppControleur, conformément au pattern State.
- *
- * Responsabilité unique : piloter le dessin interactif de l'AireImmeuble
- * sur le DessinCanvas qui lui est fourni, et exposer l'état de cette aire
- * à AppControleur via des getters.
- *
- * Cycle de vie :
- *   1. AppControleur instancie ImmeubleControleur en lui passant le canvasAire
- *      extrait d'AppView.
- *   2. L'utilisateur clique pour poser les 3 points de l'aire.
- *   3. ContexteAire appelle btnValiderAire() puis AppControleur.onAireValidee()
- *      pour basculer de contexte.
+ * Contrôleur CAO dédié à la capture, au tracé et à l'ajustement géométrique de l'emprise au sol du bâtiment.
+ * <p>
+ * Cette classe orchestre l'interaction événementielle de la phase initiale de conception au sein du
+ * motif <b>MVC (Modèle-Vue-Contrôleur)</b>. Conformément au <b>Pattern State (Contexte)</b>, elle n'instancie plus
+ * la vue racine et ne gère plus les transitions globales. Sa responsabilité unique est de piloter le dessin
+ * interactif de l'{@link AireImmeuble} sur le {@link DessinCanvas} qui lui est fourni par le contrôleur maître.
+ * </p>
+ * <p>
+ * <b>Cinématique de saisie (3 points contraints) :</b>
+ * <ol>
+ * <li><b>Clic 1 :</b> Ancrage de l'origine géométrique ({@code Point p1}).</li>
+ * <li><b>Clic 2 :</b> Définition du vecteur directeur du premier côté ({@code Point p2}).</li>
+ * <li><b>Clic 3 :</b> Projection orthogonale contrainte par rapport au segment [p1, p2] pour fixer la largeur et engendrer le rectangle initial ({@code Point p3}).</li>
+ * <li><b>Phase d'ajustement :</b> Support du drag-and-drop sur les arêtes pour redimensionner les façades avant validation définitive.</li>
+ * </ol>
+ * </p>
+ * * @see AireImmeuble
+ * @see DessinCanvas
+ * @see AppView
  */
 public class ImmeubleControleur {
 
-    // --- Vue canvas (reçu d'AppView, pas possédé) ---
+    /** Le canevas de rendu vectoriel sur lequel s'effectuent les opérations de tracé et d'aimantage. */
     private final DessinCanvas canvas;
 
-    // --- AppView : uniquement pour setInstructions() et getToolBarView() ---
-    // ✅ On conserve AppView plutôt que Stage : ImmeubleControleur n'a pas
-    //    besoin de changer de scène, il met juste à jour le label et la toolbar.
+    /** La vue racine principale, sollicitée exclusivement pour diffuser les consignes et rafraîchir les boutons. */
     private final AppView appView;
 
-    // --- Service de sauvegarde (transmis pour usage futur) ---
+    /** Le service de persistance pour l'accès aux flux de sauvegarde et d'écriture de configuration. */
     private final GestionnaireSauvegarde gestionnaire;
 
-    // ✅ Listener d'échelle — conservé pour btnEchelle(), branché une seule fois
-    private javafx.beans.value.ChangeListener<javafx.scene.control.Toggle>
-            listenerEchelle = null;
+    /** Écouteur de propriété mémorisant le changement de granulométrie de la grille de snapping (aimantage). */
+    private javafx.beans.value.ChangeListener<javafx.scene.control.Toggle> listenerEchelle = null;
 
-    // --- Aire de l'immeuble ---
+    /** L'entité métier représentant le polygone contraint de l'emprise au sol. */
     private AireImmeuble aireImmeuble;
+
+    /** Indicateur d'étape du chaînage géométrique (valeurs de 0 à 3). */
     private int etapeAire = 0;
+
+    /** Flag de verrouillage indiquant si l'emprise au sol est définitive et non-modifiable. */
     private boolean aireValidee = false;
+
+    /** Index de l'arête en cours de déplacement par l'utilisateur (vaut -1 si aucune arête n'est saisie). */
     private int coteEnCoursDeDeplacement = -1;
 
     /**
-     * Unique constructeur valide dans la nouvelle architecture.
+     * <b>Constructeur unique du contrôleur géométrique.</b>
+     * <p>
+     * Initialise les liaisons vers la vue racine, le canvas et la persistance, puis procède à la capture
+     * et à l'accrochage des écouteurs d'événements physiques (clics, déplacements, glissements de souris).
+     * </p>
      *
-     * ✅ L'ancien constructeur (Stage, ImmeubleView, GestionnaireSauvegarde)
-     * est supprimé : ImmeubleControleur ne connaît plus ni le Stage ni
-     * ImmeubleView. C'est AppControleur qui possède le Stage et AppView.
-     *
-     * @param canvas       canvas de l'aire fourni par AppView
-     * @param appView      vue racine (pour setInstructions et getToolBarView)
-     * @param gestionnaire service de sauvegarde
+     * @param canvas       Le canevas vectoriel extrait de la zone centrale d'{@code AppView}.
+     * @param appView      La fenêtre racine de l'application gérant les bandeaux d'affichage.
+     * @param gestionnaire Le gestionnaire de sauvegarde du projet.
      */
     public ImmeubleControleur(DessinCanvas canvas,
-                               AppView appView,
-                               GestionnaireSauvegarde gestionnaire) {
+                              AppView appView,
+                              GestionnaireSauvegarde gestionnaire) {
         this.canvas       = canvas;
         this.appView      = appView;
         this.gestionnaire = gestionnaire;
 
-        // Branchement des listeners souris sur le canvas de l'aire.
-        // ✅ Identiques à l'ancienne version — la logique de dessin est inchangée.
+        // Configuration des gestionnaires d'événements de la souris sur le canvas de CAO
         this.canvas.setOnMouseClicked(e -> {
             if (e.getButton() == javafx.scene.input.MouseButton.PRIMARY
                     && e.isStillSincePress()) clicAire(e);
@@ -84,28 +85,26 @@ public class ImmeubleControleur {
     }
 
     // =========================================================================
-    // BOUTONS TOOLBAR — appelés par ContexteAire
+    // BOUTONS TOOLBAR — Invoqués par le ContexteActif (Pattern State)
     // =========================================================================
 
     /**
-     * Active le mode navigation (pan/zoom) sur le canvas de l'aire.
-     * Appelé par ContexteAire.onBtnNavigation().
+     * Déclenche l'activation du mode de translation et de zoom (pan/zoom) sur la surface du canevas.
      *
-     * @param t événement ActionEvent (peut être null si appelé programmatiquement)
+     * @param t L'événement d'action JavaFX associé.
      */
     public void btnNavigation(javafx.event.ActionEvent t) {
         canvas.setPanActif(true);
     }
 
     /**
-     * Bascule la visibilité du panneau EchelleVue et branche son listener
-     * la première fois.
-     * Appelé par ContexteAire.onBtnEchelle().
+     * Alerte le sous-panneau d'échelle graphique afin d'ajuster le pas de la grille vectorielle.
+     * <p>
+     * Le patron de conception garantit ici qu'un unique écouteur de propriété (listener) est branché
+     * sur le groupe de boutons afin de prévenir les fuites de mémoire mémoire lors des clics répétés.
+     * </p>
      *
-     * ✅ Le listener n'est branché qu'une seule fois (guard listenerEchelle != null)
-     * pour éviter les doublons si l'utilisateur clique plusieurs fois sur "Échelle".
-     *
-     * @param t événement ActionEvent (peut être null si appelé programmatiquement)
+     * @param t L'événement d'action JavaFX associé.
      */
     public void btnEchelle(javafx.event.ActionEvent t) {
         EchelleVue echelleVue = appView.getEchelleVue();
@@ -119,22 +118,21 @@ public class ImmeubleControleur {
                 }
             };
             echelleVue.getGroupeEchelle()
-                      .selectedToggleProperty()
-                      .addListener(listenerEchelle);
+                    .selectedToggleProperty()
+                    .addListener(listenerEchelle);
         }
     }
 
     /**
-     * Valide l'emprise de l'immeuble :
-     *   - marque l'aire comme validée dans le modèle
-     *   - débranche les listeners souris du canvas (l'aire ne sera plus modifiable)
-     *   - met à jour le label d'instructions
+     * Valide définitivement l'emprise géométrique brute du bâtiment.
+     * <p>
+     * <b>Mécanique de rupture :</b>
+     * Cette méthode applique le statut verrouillé au modèle, puis procède à l'éradication complète (purge)
+     * de tous les écouteurs de souris du canvas, figeant ainsi l'aire. La bascule vers le contexte supérieur
+     * (étages) est alors notifiée au contrôleur maître.
+     * </p>
      *
-     * ✅ L'instanciation du modèle Immeuble et la bascule de contexte sont
-     * gérées par AppControleur.onAireValidee(), appelé par ContexteAire
-     * juste après cette méthode. Séparation des responsabilités respectée.
-     *
-     * @param t événement ActionEvent (peut être null si appelé programmatiquement)
+     * @param t L'événement d'action JavaFX associé.
      */
     public void btnValiderAire(javafx.event.ActionEvent t) {
         if (aireImmeuble == null || etapeAire != 3) return;
@@ -142,7 +140,7 @@ public class ImmeubleControleur {
         aireImmeuble.valider();
         aireValidee = true;
 
-        // Débrancher les listeners souris : l'aire ne peut plus être modifiée
+        // Désactivation des interactions physiques pour sanctuariser l'aire géométrique
         canvas.setOnMouseClicked(null);
         canvas.setOnMouseMoved(null);
         canvas.setOnMousePressed(null);
@@ -150,15 +148,16 @@ public class ImmeubleControleur {
         canvas.setOnMouseReleased(null);
 
         appView.setInstructions(
-            "Aire validée — ajoutez des niveaux via le bouton ou le navigateur"
+                "Aire validée — ajoutez des niveaux via le bouton ou le navigateur"
         );
-
-        // Le voile cadenas et la bascule de contexte sont gérés par AppControleur
     }
 
     /**
-     * Annule le dessin de l'aire en cours et remet l'état à zéro.
-     * Appelé par AppControleur quand l'utilisateur appuie sur Échap.
+     * Annule les opérations de tracé en cours et réinitialise intégralement l'état du contrôleur.
+     * <p>
+     * Efface l'élément du canevas et désactive les boutons de validation au sein de la toolbar.
+     * Invoqué notamment lors de la capture de la touche d'échappement (Échap).
+     * </p>
      */
     public void annulerAire() {
         if (aireValidee) return;
@@ -170,16 +169,19 @@ public class ImmeubleControleur {
         coteEnCoursDeDeplacement = -1;
         appView.getToolBarView().setBtnValiderAireActif(false);
         appView.setInstructions(
-            "Cliquez pour définir le premier coin de l'immeuble"
+                "Cliquez pour définir le premier coin de l'immeuble"
         );
         canvas.redrawAll();
     }
 
     // =========================================================================
-    // GESTION DES CLICS SUR LE CANVAS DE L'AIRE
+    // GESTION DES ÉVÉNEMENTS SOURIS (INTERACTION CANVAS)
     // =========================================================================
-    // ✅ Logique identique à l'ancienne version — aucun changement fonctionnel.
 
+    /**
+     * Intercepte les clics sur le canevas pour implanter séquentiellement les jalons du polygone de l'aire.
+     * @param e L'événement de souris capté.
+     */
     private void clicAire(javafx.scene.input.MouseEvent e) {
         if (aireValidee) return;
 
@@ -192,30 +194,33 @@ public class ImmeubleControleur {
                 canvas.ajouterElement(aireImmeuble);
                 etapeAire = 1;
                 appView.setInstructions(
-                    "Cliquez pour définir le deuxième coin (côté 1)");
+                        "Cliquez pour définir le deuxième coin (côté 1)");
                 break;
             case 1:
                 aireImmeuble.setP2(pClic);
                 etapeAire = 2;
                 appView.setInstructions(
-                    "Cliquez pour définir la largeur (côté 2)");
+                        "Cliquez pour définir la largeur (côté 2)");
                 break;
             case 2:
                 Point p3Contraint = calculerPointOrthogonal(
-                    aireImmeuble.getP2(), pClic,
-                    aireImmeuble.getP1(), aireImmeuble.getP2()
+                        aireImmeuble.getP2(), pClic,
+                        aireImmeuble.getP1(), aireImmeuble.getP2()
                 );
                 aireImmeuble.setP3(p3Contraint);
                 etapeAire = 3;
                 appView.setInstructions(
-                    "Glissez les côtés pour ajuster, puis cliquez sur « Valider »");
-                // ✅ Active le bouton "Valider l'aire" dans la toolbar commune
+                        "Glissez les côtés pour ajuster, puis cliquez sur « Valider »");
                 appView.getToolBarView().setBtnValiderAireActif(true);
                 break;
         }
         canvas.redrawAll();
     }
 
+    /**
+     * Calcule l'aperçu dynamique ("rubber-banding") des lignes de l'emprise en suivant le déplacement du curseur.
+     * @param e L'événement de déplacement de la souris.
+     */
     private void mouvementAire(javafx.scene.input.MouseEvent e) {
         if (aireValidee || aireImmeuble == null) return;
 
@@ -226,8 +231,8 @@ public class ImmeubleControleur {
             aireImmeuble.setP2(pSouris);
         } else if (etapeAire == 2) {
             Point p3Contraint = calculerPointOrthogonal(
-                aireImmeuble.getP2(), pSouris,
-                aireImmeuble.getP1(), aireImmeuble.getP2()
+                    aireImmeuble.getP2(), pSouris,
+                    aireImmeuble.getP1(), aireImmeuble.getP2()
             );
             aireImmeuble.setP3(p3Contraint);
         } else if (etapeAire == 3) {
@@ -237,27 +242,39 @@ public class ImmeubleControleur {
         canvas.redrawAll();
     }
 
+    /**
+     * Identifie si l'utilisateur presse la souris à proximité immédiate d'une arête pour initier un glissement.
+     * @param e L'événement de pression de la souris.
+     */
     private void pressionAire(javafx.scene.input.MouseEvent e) {
         if (aireValidee || aireImmeuble == null || etapeAire != 3) return;
 
         Point2D snap = canvas.snapToGrid(e.getX(), e.getY());
         coteEnCoursDeDeplacement = aireImmeuble.detecterCote(
-            snap.getX(), snap.getY(), 0.3);
+                snap.getX(), snap.getY(), 0.3);
         if (coteEnCoursDeDeplacement != -1) {
             aireImmeuble.setCoteGlisse(coteEnCoursDeDeplacement);
             canvas.redrawAll();
         }
     }
 
+    /**
+     * Répercute en temps réel la translation appliquée à une arête sélectionnée lors du glissement.
+     * @param e L'événement de déplacement avec bouton enfoncé.
+     */
     private void glisserAire(javafx.scene.input.MouseEvent e) {
         if (coteEnCoursDeDeplacement == -1 || aireImmeuble == null) return;
 
         Point2D snap = canvas.snapToGrid(e.getX(), e.getY());
         aireImmeuble.deplacerCote(
-            coteEnCoursDeDeplacement, snap.getX(), snap.getY());
+                coteEnCoursDeDeplacement, snap.getX(), snap.getY());
         canvas.redrawAll();
     }
 
+    /**
+     * Clôture l'opération de translation de l'arête et réinitialise les index de sélection.
+     * @param e L'événement de relâchement du clic.
+     */
     private void relacherAire(javafx.scene.input.MouseEvent e) {
         if (coteEnCoursDeDeplacement != -1) {
             coteEnCoursDeDeplacement = -1;
@@ -267,14 +284,23 @@ public class ImmeubleControleur {
     }
 
     // =========================================================================
-    // UTILITAIRE GÉOMÉTRIQUE
+    // UTILITAIRE GÉOMÉTRIQUE VECTORIEL
     // =========================================================================
 
     /**
-     * Calcule le point orthogonal à la direction (refP1→refP2) passant par
-     * {@code centre} et le plus proche de {@code cible}.
-     * Utilisé pour contraindre le troisième coin de l'aire à être
-     * perpendiculaire au premier côté.
+     * Calcule le point orthogonal à la direction de référence (refP1 → refP2) passant par un centre et le plus proche d'une cible.
+     * <p>
+     * <b>Algorithme de projection :</b>
+     * Cette méthode mathématique contraint le troisième sommet de l'emprise à former un angle
+     * rigoureusement droit (90°) avec le premier côté dessiné, garantissant la parfaite rectangularité
+     * des fondations de l'immeuble.
+     * </p>
+     *
+     * @param centre Le point pivot d'articulation de l'angle droit (généralement p2).
+     * @param cible  La coordonnée courante de la souris à projeter.
+     * @param refP1  L'origine du segment de base.
+     * @param refP2  L'extrémité du segment de base dictant le vecteur directeur.
+     * @return L'instance de {@link Point} contrainte calculée par projection orthogonale.
      */
     private Point calculerPointOrthogonal(Point centre, Point cible,
                                           Point refP1, Point refP2) {
@@ -286,57 +312,55 @@ public class ImmeubleControleur {
         double uy    = cible.getY() - centre.getY();
         double s     = (ux * perpX + uy * perpY) / (perpX * perpX + perpY * perpY);
         return new Point(
-            centre.getX() + s * perpX,
-            centre.getY() + s * perpY
+                centre.getX() + s * perpX,
+                centre.getY() + s * perpY
         );
     }
 
     // =========================================================================
-    // GETTERS — exposés à AppControleur
+    // GETTERS & SETTERS (INTERFAÇAGE APPCONTROLEUR)
     // =========================================================================
 
     /**
-     * Retourne l'aire de l'immeuble telle que dessinée par l'utilisateur.
-     * Utilisé par AppControleur pour instancier le modèle Immeuble et par
-     * NiveauControleur pour afficher le contour en fond de canvas.
-     *
-     * @return AireImmeuble courante, ou null si aucun point n'a encore été posé
+     * Retourne l'entité géométrique de l'emprise au sol.
+     * @return L'instance courante d'{@link AireImmeuble}.
      */
     public AireImmeuble getAireImmeuble() { return aireImmeuble; }
 
     /**
-     * Indique si l'aire a été validée par l'utilisateur.
-     * Utilisé par AppControleur pour conditionner l'ajout de niveaux.
-     *
-     * @return true si btnValiderAire() a été appelé avec succès
+     * Indique si l'emprise au sol du terrain a été validée et verrouillée.
+     * @return {@code true} si l'aire est scellée, {@code false} sinon.
      */
     public boolean isAireValidee() { return aireValidee; }
 
     /**
-     * Expose le canvas de l'aire pour que NiveauControleur puisse y lire
-     * la taille de grille courante si nécessaire.
-     *
-     * @return le DessinCanvas de l'aire
+     * Retourne le canevas de dessin vectoriel associé.
+     * @return L'instance de {@link DessinCanvas}.
      */
     public DessinCanvas getCanvas() { return canvas; }
-    
-    // À ajouter dans ImmeubleControleur
+
+    /**
+     * Injecte une emprise géométrique préexistante (chargement de fichier) et configure instantanément le contrôleur à l'état validé.
+     * <p>
+     * Cette méthode neutralise les écouteurs de souris pour empêcher toute altération ultérieure d'un plan chargé
+     * et rafraîchit le calque graphique.
+     * </p>
+     *
+     * @param aire L'entité {@link AireImmeuble} restaurée depuis la persistance.
+     */
     public void setAireImmeuble(AireImmeuble aire) {
         this.aireImmeuble = aire;
         this.etapeAire    = 3;
         this.aireValidee  = true;
 
-        // Débrancher les listeners souris — l'aire chargée n'est pas modifiable
         canvas.setOnMouseClicked(null);
         canvas.setOnMouseMoved(null);
         canvas.setOnMousePressed(null);
         canvas.setOnMouseDragged(null);
         canvas.setOnMouseReleased(null);
 
-        // Afficher l'aire sur le canvas
         canvas.getElements().clear();
         canvas.ajouterElement(aire);
         canvas.redrawAll();
     }
-    
 }

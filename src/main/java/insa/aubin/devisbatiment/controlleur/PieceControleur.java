@@ -54,7 +54,7 @@ public class PieceControleur {
     public static final int ETAT_PORTE     = 40;
     public static final int ETAT_FENETRE   = 50;
     public static final int ETAT_PIECE     = 60;
-    public static final int ETAT_SELECTION = 70; // ✅ Ajouté de vos modifications
+    public static final int ETAT_SELECTION = 70;
     public static final int ETAT_EDITION   = 80;
 
     // =========================================================================
@@ -101,7 +101,6 @@ public class PieceControleur {
     private Porte porteEnCours = null;
     private Point dernierPointSouris = new Point(0, 0);
 
-    // ✅ Ajouté : Variables de votre mode sélection pour les revêtements
     private final List<SurfaceAvecRevetement> surfacesSelectionnees = new ArrayList<>();
     private boolean vuePieceActive = false;
     private Piece pieceActive = null;
@@ -175,7 +174,6 @@ public class PieceControleur {
     // =========================================================================
 
     public void changerEtat(int nouvelEtat) {
-        // ✅ Provenant de origin/master : Nettoyer le fantôme d'ouverture en quittant le mode
         if (this.etat == ETAT_PORTE || this.etat == ETAT_FENETRE) {
             murSurvole = null;
             porteEnCours = null;
@@ -1011,8 +1009,6 @@ public class PieceControleur {
         return plusProche;
     }
 
-    // Nettoyage : trouverMurProcheAjuste obsolète et inutilisé supprimé.
-
     private boolean murInclsDansCote(Mur mur, double[] cote) {
         double ax = cote[0], ay = cote[1], bx = cote[2], by = cote[3];
         double dx = bx - ax, dy = by - ay;
@@ -1087,13 +1083,9 @@ public class PieceControleur {
 
     public Map<TreeItem<String>, Piece> getMapItemPiece() { return mapItemPiece; }
 
-    // Nettoyage : rafraichirNavigateur obsolète et inutilisé supprimé.
-
     // =========================================================================
     // UTILITAIRES DE MURS
     // =========================================================================
-
-    // Nettoyage : sontMursSuperposes géométrique redondant supprimé.
 
     /** Remonte les portes/fenêtres des pièces vers la grande vue Appartement */
     private boolean contientMurIdentiqueCanvas(Mur mur) {
