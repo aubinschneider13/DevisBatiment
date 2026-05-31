@@ -20,19 +20,26 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 /**
- * Vue de la pièce (aménagement intérieur d'un appartement).
- *
- * Simplifiée par rapport à l'ancienne version :
- * - Ne contient plus sa propre toolbar : la ToolBarView commune d'AppView pilote
- *   PieceControleur via ContexteAppartement ou ContextePiece.
- * - Ne contient plus son propre TreeView : c'est NavigateurView d'AppView.
- * - Ne connaît plus le Stage directement pour changer de scène :
- *   AppControleur.retourDashboard() s'en charge.
- * - Se réduit à un StackPane : canvas de dessin + OptionsMurVue + EchelleVue
- *   + label d'instructions.
- *
- * Expose getControleur() pour que les contextes puissent déléguer les événements
- * toolbar à PieceControleur.
+ * Représente la surface d'édition graphique et d'aménagement intérieur du second œuvre.
+ * <p>
+ * Cette vue s'inscrit dans l'architecture <b>MVC (Modèle-Vue-Contrôleur)</b> de l'application.
+ * Elle se matérialise sous la forme d'un {@link StackPane} JavaFX qui superpose :
+ * <ul>
+ * <li>Un canevas vectoriel interactif ({@link DessinCanvas}) supportant le tracé géométrique.</li>
+ * <li>Des panneaux flottants contextuels ({@link OptionsMurVue}, {@link OptionsPieceVue}, {@link EchelleVue}).</li>
+ * <li>Un bandeau textuel d'assistance et de guidage en temps réel pour l'utilisateur.</li>
+ * </ul>
+ * </p>
+ * <p>
+ * <b>Évolution de la conception :</b>
+ * Cette classe a été hautement simplifiée et découplée pour respecter la séparation des responsabilités.
+ * Elle est désormais exempte de barres d'outils et d'arborescences de navigation internes. La gestion des
+ * événements de boutons et les transitions de scènes globales sont déléguées de manière ascendante à
+ * l'{@code AppControleur} par le biais du Pattern State (Contextes).
+ * </p>
+ * * @see PieceControleur
+ * @see DessinCanvas
+ * @see StackPane
  */
 public class PieceView extends StackPane {
 

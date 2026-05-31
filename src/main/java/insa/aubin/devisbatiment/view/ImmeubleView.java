@@ -11,23 +11,27 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 
 /**
- * Vue de l'aire de l'immeuble.
- *
- * ✅ SIMPLIFIÉE dans la nouvelle architecture (pattern State + contextes) :
- *   - Ne contient plus de toolbar, de TreeView, ni de SplitPane.
- *   - Ne connaît plus ImmeubleControleur — c'est AppControleur qui l'instancie
- *     et le relie au canvas via AppView.
- *   - Se réduit à un StackPane : canvas de l'aire + voile cadenas + EchelleVue
- *     + label d'instructions.
- *
- * Cette vue est insérée dans la zone centrale d'AppView par
- * AppView.afficherCanvasAire(). Sa taille est liée à celle de la zone centrale
- * par AppView (bind sur widthProperty / heightProperty).
- *
- * ✅ NOTE ARCHITECTURE : l'ancienne ImmeubleView (BorderPane complet avec
- * toolbar et navigateur) est conservée à titre de référence dans le dépôt,
- * mais n'est plus instanciée dans la nouvelle architecture. AppView la remplace
- * dans son rôle de fenêtre racine.
+ * Représente la surface graphique dédiée à la saisie et à la délimitation de l'emprise au sol globale du bâtiment.
+ * <p>
+ * Cette vue s'intègre au sein de l'architecture <b>MVC (Modèle-Vue-Contrôleur)</b> globale. Elle est matérialisée
+ * sous la forme d'un {@link StackPane} JavaFX qui superpose :
+ * <ul>
+ * <li>Le canevas de dessin vectoriel principal ({@link DessinCanvas}) pour le tracé des polygones d'emprise.</li>
+ * <li>Un calque visuel de verrouillage semi-transparent (le voile cadenas) activé lors de la validation.</li>
+ * <li>Un indicateur flottant pour le calibrage de l'échelle graphique ({@link EchelleVue}).</li>
+ * <li>Un bandeau inférieur textuel guidant pas-à-pas l'utilisateur dans le chaînage des sommets.</li>
+ * </ul>
+ * </p>
+ * <p>
+ * <b>Évolution et Simplification Architecturale (Pattern State) :</b>
+ * Dans la nouvelle version de l'application, cette vue a été allégée de ses anciennes barres d'outils (toolbar),
+ * de son arborescence (TreeView) et de ses séparateurs (SplitPane). Elle ne collabore plus directement avec un
+ * contrôleur dédié. C'est l'{@code AppControleur} qui instancie cette vue, l'insère dynamiquement dans la zone
+ * centrale de la fenêtre racine {@code AppView}, et orchestre l'accrochage des écouteurs d'événements.
+ * </p>
+ * * @see DessinCanvas
+ * @see EchelleVue
+ * @see StackPane
  */
 public class ImmeubleView extends StackPane {
 

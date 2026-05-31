@@ -10,20 +10,29 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 
 /**
- * Fenêtre racine unique de l'application (remplace ImmeubleView comme BorderPane).
- *
- * Structure fixe, indépendante du contexte actif :
- *   TOP    → TabPane contenant ToolBarView (barre d'outils commune)
- *   CENTER → SplitPane
- *                gauche  : NavigateurView (TreeView commun)
- *                droite  : zoneDessin (StackPane recevant les canvas successifs)
- *
- * AppView ne contient aucune logique métier. Elle expose des méthodes
- * d'affichage (afficherCanvasAire, afficherNiveau, afficherPiece…) que
- * AppControleur appelle selon le contexte actif.
- *
- * Les overlays (voile cadenas, EchelleVue, label d'instructions) sont
- * empilés dans zoneDessin et restent en place quel que soit le canvas affiché.
+ * Fenêtre racine et conteneur maître unique de l'interface graphique de l'application.
+ * <p>
+ * Cette classe constitue le pivot de la couche <b>Vue (IHM)</b> au sein de l'architecture MVC.
+ * Étendant un {@link BorderPane} JavaFX, elle définit la structure structurelle fixe et immuable
+ * de l'application, indépendamment du contexte fonctionnel actif :
+ * <ul>
+ * <li><b>TOP :</b> Un {@link TabPane} regroupant les barres d'outils contextuelles ({@link ToolBarView} pour la CAO et {@link ToolBarDevisView} pour le second œuvre).</li>
+ * <li><b>LEFT :</b> Un {@link SplitPane} ancrant le {@link NavigateurView} (l'arborescence structurelle du projet).</li>
+ * <li><b>CENTER :</b> Une zone de dessin dynamique ({@link StackPane}) accueillant par permutation les différents calques et canvas vectoriels.</li>
+ * </ul>
+ * </p>
+ * <p>
+ * <b>Philosophie de Conception :</b>
+ * Fidèle aux principes du pattern de réorientation (Pattern State), {@code AppView} est totalement exempte
+ * de logique métier et décisionnelle. Elle n'intercepte pas le flux ; elle se contente d'exposer une API
+ * publique d'affichage (méthodes {@code afficher...}) pilotée de manière descendante par l'{@code AppControleur}.
+ * Les calques utilitaires permanents (échelle, consignes, filtre de validation) y sont empilés de manière
+ * à rester superposés lors des changements de calques intérieurs.
+ * </p>
+ * * @see ToolBarView
+ * @see NavigateurView
+ * @see DessinCanvas
+ * @see BorderPane
  */
 public class AppView extends BorderPane {
 
@@ -171,7 +180,6 @@ public class AppView extends BorderPane {
             n -> n instanceof DessinCanvas || n instanceof NiveauView || n instanceof PieceView
         );
 
-        // ✅ Binder la PieceView (pas le canvas directement — il est déjà bindé sur PieceView)
         pieceView.prefWidthProperty().bind(zoneDessin.widthProperty());
         pieceView.prefHeightProperty().bind(zoneDessin.heightProperty());
 
@@ -206,7 +214,7 @@ public class AppView extends BorderPane {
     public void setInstructions(String texte) {
         labelInstructions.setText(texte);
 
-        // ✅ Synchronisation automatique avec la sous-vue active si présente
+        // Synchronisation automatique avec la sous-vue active si présente
         if (!zoneDessin.getChildren().isEmpty()) {
             var activeView = zoneDessin.getChildren().get(0);
             if (activeView instanceof PieceView pv) {

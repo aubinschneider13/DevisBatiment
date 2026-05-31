@@ -1,4 +1,3 @@
-// Carrelage.java
 package insa.aubin.devisbatiment.modele;
 
 public class Carrelage extends Revetement {

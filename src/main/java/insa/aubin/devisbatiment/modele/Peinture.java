@@ -1,4 +1,3 @@
-// Peinture.java
 package insa.aubin.devisbatiment.modele;
 
 public class Peinture extends Revetement {

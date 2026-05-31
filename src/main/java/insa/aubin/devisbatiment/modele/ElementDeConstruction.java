@@ -1,8 +1,5 @@
 package insa.aubin.devisbatiment.modele;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 public abstract class ElementDeConstruction {
     
     private String id;

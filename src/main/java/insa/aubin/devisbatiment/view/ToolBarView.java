@@ -91,7 +91,6 @@ public class ToolBarView extends HBox {
         btnValiderAire.setPrefSize(80, 60);
         btnValiderAire.setDisable(true); // activé quand l'aire est complète (3 points posés)
 
-        // Bouton "Ajouter Niveau" — icône "+" généré en Label
         btnAjouterNiveau = new Button("Ajouter Niveau");
         btnAjouterNiveau.setStyle(
             "-fx-cursor: hand; -fx-font-weight: bold; -fx-text-fill: #34495e;"
@@ -115,7 +114,6 @@ public class ToolBarView extends HBox {
         boutonsParId.put("fenetre",       btnFenetre);
         boutonsParId.put("validerAire",   btnValiderAire);
         boutonsParId.put("ajouterNiveau", btnAjouterNiveau);
-        // "retour" est géré séparément — toujours visible
 
         // --- Séparateurs ---
         Separator sep1 = new Separator(Orientation.VERTICAL);
