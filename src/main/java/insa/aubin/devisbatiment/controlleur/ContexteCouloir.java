@@ -12,7 +12,7 @@ import java.util.List;
 public class ContexteCouloir implements Contexte {
 
     private static final List<String> BOUTONS = List.of(
-            "navigation", "echelle", "mur", "porte", "fenetre", "escalier", "ascenseur"
+            "navigation", "echelle", "mur", "escalier", "ascenseur"
     );
 
     private final Couloir couloir;
@@ -74,18 +74,6 @@ public class ContexteCouloir implements Contexte {
     public void onBtnMur() {
         if (pieceControleur != null)
             pieceControleur.changerEtat(PieceControleur.ETAT_MUR);
-    }
-
-    @Override
-    public void onBtnPorte() {
-        if (pieceControleur != null)
-            pieceControleur.changerEtat(PieceControleur.ETAT_PORTE);
-    }
-
-    @Override
-    public void onBtnFenetre() {
-        if (pieceControleur != null)
-            pieceControleur.changerEtat(PieceControleur.ETAT_FENETRE);
     }
 
     @Override
